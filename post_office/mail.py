@@ -1,17 +1,13 @@
-import sys
-
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import connection as db_connection
 from django.db.models import Q
 from django.template import Context, Template
 from django.utils import timezone
+
 from email.utils import make_msgid
-from multiprocessing import Pool
-from multiprocessing.dummy import Pool as ThreadPool
 
 from .connections import connections
-from .lockfile import default_lockfile, FileLock, FileLocked
 from .logutils import setup_loghandlers
 from .models import Email, EmailTemplate, Log, PRIORITY, STATUS
 from .settings import (
@@ -195,41 +191,26 @@ def get_queued():
                 .order_by(*get_sending_order()).prefetch_related('attachments')[:get_batch_size()]
 
 
-def send_queued(processes=1, log_level=None):
+def send_queued(log_level=None):
     """
     Sends out all queued mails that has scheduled_time less than now or None
     """
     queued_emails = get_queued()
-    total_sent, total_failed, total_requeued = 0, 0, 0
     total_email = len(queued_emails)
 
-    logger.info('Started sending %s emails with %s processes.' %
-                (total_email, processes))
+    logger.info('Started sending %s emails.' % total_email)
 
     if log_level is None:
         log_level = get_log_level()
 
     if queued_emails:
-        # Don't use more processes than number of emails
-        if total_email < processes:
-            processes = total_email
-
-        if processes == 1:
-            total_sent, total_failed, total_requeued = _send_bulk(
-                emails=queued_emails,
-                uses_multiprocessing=False,
-                log_level=log_level,
-            )
-        else:
-            email_lists = split_emails(queued_emails, processes)
-
-            pool = Pool(processes)
-            results = pool.map(_send_bulk, email_lists)
-            pool.terminate()
-
-            total_sent = sum(result[0] for result in results)
-            total_failed = sum(result[1] for result in results)
-            total_requeued = [result[2] for result in results]
+        total_sent, total_failed, total_requeued = _send_bulk(
+            emails=queued_emails,
+            uses_multiprocessing=False,
+            log_level=log_level,
+        )
+    else:
+        total_sent, total_failed, total_requeued = 0, 0, 0
 
     logger.info(
         '%s emails attempted, %s sent, %s failed, %s requeued',
@@ -339,26 +320,3 @@ def _send_bulk(emails, uses_multiprocessing=True, log_level=None):
     )
 
     return len(sent_emails), num_failed, num_requeued
-
-
-def send_queued_mail_until_done(lockfile=default_lockfile, processes=1, log_level=None):
-    """
-    Send mail in queue batch by batch, until all emails have been processed.
-    """
-    try:
-        with FileLock(lockfile):
-            logger.info('Acquired lock for sending queued emails at %s.lock', lockfile)
-            while True:
-                try:
-                    send_queued(processes, log_level)
-                except Exception as e:
-                    logger.exception(e, extra={'status_code': 500})
-                    raise
-
-                # Close DB connection to avoid multiprocessing errors
-                db_connection.close()
-
-                if not get_queued().exists():
-                    break
-    except FileLocked:
-        logger.info('Failed to acquire lock, terminating now.')

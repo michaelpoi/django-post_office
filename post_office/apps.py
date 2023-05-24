@@ -6,6 +6,9 @@ class PostOfficeConfig(AppConfig):
     name = 'post_office'
     verbose_name = _("Post Office")
     default_auto_field = 'django.db.models.AutoField'
+    default_settings = {
+        'BATCH_SIZE': 100,
+    }
 
     def ready(self):
         from post_office import tasks

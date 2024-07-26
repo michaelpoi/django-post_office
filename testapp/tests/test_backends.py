@@ -160,3 +160,18 @@ def test_default_priority_now(settings):
     email = Email.objects.latest('id')
     assert email.status == STATUS.sent
     assert num_sent == 1
+
+
+@pytest.mark.django_db
+def test_email_queued_signal(settings, mocker):
+    settings.EMAIL_BACKEND = 'post_office.EmailBackend'
+    settings.POST_OFFICE = {
+        'DEFAULT_PRIORITY': 'medium',
+        'BACKENDS': {'default': 'django.core.mail.backends.dummy.EmailBackend'},
+    }
+    magic_mock = mocker.patch('post_office.signals.email_queued.send')
+    # If DEFAULT_PRIORITY is not "now", the email_queued signal should be sent
+    send_mail('Test', 'Message', 'from1@example.com', ['to@example.com'])
+    email = Email.objects.latest('id')
+    assert email.status == STATUS.queued
+    magic_mock.assert_called_once()

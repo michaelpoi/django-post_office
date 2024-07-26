@@ -3,6 +3,7 @@
 Django Post Office is a simple app to send and manage your emails in
 Django. Some awesome features are:
 
+-   Designed to scale, handles millions of emails efficiently
 -   Allows you to send email asynchronously
 -   Multi backend support
 -   Supports HTML email
@@ -12,8 +13,7 @@ Django. Some awesome features are:
 -   Built in scheduling support
 -   Works well with task queues like [RQ](http://python-rq.org) or
     [Celery](http://www.celeryproject.org)
--   Uses multiprocessing (and threading) to send a large number of
-    emails in parallel
+-   Uses multiprocessing and threading to send a large number of emails in parallel
 
 ## Dependencies
 
@@ -412,15 +412,29 @@ put in Django's `settings.py` to fine tune `post-office`'s behavior.
 
 ### Batch Size
 
-If you may want to limit the number of emails sent in a batch (sometimes
+If you may want to limit the number of emails sent in a batch (
 useful in a low memory environment), use the `BATCH_SIZE` argument to
-limit the number of queued emails fetched in one batch.
+limit the number of queued emails fetched in one batch. `BATCH_SIZE` defaults to 100.
 
 ```python
 # Put this in settings.py
 POST_OFFICE = {
     ...
-    'BATCH_SIZE': 50,
+    'BATCH_SIZE': 100,
+}
+```
+
+Version 3.8 introduces a companion setting called `BATCH_DELIVERY_TIMEOUT`. This setting
+specifies the maximum time allowed for each batch to be delivered, this is useful to guard against
+cases where delivery process never terminates. Defaults to 180.
+
+If you send a large number of emails in a single batch on a slow connection, consider increasing this number.
+
+```python
+# Put this in settings.py
+POST_OFFICE = {
+    ...
+    'BATCH_DELIVERY_TIMEOUT': 180,
 }
 ```
 
@@ -435,6 +449,17 @@ setting `DEFAULT_PRIORITY`. Integration with asynchronous email backends
 POST_OFFICE = {
     ...
     'DEFAULT_PRIORITY': 'now',
+}
+```
+
+### Lock File Name
+The default lock file name is `post_office`, but this can be altered by setting `LOCK_FILE_NAME` in the configuration.
+
+```python
+# Put this in settings.py
+POST_OFFICE = {
+    ...
+    'LOCK_FILE_NAME': 'custom_lock_file',
 }
 ```
 
@@ -668,7 +693,7 @@ Attachments are not supported with `mail.send_many()`.
 To run the test suite:
 
 ```python
-`which django-admin.py` test post_office --settings=post_office.test_settings --pythonpath=.
+`which django-admin` test post_office --settings=post_office.test_settings --pythonpath=.
 ```
 
 You can run the full test suite for all supported versions of Django and Python with:

@@ -1,3 +1,4 @@
+import multiprocessing
 import pytest
 import os
 
@@ -12,3 +13,7 @@ def admin_user(db):
     admin_user = UserModel.objects.get(username='admin')
     return admin_user
 
+
+@pytest.fixture(scope='session', autouse=True)
+def init_multiprocessing():
+    multiprocessing.set_start_method('fork')

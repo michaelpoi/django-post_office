@@ -42,9 +42,9 @@ class db_lock:
     with db_lock('my_lock', wait=True):
         do_something()
     ```
-    By using the parameter ``wait=True``, the critical section of code is only entered after
-    mutexes from other processes have been released. A ``LockedException`` will not be raised.
-
+    By using the parameter ``wait=True``, the critical section of code is only entered if either
+    no such lock is acquired or after all locks from anyother process have been released.
+    No ``LockedException`` will not be raised.
     ```
     # Running critical section until it expires
     with db_lock('my_lock') as lock:
@@ -75,7 +75,7 @@ class db_lock:
     GRANULARITY = timedelta(milliseconds=100)
     locked_by = uuid4()
 
-    def __init__(self, lock_id, timeout=timedelta(minutes=1), wait=False):
+    def __init__(self, lock_id: str, timeout=timedelta(minutes=1), wait=False):
         self.lock_id = lock_id[:50]
         if not isinstance(timeout, timedelta):
             raise ValueError("DB lock timeout must be of type timedelta.")
@@ -85,7 +85,7 @@ class db_lock:
         self.wait = wait
         self._mutex = None
 
-    def __call__(self, func):
+    def __call__(self, func: callable):
         return self._decorate(func)
 
     def __enter__(self):
@@ -96,7 +96,7 @@ class db_lock:
         self.release()
 
     @property
-    def remaining_time(self):
+    def remaining_time(self) -> timedelta:
         """
         @:return: The remaining time until this lock expires.
         """
@@ -123,16 +123,22 @@ class db_lock:
                     mutex = None
             try:
                 self._mutex = DBMutex.objects.create(
-                    lock_id=self.lock_id, locked_by=self.locked_by, expires_at=now() + self.timeout)
+                    lock_id=self.lock_id,
+                    locked_by=self.locked_by,
+                    expires_at=now() + self.timeout,
+                )
                 break
             except IntegrityError:  # NOQA
-                # very rare: other process acquired a lock between exiting inner loop and
-                # creating DBMutex object
+                # very rare and impossible to reproduce:
+                # other process acquired a lock between exiting inner loop and creating DBMutex object
                 continue
         else:
             try:
                 self._mutex = DBMutex.objects.create(
-                    lock_id=self.lock_id, locked_by=self.locked_by, expires_at=now() + self.timeout)
+                    lock_id=self.lock_id,
+                    locked_by=self.locked_by,
+                    expires_at=now() + self.timeout,
+                )
             except IntegrityError:
                 raise LockedException("DB mutex for {} is locked.".format(self.lock_id))
 
@@ -162,7 +168,7 @@ class db_lock:
         """
         try:
             DBMutex.objects.filter(locked_by=cls.locked_by).delete()
-        except DatabaseError:
+        except (DatabaseError, RuntimeError):
             pass
 
 

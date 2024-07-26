@@ -12,10 +12,11 @@ dist/
 eggs/
 sdist/
 tmp/
+workdir/
+post_office_attachments/
 *.egg-info/
 .installed.cfg
 *.egg
-*.sqlite3
 
 # Installer logs
 pip-log.txt
@@ -39,5 +40,3 @@ ghostdriver.log
 *.lock
 .mypy_cache
 *.sqlite3
-
-post_office_attachments

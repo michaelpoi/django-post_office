@@ -15,6 +15,7 @@ tmp/
 *.egg-info/
 .installed.cfg
 *.egg
+*.sqlite3
 
 # Installer logs
 pip-log.txt

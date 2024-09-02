@@ -40,3 +40,4 @@ ghostdriver.log
 *.lock
 .mypy_cache
 *.sqlite3
+celerybeat-schedule

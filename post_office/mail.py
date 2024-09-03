@@ -11,7 +11,7 @@ from multiprocessing.dummy import Pool as ThreadPool
 from .connections import connections
 from .dblock import db_lock, TimeoutException, LockedException
 from .logutils import setup_loghandlers
-from .models import Email, EmailTemplate, Log, PRIORITY, STATUS
+from .models import EmailModel, EmailMergeModel, Log, PRIORITY, STATUS
 from .settings import (
     get_available_backends,
     get_batch_delivery_timeout,
@@ -30,7 +30,7 @@ from .utils import (
     get_email_template,
     parse_emails,
     parse_priority,
-    split_emails,
+    split_emails, get_or_create_recipient, get_recipients_objects
 )
 
 logger = setup_loghandlers('INFO')
@@ -70,15 +70,17 @@ def create(
     if context is None:
         context = ''
     message_id = make_msgid(domain=get_message_id_fqdn()) if get_message_id_enabled() else None
-
+    recipients_addresses = get_recipients_objects(recipients)
+    cc_addresses = get_recipients_objects(cc)
+    bcc_addresses = get_recipients_objects(bcc)
     # If email is to be rendered during delivery, save all necessary
     # information
     if render_on_delivery:
-        email = Email(
+        email = EmailModel(
             from_email=sender,
-            to=recipients,
-            cc=cc,
-            bcc=bcc,
+            # to=recipients,
+            # cc=cc,
+            # bcc=bcc,
             scheduled_time=scheduled_time,
             expires_at=expires_at,
             message_id=message_id,
@@ -89,6 +91,13 @@ def create(
             template=template,
             backend_alias=backend,
         )
+
+        if commit:
+            email.save()
+
+        email.to.set(recipients_addresses)
+        email.cc.set(cc_addresses)
+        email.bcc.set(bcc_addresses)
 
     else:
         if template:
@@ -101,11 +110,11 @@ def create(
         message = Template(message).render(_context)
         html_message = Template(html_message).render(_context)
 
-        email = Email(
+        email = EmailModel(
             from_email=sender,
-            to=recipients,
-            cc=cc,
-            bcc=bcc,
+            # to=recipients,
+            # cc=cc,
+            # bcc=bcc,
             subject=subject,
             message=message,
             html_message=html_message,
@@ -119,8 +128,14 @@ def create(
             template=template,
         )
 
-    if commit:
-        email.save()
+        if commit:
+            email.save()
+
+        email.to.set(recipients_addresses)
+        email.cc.set(cc_addresses)
+        email.bcc.set(bcc_addresses)
+
+
 
     return email
 
@@ -148,6 +163,7 @@ def send(
 ):
     try:
         recipients = parse_emails(recipients)
+        print(recipients)
     except ValidationError as e:
         raise ValidationError('recipients: %s' % e.message)
 
@@ -184,7 +200,7 @@ def send(
             raise ValueError('You can\'t specify both "template" and "html_message" arguments')
 
         # template can be an EmailTemplate instance or name
-        if isinstance(template, EmailTemplate):
+        if isinstance(template, EmailMergeModel):
             template = template
             # If language is specified, ensure template uses the right language
             if language and template.language != language:
@@ -221,7 +237,7 @@ def send(
     if priority == PRIORITY.now:
         email.dispatch(log_level=log_level)
     elif commit:
-        email_queued.send(sender=Email, emails=[email])
+        email_queued.send(sender=EmailModel, emails=[email])
 
     return email
 
@@ -234,8 +250,8 @@ def send_many(kwargs_list):
     """
     emails = [send(commit=False, **kwargs) for kwargs in kwargs_list]
     if emails:
-        Email.objects.bulk_create(emails)
-        email_queued.send(sender=Email, emails=emails)
+        EmailModel.objects.bulk_create(emails)
+        email_queued.send(sender=EmailModel, emails=emails)
 
 
 def get_queued():
@@ -248,7 +264,7 @@ def get_queued():
     now = timezone.now()
     query = (Q(scheduled_time__lte=now) | Q(scheduled_time=None)) & (Q(expires_at__gt=now) | Q(expires_at=None))
     return (
-        Email.objects.filter(query, status__in=[STATUS.queued, STATUS.requeued])
+        EmailModel.objects.filter(query, status__in=[STATUS.queued, STATUS.requeued])
         .select_related('template')
         .order_by(*get_sending_order())
         .prefetch_related('attachments')[: get_batch_size()]
@@ -386,7 +402,7 @@ def _send_bulk(emails, uses_multiprocessing=True, log_level=None):
 
     # Update statuses of sent emails
     email_ids = [email.id for email in sent_emails]
-    Email.objects.filter(id__in=email_ids).update(status=STATUS.sent)
+    EmailModel.objects.filter(id__in=email_ids).update(status=STATUS.sent)
 
     # Update statuses and conditionally requeue failed emails
     num_failed, num_requeued = 0, 0
@@ -406,7 +422,7 @@ def _send_bulk(emails, uses_multiprocessing=True, log_level=None):
             email.status = STATUS.failed
             num_failed += 1
 
-    Email.objects.bulk_update(emails_failed, ['status', 'scheduled_time', 'number_of_retries'])
+    EmailModel.objects.bulk_update(emails_failed, ['status', 'scheduled_time', 'number_of_retries'])
 
     # If log level is 0, log nothing, 1 logs only sending failures
     # and 2 means log both successes and failures

@@ -18,7 +18,7 @@ class EmailBackend(BaseEmailBackend):
         email messages sent.
         """
         from .mail import create
-        from .models import STATUS, Email
+        from .models import STATUS, EmailModel
         from .utils import create_attachments
         from .signals import email_queued
 
@@ -77,6 +77,6 @@ class EmailBackend(BaseEmailBackend):
                     num_sent += 1
 
         if default_priority != 'now':
-            email_queued.send(sender=Email, emails=emails)
+            email_queued.send(sender=EmailModel, emails=emails)
 
         return num_sent

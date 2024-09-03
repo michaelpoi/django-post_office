@@ -16,7 +16,7 @@ from django.utils.text import Truncator
 from django.utils.translation import gettext_lazy as _
 
 from .fields import CommaSeparatedEmailField
-from .models import STATUS, Attachment, Email, EmailTemplate, Log
+from .models import STATUS, Attachment, EmailModel, EmailMergeModel, Log, EmailAddress
 from .sanitizer import clean_html
 
 
@@ -43,7 +43,7 @@ class AttachmentInline(admin.StackedInline):
         """
         queryset = super().get_queryset(request)
         if self.parent_obj:
-            queryset = queryset.filter(email=self.parent_obj)
+            queryset = queryset.filter(emailmodel=self.parent_obj)
 
         inlined_attachments = [
             a.id
@@ -91,13 +91,14 @@ requeue.short_description = 'Requeue selected emails'
 class EmailAdmin(admin.ModelAdmin):
     list_display = [
         'truncated_message_id',
-        'to_display',
+        #'to_display',
         'shortened_subject',
         'status',
         'last_updated',
         'scheduled_time',
         'use_template',
     ]
+    filter_horizontal = ('to','cc', 'bcc')
     search_fields = ['to', 'subject']
     readonly_fields = ['message_id', 'render_subject', 'render_plaintext_body', 'render_html_body']
     inlines = [AttachmentInline, LogInline]
@@ -121,7 +122,7 @@ class EmailAdmin(admin.ModelAdmin):
         return super().get_queryset(request).select_related('template')
 
     def to_display(self, instance):
-        return ', '.join(instance.to)
+        return ', '.join([str(to) for to in instance.to])
 
     def truncated_message_id(self, instance):
         if instance.message_id:
@@ -255,7 +256,7 @@ class EmailTemplateAdminForm(forms.ModelForm):
     )
 
     class Meta:
-        model = EmailTemplate
+        model = EmailMergeModel
         fields = ['name', 'description', 'subject', 'content', 'html_content', 'language', 'default_template']
 
     def __init__(self, *args, **kwargs):
@@ -268,7 +269,7 @@ class EmailTemplateAdminForm(forms.ModelForm):
 class EmailTemplateInline(admin.StackedInline):
     form = EmailTemplateAdminForm
     formset = EmailTemplateAdminFormSet
-    model = EmailTemplate
+    model = EmailMergeModel
     extra = 0
     fields = ('language', 'subject', 'content', 'html_content')
     formfield_overrides = {models.CharField: {'widget': SubjectField}}
@@ -317,8 +318,12 @@ class AttachmentAdmin(admin.ModelAdmin):
     search_fields = ['name']
     autocomplete_fields = ['emails']
 
+@admin.register(EmailAddress)
+class EmailAddressAdmin(admin.ModelAdmin):
+    pass
 
-admin.site.register(Email, EmailAdmin)
+
+admin.site.register(EmailModel, EmailAdmin)
 admin.site.register(Log, LogAdmin)
-admin.site.register(EmailTemplate, EmailTemplateAdmin)
+admin.site.register(EmailMergeModel, EmailTemplateAdmin)
 admin.site.register(Attachment, AttachmentAdmin)

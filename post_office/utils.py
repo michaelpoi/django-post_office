@@ -1,24 +1,30 @@
+from typing import List
+
+from .logutils import setup_loghandlers
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.files import File
 from django.utils.encoding import force_str
+from django.core.exceptions import ObjectDoesNotExist
 
 from post_office import cache
-from .models import Email, PRIORITY, STATUS, EmailTemplate, Attachment
+from .models import EmailModel, PRIORITY, STATUS, EmailMergeModel, Attachment, EmailAddress
 from .settings import get_default_priority
 from .signals import email_queued
 from .validators import validate_email_with_name
 
+logger = setup_loghandlers('WARN')
+
 
 def send_mail(
-    subject,
-    message,
-    from_email,
-    recipient_list,
-    html_message='',
-    scheduled_time=None,
-    headers=None,
-    priority=PRIORITY.medium,
+        subject,
+        message,
+        from_email,
+        recipient_list,
+        html_message='',
+        scheduled_time=None,
+        headers=None,
+        priority=PRIORITY.medium,
 ):
     """
     Add a new message to the mail queue. This is a replacement for Django's
@@ -28,7 +34,7 @@ def send_mail(
     subject = force_str(subject)
     status = None if priority == PRIORITY.now else STATUS.queued
     emails = [
-        Email.objects.create(
+        EmailModel.objects.create(
             from_email=from_email,
             to=address,
             subject=subject,
@@ -45,7 +51,7 @@ def send_mail(
         for email in emails:
             email.dispatch()
     else:
-        email_queued.send(sender=Email, emails=emails)
+        email_queued.send(sender=EmailModel, emails=emails)
     return emails
 
 
@@ -57,13 +63,13 @@ def get_email_template(name, language=''):
     if use_cache:
         use_cache = getattr(settings, 'POST_OFFICE_TEMPLATE_CACHE', True)
     if not use_cache:
-        return EmailTemplate.objects.get(name=name, language=language)
+        return EmailMergeModel.objects.get(name=name, language=language)
     else:
         composite_name = '%s:%s' % (name, language)
         email_template = cache.get(composite_name)
 
         if email_template is None:
-            email_template = EmailTemplate.objects.get(name=name, language=language)
+            email_template = EmailMergeModel.objects.get(name=name, language=language)
             cache.set(composite_name, email_template)
 
         return email_template
@@ -156,6 +162,23 @@ def parse_emails(emails):
     return emails
 
 
+def get_or_create_recipient(email: str) -> EmailAddress:
+    try:
+        return EmailAddress.objects.get(email=email)
+    except ObjectDoesNotExist:
+        return EmailAddress.objects.create(email=email)
+
+
+def get_recipients_objects(emails: List[str]) -> List[EmailAddress]:
+    recipient_objects = []
+    for email in emails:
+        obj = get_or_create_recipient(email)
+        if obj.is_blocked:
+            logger.warn(f"User {email} is blocked and hence will be excluded")
+        else:
+            recipient_objects.append(obj)
+    return recipient_objects
+
 def cleanup_expired_mails(cutoff_date, delete_attachments=True, batch_size=1000):
     """
     Delete all emails before the given cutoff date.
@@ -165,11 +188,11 @@ def cleanup_expired_mails(cutoff_date, delete_attachments=True, batch_size=1000)
     total_deleted_emails = 0
 
     while True:
-        email_ids = Email.objects.filter(created__lt=cutoff_date).values_list('id', flat=True)[:batch_size]
+        email_ids = EmailModel.objects.filter(created__lt=cutoff_date).values_list('id', flat=True)[:batch_size]
         if not email_ids:
             break
 
-        _, deleted_data = Email.objects.filter(id__in=email_ids).delete()
+        _, deleted_data = EmailModel.objects.filter(id__in=email_ids).delete()
         if deleted_data:
             total_deleted_emails += deleted_data['post_office.Email']
 

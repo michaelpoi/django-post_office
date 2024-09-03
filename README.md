@@ -190,10 +190,10 @@ example, if you put `Hello, {{ name }}` in the subject line and pass in
 `{'name': 'Alice'}` as context, you will get `Hello, Alice` as subject:
 
 ```python
-from post_office.models import EmailTemplate
+from post_office.models import EmailMergeModel
 from post_office import mail
 
-EmailTemplate.objects.create(
+EmailMergeModel.objects.create(
     name='morning_greeting',
     subject='Morning, {{ name|capfirst }}',
     content='Hi {{ name }}, how are you feeling today?',

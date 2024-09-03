@@ -10,7 +10,7 @@ from django.test import Client, TestCase
 from django.test.utils import override_settings
 from django.urls import reverse
 
-from post_office.models import Email, EmailTemplate, STATUS
+from post_office.models import EmailModel, EmailMergeModel, STATUS
 from post_office.template import render_to_string
 from post_office.template.backends.post_office import PostOfficeTemplates
 from post_office.mail import send, send_queued
@@ -120,7 +120,7 @@ class HTMLMailTest(TestCase):
         },
     )
     def test_send_with_html_template(self):
-        template = EmailTemplate.objects.create(
+        template = EmailMergeModel.objects.create(
             name='Test Inlined Images',
             subject='[django-SHOP unit tests] attached image',
             html_content="""
@@ -137,9 +137,9 @@ class HTMLMailTest(TestCase):
             context=context,
             render_on_delivery=True,
         )
-        queued_mail = Email.objects.get(id=queued_mail.id)
+        queued_mail = EmailModel.objects.get(id=queued_mail.id)
         send_queued()
-        self.assertEqual(Email.objects.get(id=queued_mail.id).status, STATUS.sent)
+        self.assertEqual(EmailModel.objects.get(id=queued_mail.id).status, STATUS.sent)
 
 
 class EmailAdminTest(TestCase):
@@ -161,8 +161,8 @@ class EmailAdminTest(TestCase):
         msg.send()
 
         # check that in the Email's detail view, the message is rendered
-        self.assertEqual(Email.objects.count(), 1)  # TODO: remove this
-        email = Email.objects.latest('id')
+        self.assertEqual(EmailModel.objects.count(), 1)  # TODO: remove this
+        email = EmailModel.objects.latest('id')
         parts = email.email_message().message().walk()
         part = next(parts)
         self.assertIsInstance(part, SafeMIMEMultipart)

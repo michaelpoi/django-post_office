@@ -4,7 +4,7 @@ from django.core.exceptions import ValidationError
 from django.test import TestCase
 from django.test.utils import override_settings
 
-from ..models import Email, STATUS, PRIORITY, EmailTemplate, Attachment
+from ..models import EmailModel, STATUS, PRIORITY, EmailMergeModel, Attachment
 from ..utils import create_attachments, get_email_template, parse_emails, parse_priority, send_mail, split_emails
 from ..validators import validate_email_with_name, validate_comma_separated_emails
 
@@ -16,19 +16,19 @@ class UtilsTest(TestCase):
         Check that send_mail assigns the right status field to Email instances
         """
         send_mail('subject', 'message', 'from@example.com', ['to@example.com'], priority=PRIORITY.medium)
-        email = Email.objects.latest('id')
+        email = EmailModel.objects.latest('id')
         self.assertEqual(email.status, STATUS.queued)
 
         # Emails sent with "now" priority is sent right away
         send_mail('subject', 'message', 'from@example.com', ['to@example.com'], priority=PRIORITY.now)
-        email = Email.objects.latest('id')
+        email = EmailModel.objects.latest('id')
         self.assertEqual(email.status, STATUS.sent)
 
     def test_email_validator(self):
         # These should validate
         validate_email_with_name('email@example.com')
         validate_email_with_name('Alice Bob <email@example.com>')
-        Email.objects.create(
+        EmailModel.objects.create(
             to=['to@example.com'],
             from_email='Alice <from@example.com>',
             subject='Test',
@@ -61,8 +61,8 @@ class UtilsTest(TestCase):
     def test_get_template_email(self):
         # Sanity Check
         name = 'customer/happy-holidays'
-        self.assertRaises(EmailTemplate.DoesNotExist, get_email_template, name)
-        template = EmailTemplate.objects.create(name=name, content='test')
+        self.assertRaises(EmailMergeModel.DoesNotExist, get_email_template, name)
+        template = EmailMergeModel.objects.create(name=name, content='test')
 
         # First query should hit database
         self.assertNumQueries(1, lambda: get_email_template(name))
@@ -73,7 +73,7 @@ class UtilsTest(TestCase):
         self.assertEqual(template, get_email_template(name))
 
         # Repeat with language support
-        template = EmailTemplate.objects.create(name=name, content='test', language='en')
+        template = EmailMergeModel.objects.create(name=name, content='test', language='en')
         # First query should hit database
         self.assertNumQueries(1, lambda: get_email_template(name, 'en'))
         # Second query should hit cache instead
@@ -91,8 +91,8 @@ class UtilsTest(TestCase):
             """Raise exception if real cache usage not equal to desired_cache value"""
             # to avoid cache cleaning - just create new template
             name = 'can_i/suport_cache_settings%s' % suffix
-            self.assertRaises(EmailTemplate.DoesNotExist, get_email_template, name)
-            EmailTemplate.objects.create(name=name, content='test')
+            self.assertRaises(EmailMergeModel.DoesNotExist, get_email_template, name)
+            EmailMergeModel.objects.create(name=name, content='test')
 
             # First query should hit database anyway
             self.assertNumQueries(1, lambda: get_email_template(name))
@@ -117,9 +117,9 @@ class UtilsTest(TestCase):
         Check that split emails correctly divide email lists for multiprocessing
         """
         for i in range(225):
-            Email.objects.create(from_email='from@example.com', to=['to@example.com'])
+            EmailModel.objects.create(from_email='from@example.com', to=['to@example.com'])
         expected_size = [57, 56, 56, 56]
-        email_list = split_emails(Email.objects.all(), 4)
+        email_list = split_emails(EmailModel.objects.all(), 4)
         self.assertEqual(expected_size, [len(emails) for emails in email_list])
 
     def test_create_attachments(self):

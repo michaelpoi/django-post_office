@@ -9,7 +9,7 @@ from django.core.mail.backends.base import BaseEmailBackend
 from django.test import TestCase
 from django.test.utils import override_settings
 
-from ..models import Email, STATUS, PRIORITY
+from ..models import EmailModel, STATUS, PRIORITY
 from ..settings import get_backend
 
 
@@ -30,7 +30,7 @@ class BackendTest(TestCase):
         Ensure that email backend properly queue email messages.
         """
         send_mail('Test', 'Message', 'from@example.com', ['to@example.com'])
-        email = Email.objects.latest('id')
+        email = EmailModel.objects.latest('id')
         self.assertEqual(email.subject, 'Test')
         self.assertEqual(email.status, STATUS.queued)
         self.assertEqual(email.priority, PRIORITY.medium)
@@ -72,7 +72,7 @@ class BackendTest(TestCase):
         message = EmailMultiAlternatives('subject', 'body', 'from@example.com', ['recipient@example.com'])
         message.attach_alternative('html', 'text/html')
         message.send()
-        email = Email.objects.latest('id')
+        email = EmailModel.objects.latest('id')
         self.assertEqual(email.html_message, 'html')
 
     @override_settings(EMAIL_BACKEND='post_office.EmailBackend')
@@ -84,7 +84,7 @@ class BackendTest(TestCase):
             'subject', 'body', 'from@example.com', ['recipient@example.com'], headers={'Reply-To': 'reply@example.com'}
         )
         message.send()
-        email = Email.objects.latest('id')
+        email = EmailModel.objects.latest('id')
         self.assertEqual(email.headers, {'Reply-To': 'reply@example.com'})
 
     @override_settings(EMAIL_BACKEND='post_office.EmailBackend')
@@ -103,7 +103,7 @@ class BackendTest(TestCase):
             ],
         )
         message.send()
-        email = Email.objects.latest('id')
+        email = EmailModel.objects.latest('id')
         self.assertEqual(email.headers, {'Reply-To': 'replyto@example.com'})
 
     @override_settings(EMAIL_BACKEND='post_office.EmailBackend')
@@ -123,7 +123,7 @@ class BackendTest(TestCase):
             headers={'Reply-To': 'replyto-from-header@example.com'},
         )
         message.send()
-        email = Email.objects.latest('id')
+        email = EmailModel.objects.latest('id')
         self.assertEqual(email.headers, {'Reply-To': 'replyto-from-header@example.com'})
 
     @override_settings(EMAIL_BACKEND='post_office.EmailBackend')
@@ -133,7 +133,7 @@ class BackendTest(TestCase):
         message.attach('attachment.txt', b'attachment content')
         message.send()
 
-        email = Email.objects.latest('id')
+        email = EmailModel.objects.latest('id')
         self.assertEqual(email.attachments.count(), 1)
         self.assertEqual(email.attachments.all()[0].name, 'attachment.txt')
         self.assertEqual(email.attachments.all()[0].file.read(), b'attachment content')
@@ -150,7 +150,7 @@ class BackendTest(TestCase):
         message.attach(image)
         message.send()
 
-        email = Email.objects.latest('id')
+        email = EmailModel.objects.latest('id')
         self.assertEqual(email.attachments.count(), 1)
         self.assertEqual(email.attachments.all()[0].name, 'dummy.png')
         self.assertEqual(email.attachments.all()[0].file.read(), image.get_payload().encode())
@@ -167,7 +167,7 @@ class BackendTest(TestCase):
     def test_default_priority_now(self):
         # If DEFAULT_PRIORITY is "now", mails should be sent right away
         num_sent = send_mail('Test', 'Message', 'from1@example.com', ['to@example.com'])
-        email = Email.objects.latest('id')
+        email = EmailModel.objects.latest('id')
         self.assertEqual(email.status, STATUS.sent)
         self.assertEqual(num_sent, 1)
 
@@ -182,6 +182,6 @@ class BackendTest(TestCase):
     def test_email_queued_signal(self, mock):
         # If DEFAULT_PRIORITY is not "now", the email_queued signal should be sent
         send_mail('Test', 'Message', 'from1@example.com', ['to@example.com'])
-        email = Email.objects.latest('id')
+        email = EmailModel.objects.latest('id')
         self.assertEqual(email.status, STATUS.queued)
         self.assertEqual(mock.call_count, 1)

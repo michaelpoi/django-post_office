@@ -19,15 +19,36 @@ from .logutils import setup_loghandlers
 from .settings import context_field_class, get_log_level, get_template_engine, get_override_recipients
 from .validators import validate_email_with_name, validate_template_syntax
 
-
 logger = setup_loghandlers('INFO')
-
 
 PRIORITY = namedtuple('PRIORITY', 'low medium high now')._make(range(4))
 STATUS = namedtuple('STATUS', 'sent failed queued requeued')._make(range(4))
 
 
-class Email(models.Model):
+class EmailAddress(models.Model):
+    email = models.CharField(_('Email From'),
+                             primary_key=True,
+                             max_length=254,
+                             validators=[validate_email_with_name],
+                             db_index=True)
+    first_name = models.CharField(_('First Name'), max_length=254, blank=True, null=True)
+    last_name = models.CharField(_('Last Name'), max_length=254, blank=True, null=True)
+    preferred_language = models.CharField(
+        max_length=12,
+        verbose_name=_('Language'),
+        help_text=_('Users preferred language'),
+        default='',
+        blank=True,
+    )
+    is_blocked = models.BooleanField(default=False)
+
+    def __str__(self):
+        return self.email
+    class Meta:
+        app_label = 'post_office'
+
+
+class EmailModel(models.Model):
     """
     A model to hold email information.
     """
@@ -46,9 +67,9 @@ class Email(models.Model):
     ]
 
     from_email = models.CharField(_('Email From'), max_length=254, validators=[validate_email_with_name])
-    to = CommaSeparatedEmailField(_('Email To'))
-    cc = CommaSeparatedEmailField(_('Cc'))
-    bcc = CommaSeparatedEmailField(_('Bcc'))
+    to = models.ManyToManyField(EmailAddress,  related_name='to_emails')
+    cc = models.ManyToManyField(EmailAddress, related_name='cc_emails')
+    bcc = models.ManyToManyField(EmailAddress, related_name='bcc_emails')
     subject = models.CharField(_('Subject'), max_length=989, blank=True)
     message = models.TextField(_('Message'), blank=True)
     html_message = models.TextField(_('HTML Message'), blank=True)
@@ -71,7 +92,7 @@ class Email(models.Model):
     number_of_retries = models.PositiveIntegerField(null=True, blank=True)
     headers = models.JSONField(_('Headers'), blank=True, null=True)
     template = models.ForeignKey(
-        'post_office.EmailTemplate', blank=True, null=True, verbose_name=_('Email template'), on_delete=models.CASCADE
+        'post_office.EmailMergeModel', blank=True, null=True, verbose_name=_('Email template'), on_delete=models.CASCADE
     )
     context = context_field_class(_('Context'), blank=True, null=True)
     backend_alias = models.CharField(_('Backend alias'), blank=True, default='', max_length=64)
@@ -134,9 +155,9 @@ class Email(models.Model):
                     subject=subject,
                     body=plaintext_message,
                     from_email=self.from_email,
-                    to=self.to,
-                    bcc=self.bcc,
-                    cc=self.cc,
+                    to=[str(to) for to in self.to.all()],
+                    bcc=[str(bcc) for bcc in self.bcc.all()],
+                    cc=[str(cc) for cc in self.cc.all()],
                     headers=headers,
                     connection=connection,
                 )
@@ -146,9 +167,9 @@ class Email(models.Model):
                     subject=subject,
                     body=html_message,
                     from_email=self.from_email,
-                    to=self.to,
-                    bcc=self.bcc,
-                    cc=self.cc,
+                    to=[str(to) for to in self.to.all()],
+                    bcc=[str(bcc) for bcc in self.bcc.all()],
+                    cc=[str(cc) for cc in self.cc.all()],
                     headers=headers,
                     connection=connection,
                 )
@@ -161,9 +182,9 @@ class Email(models.Model):
                 subject=subject,
                 body=plaintext_message,
                 from_email=self.from_email,
-                to=self.to,
-                bcc=self.bcc,
-                cc=self.cc,
+                to=[str(to) for to in self.to.all()],
+                bcc=[str(bcc) for bcc in self.bcc.all()],
+                cc=[str(cc) for cc in self.cc.all()],
                 headers=headers,
                 connection=connection,
             )
@@ -243,7 +264,7 @@ class Log(models.Model):
     STATUS_CHOICES = [(STATUS.sent, _('sent')), (STATUS.failed, _('failed'))]
 
     email = models.ForeignKey(
-        Email, editable=False, related_name='logs', verbose_name=_('Email address'), on_delete=models.CASCADE
+        EmailModel, editable=False, related_name='logs', verbose_name=_('Email address'), on_delete=models.CASCADE
     )
     date = models.DateTimeField(auto_now_add=True)
     status = models.PositiveSmallIntegerField(_('Status'), choices=STATUS_CHOICES)
@@ -264,7 +285,7 @@ class EmailTemplateManager(models.Manager):
         return self.get(name=name, language=language, default_template=default_template)
 
 
-class EmailTemplate(models.Model):
+class EmailMergeModel(models.Model):
     """
     Model to hold template information from db
     """
@@ -293,7 +314,7 @@ class EmailTemplate(models.Model):
         verbose_name=_('Default template'),
         on_delete=models.CASCADE,
     )
-
+    recipients = models.ManyToManyField(EmailAddress, null=True, blank=True)
     objects = EmailTemplateManager()
 
     class Meta:
@@ -336,7 +357,7 @@ class Attachment(models.Model):
 
     file = models.FileField(_('File'), upload_to=get_upload_path)
     name = models.CharField(_('Name'), max_length=255, help_text=_('The original filename'))
-    emails = models.ManyToManyField(Email, related_name='attachments', verbose_name=_('Emails'))
+    emails = models.ManyToManyField(EmailModel, related_name='attachments', verbose_name=_('Emails'))
     mimetype = models.CharField(max_length=255, default='', blank=True)
     headers = models.JSONField(_('Headers'), blank=True, null=True)
 

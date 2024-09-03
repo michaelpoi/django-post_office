@@ -12,7 +12,7 @@ from django.forms.models import modelform_factory
 from django.test import TestCase
 from django.utils import timezone
 
-from ..models import Email, Log, PRIORITY, STATUS, EmailTemplate, Attachment
+from ..models import EmailModel, Log, PRIORITY, STATUS, EmailMergeModel, Attachment
 from ..mail import send
 
 
@@ -24,7 +24,7 @@ class ModelTest(TestCase):
         """
 
         # If ``html_message`` is set, ``EmailMultiAlternatives`` is expected
-        email = Email.objects.create(
+        email = EmailModel.objects.create(
             to=['to@example.com'],
             from_email='from@example.com',
             subject='Subject',
@@ -40,7 +40,7 @@ class ModelTest(TestCase):
         self.assertEqual(message.alternatives, [('<p>HTML</p>', 'text/html')])
 
         # Without ``html_message``, ``EmailMessage`` class is expected
-        email = Email.objects.create(
+        email = EmailModel.objects.create(
             to=['to@example.com'], from_email='from@example.com', subject='Subject', message='Message'
         )
         message = email.email_message()
@@ -54,11 +54,11 @@ class ModelTest(TestCase):
         """
         Ensure Email instance with template is properly rendered.
         """
-        template = EmailTemplate.objects.create(
+        template = EmailMergeModel.objects.create(
             subject='Subject {{ name }}', content='Content {{ name }}', html_content='HTML {{ name }}'
         )
         context = {'name': 'test'}
-        email = Email.objects.create(to=['to@example.com'], template=template, from_email='from@e.com', context=context)
+        email = EmailModel.objects.create(to=['to@example.com'], template=template, from_email='from@e.com', context=context)
         message = email.email_message()
         self.assertEqual(message.subject, 'Subject test')
         self.assertEqual(message.body, 'Content test')
@@ -69,7 +69,7 @@ class ModelTest(TestCase):
         Ensure Email instance without template but with context is properly prepared.
         """
         context = {'name': 'test'}
-        email = Email.objects.create(
+        email = EmailModel.objects.create(
             to=['to@example.com'],
             template=None,
             subject='Subject test',
@@ -87,7 +87,7 @@ class ModelTest(TestCase):
         """
         Ensure that email.dispatch() actually sends out the email
         """
-        email = Email.objects.create(
+        email = EmailModel.objects.create(
             to=['to@example.com'],
             from_email='from@example.com',
             subject='Test dispatch',
@@ -100,7 +100,7 @@ class ModelTest(TestCase):
     def test_dispatch_with_override_recipients(self):
         previous_settings = settings.POST_OFFICE
         setattr(settings, 'POST_OFFICE', {'OVERRIDE_RECIPIENTS': ['override@gmail.com']})
-        email = Email.objects.create(
+        email = EmailModel.objects.create(
             to=['to@example.com'],
             from_email='from@example.com',
             subject='Test dispatch',
@@ -115,7 +115,7 @@ class ModelTest(TestCase):
         """
         Ensure that status and log are set properly on successful sending
         """
-        email = Email.objects.create(
+        email = EmailModel.objects.create(
             to=['to@example.com'],
             from_email='from@example.com',
             subject='Test',
@@ -133,7 +133,7 @@ class ModelTest(TestCase):
         """
         Ensure that status and log are set properly on sending failure
         """
-        email = Email.objects.create(
+        email = EmailModel.objects.create(
             to=['to@example.com'],
             from_email='from@example.com',
             subject='Test',
@@ -153,7 +153,7 @@ class ModelTest(TestCase):
         """
         Ensure that status and log are set properly on sending failure
         """
-        email = Email.objects.create(
+        email = EmailModel.objects.create(
             to=['to@example.com'],
             subject='Test',
             from_email='from@example.com',
@@ -193,9 +193,9 @@ class ModelTest(TestCase):
         """
         Ensure mail.send correctly creates templated emails to recipients
         """
-        Email.objects.all().delete()
+        EmailModel.objects.all().delete()
         headers = {'Reply-to': 'reply@email.com'}
-        email_template = EmailTemplate.objects.create(name='foo', subject='bar', content='baz')
+        email_template = EmailMergeModel.objects.create(name='foo', subject='bar', content='baz')
         scheduled_time = datetime.now() + timedelta(days=1)
         email = send(
             recipients=['to1@example.com', 'to2@example.com'],
@@ -209,7 +209,7 @@ class ModelTest(TestCase):
         self.assertEqual(email.scheduled_time, scheduled_time)
 
         # Test without header
-        Email.objects.all().delete()
+        EmailModel.objects.all().delete()
         email = send(recipients=['to1@example.com', 'to2@example.com'], sender='from@a.com', template=email_template)
         self.assertEqual(email.to, ['to1@example.com', 'to2@example.com'])
         self.assertEqual(email.headers, None)
@@ -269,7 +269,7 @@ class ModelTest(TestCase):
             html_content='{% block content %}<h1>Welcome to the site</h1>',
         )
 
-        EmailTemplateForm = modelform_factory(EmailTemplate, exclude=['template'])
+        EmailTemplateForm = modelform_factory(EmailMergeModel, exclude=['template'])
         form = EmailTemplateForm(data)
 
         self.assertFalse(form.is_valid())
@@ -322,7 +322,7 @@ class ModelTest(TestCase):
         self.assertTrue(expected_path in attachment.file.name)
 
     def test_attachments_email_message(self):
-        email = Email.objects.create(to=['to@example.com'], from_email='from@example.com', subject='Subject')
+        email = EmailModel.objects.create(to=['to@example.com'], from_email='from@example.com', subject='Subject')
 
         attachment = Attachment()
         attachment.file.save('test.txt', content=ContentFile('test file content'), save=True)
@@ -332,7 +332,7 @@ class ModelTest(TestCase):
         self.assertEqual(message.attachments, [('test.txt', 'test file content', 'text/plain')])
 
     def test_attachments_email_message_with_mimetype(self):
-        email = Email.objects.create(to=['to@example.com'], from_email='from@example.com', subject='Subject')
+        email = EmailModel.objects.create(to=['to@example.com'], from_email='from@example.com', subject='Subject')
 
         attachment = Attachment()
         attachment.file.save('test.txt', content=ContentFile('test file content'), save=True)
@@ -344,20 +344,20 @@ class ModelTest(TestCase):
         self.assertEqual(message.attachments, [('test.txt', 'test file content', 'text/plain')])
 
     def test_translated_template_uses_default_templates_name(self):
-        template = EmailTemplate.objects.create(name='name')
+        template = EmailMergeModel.objects.create(name='name')
         id_template = template.translated_templates.create(language='id')
         self.assertEqual(id_template.name, template.name)
 
     def test_models_repr(self):
-        self.assertEqual(repr(EmailTemplate(name='test', language='en')), '<EmailTemplate: test en>')
-        self.assertEqual(repr(Email(to=['test@example.com'])), "<Email: ['test@example.com']>")
+        self.assertEqual(repr(EmailMergeModel(name='test', language='en')), '<EmailTemplate: test en>')
+        self.assertEqual(repr(EmailModel(to=['test@example.com'])), "<Email: ['test@example.com']>")
 
     def test_natural_key(self):
-        template = EmailTemplate.objects.create(name='name')
-        self.assertEqual(template, EmailTemplate.objects.get_by_natural_key(*template.natural_key()))
+        template = EmailMergeModel.objects.create(name='name')
+        self.assertEqual(template, EmailMergeModel.objects.get_by_natural_key(*template.natural_key()))
 
         data = serializers.serialize('json', [template], use_natural_primary_keys=True)
         self.assertNotIn('pk', json.loads(data)[0])
         deserialized_objects = serializers.deserialize('json', data, use_natural_primary_keys=True)
         list(deserialized_objects)[0].save()
-        self.assertEqual(EmailTemplate.objects.count(), 1)
+        self.assertEqual(EmailMergeModel.objects.count(), 1)

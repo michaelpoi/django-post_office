@@ -1,7 +1,7 @@
 from celery_project.tasks import sample
 from django.http import HttpResponse
 from post_office import mail
-from post_office.models import EmailTemplate
+from post_office.models import EmailMergeModel, EmailAddress
 from django.template.loader import get_template
 from django.core.mail import EmailMultiAlternatives
 
@@ -21,11 +21,14 @@ def index(request):
 
 
 def send_template(request):
-    template = EmailTemplate.objects.create(
+    template = EmailMergeModel.objects.create(
         name='morning_greeting',
         subject='Morning, {{ name|capfirst }}',
         content='Hi {{ name }}, how are you feeling today?',
         html_content='Hi <strong>{{ name }}</strong>, how are you feeling today?')
+
+    template.save()
+    template.recipients.set(EmailAddress.objects.all())
 
     try:
         mail.send(
@@ -61,16 +64,15 @@ import tempfile
 
 
 def send_attachment(request):
-    try:
-        with tempfile.NamedTemporaryFile(delete=True) as f:
-            f.write(b'Hello There')
-            f.seek(0)
-            mail.send(
-                'poenko.mishany@gmail.com',
-                'Mykhailo.Poienko@uibk.ac.at',
-                html_message='<b>HI there</b>',
-                attachments={'test.txt', }
-            )
-    except Exception as e:
-        return HttpResponse(e)
+    with tempfile.NamedTemporaryFile(delete=True) as f:
+        f.write(b'Hello There')
+        f.seek(0)
+        mail.send(
+            'poenko.mishany@gmail.com',
+            'Mykhailo.Poienko@uibk.ac.at',
+            html_message='<b>HI there</b>',
+            attachments={'test.txt':f}
+        )
+
+
     return HttpResponse('Success')

@@ -7,13 +7,13 @@ from django.test import TestCase
 from django.test.utils import override_settings
 from django.utils.timezone import now
 
-from ..models import Attachment, Email, STATUS
+from ..models import Attachment, EmailModel, STATUS
 
 
 class CommandTest(TestCase):
     def test_cleanup_mail_with_orphaned_attachments(self):
-        self.assertEqual(Email.objects.count(), 0)
-        email = Email.objects.create(to=['to@example.com'], from_email='from@example.com', subject='Subject')
+        self.assertEqual(EmailModel.objects.count(), 0)
+        email = EmailModel.objects.create(to=['to@example.com'], from_email='from@example.com', subject='Subject')
 
         email.created = now() - datetime.timedelta(31)
         email.save()
@@ -25,20 +25,20 @@ class CommandTest(TestCase):
 
         # We have orphaned attachment now
         call_command('cleanup_mail', days=30)
-        self.assertEqual(Email.objects.count(), 0)
+        self.assertEqual(EmailModel.objects.count(), 0)
         self.assertEqual(Attachment.objects.count(), 1)
 
         # Actually cleanup orphaned attachments
         call_command('cleanup_mail', '-da', days=30)
-        self.assertEqual(Email.objects.count(), 0)
+        self.assertEqual(EmailModel.objects.count(), 0)
         self.assertEqual(Attachment.objects.count(), 0)
 
         # Check that the actual file has been deleted as well
         self.assertFalse(os.path.exists(attachment_path))
 
         # Check if the email attachment's actual file have been deleted
-        Email.objects.all().delete()
-        email = Email.objects.create(to=['to@example.com'], from_email='from@example.com', subject='Subject')
+        EmailModel.objects.all().delete()
+        email = EmailModel.objects.create(to=['to@example.com'], from_email='from@example.com', subject='Subject')
         email.created = now() - datetime.timedelta(31)
         email.save()
 
@@ -52,7 +52,7 @@ class CommandTest(TestCase):
 
         # No exceptions should break the cleanup
         call_command('cleanup_mail', '-da', days=30)
-        self.assertEqual(Email.objects.count(), 0)
+        self.assertEqual(EmailModel.objects.count(), 0)
         self.assertEqual(Attachment.objects.count(), 0)
 
     def test_cleanup_mail(self):
@@ -60,18 +60,18 @@ class CommandTest(TestCase):
         The ``cleanup_mail`` command deletes mails older than a specified
         amount of days
         """
-        self.assertEqual(Email.objects.count(), 0)
+        self.assertEqual(EmailModel.objects.count(), 0)
 
         # The command shouldn't delete today's email
-        email = Email.objects.create(from_email='from@example.com', to=['to@example.com'])
+        email = EmailModel.objects.create(from_email='from@example.com', to=['to@example.com'])
         call_command('cleanup_mail', days=30)
-        self.assertEqual(Email.objects.count(), 1)
+        self.assertEqual(EmailModel.objects.count(), 1)
 
         # Email older than 30 days should be deleted
         email.created = now() - datetime.timedelta(31)
         email.save()
         call_command('cleanup_mail', days=30)
-        self.assertEqual(Email.objects.count(), 0)
+        self.assertEqual(EmailModel.objects.count(), 0)
 
     TEST_SETTINGS = {
         'BACKENDS': {
@@ -89,25 +89,25 @@ class CommandTest(TestCase):
         # Make sure that send_queued_mail with empty queue does not raise error
         call_command('send_queued_mail', processes=1)
 
-        Email.objects.create(from_email='from@example.com', to=['to@example.com'], status=STATUS.queued)
-        Email.objects.create(from_email='from@example.com', to=['to@example.com'], status=STATUS.queued)
+        EmailModel.objects.create(from_email='from@example.com', to=['to@example.com'], status=STATUS.queued)
+        EmailModel.objects.create(from_email='from@example.com', to=['to@example.com'], status=STATUS.queued)
         call_command('send_queued_mail', processes=1)
-        self.assertEqual(Email.objects.filter(status=STATUS.sent).count(), 2)
-        self.assertEqual(Email.objects.filter(status=STATUS.queued).count(), 0)
+        self.assertEqual(EmailModel.objects.filter(status=STATUS.sent).count(), 2)
+        self.assertEqual(EmailModel.objects.filter(status=STATUS.queued).count(), 0)
 
     def test_successful_deliveries_logging(self):
         """
         Successful deliveries are only logged when log_level is 2.
         """
-        email = Email.objects.create(from_email='from@example.com', to=['to@example.com'], status=STATUS.queued)
+        email = EmailModel.objects.create(from_email='from@example.com', to=['to@example.com'], status=STATUS.queued)
         call_command('send_queued_mail', log_level=0)
         self.assertEqual(email.logs.count(), 0)
 
-        email = Email.objects.create(from_email='from@example.com', to=['to@example.com'], status=STATUS.queued)
+        email = EmailModel.objects.create(from_email='from@example.com', to=['to@example.com'], status=STATUS.queued)
         call_command('send_queued_mail', log_level=1)
         self.assertEqual(email.logs.count(), 0)
 
-        email = Email.objects.create(from_email='from@example.com', to=['to@example.com'], status=STATUS.queued)
+        email = EmailModel.objects.create(from_email='from@example.com', to=['to@example.com'], status=STATUS.queued)
         call_command('send_queued_mail', log_level=2)
         self.assertEqual(email.logs.count(), 1)
 
@@ -115,19 +115,19 @@ class CommandTest(TestCase):
         """
         Failed deliveries are logged when log_level is 1 and 2.
         """
-        email = Email.objects.create(
+        email = EmailModel.objects.create(
             from_email='from@example.com', to=['to@example.com'], status=STATUS.queued, backend_alias='error'
         )
         call_command('send_queued_mail', log_level=0)
         self.assertEqual(email.logs.count(), 0)
 
-        email = Email.objects.create(
+        email = EmailModel.objects.create(
             from_email='from@example.com', to=['to@example.com'], status=STATUS.queued, backend_alias='error'
         )
         call_command('send_queued_mail', log_level=1)
         self.assertEqual(email.logs.count(), 1)
 
-        email = Email.objects.create(
+        email = EmailModel.objects.create(
             from_email='from@example.com', to=['to@example.com'], status=STATUS.queued, backend_alias='error'
         )
         call_command('send_queued_mail', log_level=2)

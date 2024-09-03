@@ -11,7 +11,7 @@ from django.core.mail.backends.base import BaseEmailBackend
 from django.test import TestCase
 from django.test.utils import override_settings
 
-from post_office.models import Email, STATUS, PRIORITY
+from post_office.models import EmailModel, STATUS, PRIORITY
 
 
 @pytest.mark.django_db
@@ -20,7 +20,7 @@ def test_django_email_backend():
     Ensure that Django's email backend does not queue email messages.
     """
     send_mail('Test', 'Message', 'from@example.com', ['to@example.com'])
-    assert Email.objects.count() == 0
+    assert EmailModel.objects.count() == 0
 
 
 @pytest.mark.django_db
@@ -30,7 +30,7 @@ def test_postoffice_email_backend(settings):
     """
     settings.EMAIL_BACKEND = 'post_office.EmailBackend'
     send_mail('Test', 'Message', 'from@example.com', ['to@example.com'])
-    email = Email.objects.latest('id')
+    email = EmailModel.objects.latest('id')
     assert email.subject == 'Test'
     assert email.status == STATUS.queued
     assert email.priority == PRIORITY.medium
@@ -59,7 +59,7 @@ def test_send_html_email(settings):
                                      ['recipient@example.com'])
     message.attach_alternative('html', "text/html")
     message.send()
-    email = Email.objects.latest('id')
+    email = EmailModel.objects.latest('id')
     assert email.html_message == 'html'
 
 
@@ -73,7 +73,7 @@ def test_headers_sent(settings):
                            ['recipient@example.com'],
                            headers={'Mailing-list': 'django-developers@googlegroups.com'})
     message.send()
-    email = Email.objects.latest('id')
+    email = EmailModel.objects.latest('id')
     assert email.headers == {'Mailing-list': 'django-developers@googlegroups.com'}
 
 
@@ -88,7 +88,7 @@ def test_reply_to_added_as_header(settings):
                            ['recipient@example.com'],
                            reply_to=['replyto@example.com', ],)
     message.send()
-    email = Email.objects.latest('id')
+    email = EmailModel.objects.latest('id')
     email.headers == {'Reply-To': 'replyto@example.com'}
 
 
@@ -106,7 +106,7 @@ def test_reply_to_favors_explict_header(settings):
                            reply_to=['replyto-from-property@example.com'],
                            headers={'Reply-To': 'replyto-from-header@example.com'})
     message.send()
-    email = Email.objects.latest('id')
+    email = EmailModel.objects.latest('id')
     assert email.headers == {'Reply-To': 'replyto-from-header@example.com'}
 
 
@@ -118,7 +118,7 @@ def test_backend_attachments(settings):
     message.attach('attachment.txt', b'attachment content')
     message.send()
 
-    email = Email.objects.latest('id')
+    email = EmailModel.objects.latest('id')
     assert email.attachments.count() == 1
     assert email.attachments.all()[0].name == 'attachment.txt'
     assert email.attachments.all()[0].file.read() == b'attachment content'
@@ -139,7 +139,7 @@ def test_backend_image_attachments(settings):
     message.attach(image)
     message.send()
 
-    email = Email.objects.latest('id')
+    email = EmailModel.objects.latest('id')
     assert email.attachments.count() == 1
     assert email.attachments.all()[0].name == 'dummy.png'
     assert email.attachments.all()[0].file.read() == image.get_payload().encode()
@@ -157,7 +157,7 @@ def test_default_priority_now(settings):
 
     # If DEFAULT_PRIORITY is "now", mails should be sent right away
     num_sent = send_mail('Test', 'Message', 'from1@example.com', ['to@example.com'])
-    email = Email.objects.latest('id')
+    email = EmailModel.objects.latest('id')
     assert email.status == STATUS.sent
     assert num_sent == 1
 
@@ -172,6 +172,6 @@ def test_email_queued_signal(settings, mocker):
     magic_mock = mocker.patch('post_office.signals.email_queued.send')
     # If DEFAULT_PRIORITY is not "now", the email_queued signal should be sent
     send_mail('Test', 'Message', 'from1@example.com', ['to@example.com'])
-    email = Email.objects.latest('id')
+    email = EmailModel.objects.latest('id')
     assert email.status == STATUS.queued
     magic_mock.assert_called_once()

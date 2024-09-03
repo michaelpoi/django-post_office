@@ -41,3 +41,5 @@ ghostdriver.log
 .mypy_cache
 *.sqlite3
 celerybeat-schedule
+staticfiles/
+static/

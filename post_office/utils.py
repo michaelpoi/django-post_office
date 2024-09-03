@@ -1,4 +1,6 @@
+import os
 from typing import List
+from django.template import loader
 
 from .logutils import setup_loghandlers
 from django.conf import settings
@@ -6,9 +8,10 @@ from django.core.exceptions import ValidationError
 from django.core.files import File
 from django.utils.encoding import force_str
 from django.core.exceptions import ObjectDoesNotExist
+from django.template import Template, Context
 
 from post_office import cache
-from .models import EmailModel, PRIORITY, STATUS, EmailMergeModel, Attachment, EmailAddress
+from .models import EmailModel, PRIORITY, STATUS, EmailMergeModel, Attachment, EmailAddress, EmailContent
 from .settings import get_default_priority
 from .signals import email_queued
 from .validators import validate_email_with_name
@@ -53,6 +56,31 @@ def send_mail(
     else:
         email_queued.send(sender=EmailModel, emails=emails)
     return emails
+
+
+def get_html_content(template_instance: EmailMergeModel):
+    template = loader.get_template(template_instance.base_file).template
+    html_content = template.source
+    return html_content
+
+
+def render_email_template(template_instance: EmailMergeModel):
+    """
+    Function to render an email from the template html code and placeholders in database
+    """
+    html_content = get_html_content(template_instance)
+    django_template_first_pass = Template(html_content)
+    first_pass_content = django_template_first_pass.render(Context())
+
+    placeholders = EmailContent.objects.filter(template=template_instance)
+    print(placeholders)
+    context_data = {placeholder.placeholder_name: placeholder.content for placeholder in placeholders}
+
+    django_template_second_pass = Template(first_pass_content)
+    context = Context(context_data)
+    final_content = django_template_second_pass.render(context)
+
+    return final_content
 
 
 def get_email_template(name, language=''):
@@ -178,6 +206,7 @@ def get_recipients_objects(emails: List[str]) -> List[EmailAddress]:
         else:
             recipient_objects.append(obj)
     return recipient_objects
+
 
 def cleanup_expired_mails(cutoff_date, delete_attachments=True, batch_size=1000):
     """

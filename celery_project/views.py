@@ -1,11 +1,12 @@
+from django.template import loader
+
 from celery_project.tasks import sample
 from django.http import HttpResponse
 from post_office import mail
 from post_office.models import EmailMergeModel, EmailAddress
 from django.template.loader import get_template
 from django.core.mail import EmailMultiAlternatives
-
-
+from post_office.utils import render_email_template
 
 
 def index(request):
@@ -21,24 +22,17 @@ def index(request):
 
 
 def send_template(request):
-    template = EmailMergeModel.objects.create(
-        name='morning_greeting',
-        subject='Morning, {{ name|capfirst }}',
-        content='Hi {{ name }}, how are you feeling today?',
-        html_content='Hi <strong>{{ name }}</strong>, how are you feeling today?')
 
-    template.save()
-    template.recipients.set(EmailAddress.objects.all())
 
-    try:
-        mail.send(
-            'poenko.mishany@gmail.com',
-            'Mykhailo.Poienko@uibk.ac.at',
-            template=template,
-            context={'name': 'Misha'}
-        )
-    except Exception as e:
-        return HttpResponse(e)
+    # template.save()
+    # template.recipients.set(EmailAddress.objects.all())
+
+    mail.send(
+        'poenko.mishany@gmail.com',
+        'Mykhailo.Poienko@uibk.ac.at',
+        template=EmailMergeModel.objects.get(name='test_1'),
+        context={'name': 'Idiot'}
+    )
     return HttpResponse('Success')
 
 
@@ -71,8 +65,14 @@ def send_attachment(request):
             'poenko.mishany@gmail.com',
             'Mykhailo.Poienko@uibk.ac.at',
             html_message='<b>HI there</b>',
-            attachments={'test.txt':f}
+            attachments={'test.txt': f}
         )
 
-
     return HttpResponse('Success')
+
+
+def test_new_system(request):
+    temp = loader.get_template('email/placeholders.html')
+    template = EmailMergeModel.objects.get(name='test_1')
+    html_content = render_email_template(template)
+    return HttpResponse(html_content)

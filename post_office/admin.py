@@ -16,8 +16,9 @@ from django.utils.text import Truncator
 from django.utils.translation import gettext_lazy as _
 
 from .fields import CommaSeparatedEmailField
-from .models import STATUS, Attachment, EmailModel, EmailMergeModel, Log, EmailAddress
+from .models import STATUS, Attachment, EmailModel, EmailMergeModel, Log, EmailAddress, EmailContent
 from .sanitizer import clean_html
+from .settings import get_email_templates
 
 
 def get_message_preview(instance):
@@ -49,7 +50,7 @@ class AttachmentInline(admin.StackedInline):
             a.id
             for a in queryset
             if isinstance(a.attachment.headers, dict)
-            and a.attachment.headers.get('Content-Disposition', '').startswith('inline')
+               and a.attachment.headers.get('Content-Disposition', '').startswith('inline')
         ]
         return queryset.exclude(id__in=inlined_attachments)
 
@@ -88,6 +89,49 @@ def requeue(modeladmin, request, queryset):
 requeue.short_description = 'Requeue selected emails'
 
 
+class EmailContentInlineForm(forms.ModelForm):
+    class Meta:
+        model = EmailContent
+        fields = ['placeholder_name', 'content']
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Make the `placeholder_name` field readonly
+        self.fields['placeholder_name'].disabled = True
+
+
+from .utils import get_html_content
+
+
+class EmailContentInlineFormset(forms.BaseInlineFormSet):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.instance and self.instance.pk:
+            placeholders = get_html_content(self.instance).split("{% placeholder '")[1:]
+            placeholder_names = [ph.split("' %}")[0] for ph in placeholders]
+            print(placeholders)
+            existing_placeholders = set(self.instance.contents.values_list('placeholder_name', flat=True))
+
+            for placeholder_name in placeholder_names:
+                if placeholder_name not in existing_placeholders:
+                    self.forms.append(self._construct_form(len(self.forms), initial={
+                        'placeholder_name': placeholder_name
+                    }))
+
+
+class EmailContentInline(admin.TabularInline):
+    model = EmailContent
+    formset = EmailContentInlineFormset
+    form = EmailContentInlineForm
+    extra = 0
+
+    # def has_add_permission(self, request, obj=None):
+    #     return False
+    #
+    # def has_delete_permission(self, request, obj=None):
+    #     return False
+
+
 class EmailAdmin(admin.ModelAdmin):
     list_display = [
         'truncated_message_id',
@@ -98,7 +142,7 @@ class EmailAdmin(admin.ModelAdmin):
         'scheduled_time',
         'use_template',
     ]
-    filter_horizontal = ('to','cc', 'bcc')
+    filter_horizontal = ('to', 'cc', 'bcc')
     search_fields = ['to', 'subject']
     readonly_fields = ['message_id', 'render_subject', 'render_plaintext_body', 'render_html_body']
     inlines = [AttachmentInline, LogInline]
@@ -254,10 +298,16 @@ class EmailTemplateAdminForm(forms.ModelForm):
         label=_('Language'),
         help_text=_('Render template in alternative language'),
     )
+    base_file = forms.ChoiceField(
+        choices=get_email_templates(),  # Set choices to the result of get_email_templates
+        required=False,
+        label=_('Base File'),
+        help_text=_('Select the base email template file'),
+    )
 
     class Meta:
         model = EmailMergeModel
-        fields = ['name', 'description', 'subject', 'content', 'html_content', 'language', 'default_template']
+        fields = ['name', 'description', 'subject', 'content', 'language', 'default_template', 'base_file']
 
     def __init__(self, *args, **kwargs):
         instance = kwargs.get('instance')
@@ -271,7 +321,7 @@ class EmailTemplateInline(admin.StackedInline):
     formset = EmailTemplateAdminFormSet
     model = EmailMergeModel
     extra = 0
-    fields = ('language', 'subject', 'content', 'html_content')
+    fields = ('language', 'subject', 'content')
     formfield_overrides = {models.CharField: {'widget': SubjectField}}
 
     def get_max_num(self, request, obj=None, **kwargs):
@@ -283,10 +333,10 @@ class EmailTemplateAdmin(admin.ModelAdmin):
     list_display = ('name', 'description_shortened', 'subject', 'languages_compact', 'created')
     search_fields = ('name', 'description', 'subject')
     fieldsets = [
-        (None, {'fields': ('name', 'description')}),
-        (_('Default Content'), {'fields': ('subject', 'content', 'html_content')}),
+        (None, {'fields': ('name', 'description', 'base_file')}),
+        (_('Default Content'), {'fields': ('subject', 'content')}),
     ]
-    inlines = (EmailTemplateInline,) if settings.USE_I18N else ()
+    inlines = (EmailTemplateInline, EmailContentInline) if settings.USE_I18N else (EmailContentInline,)
     formfield_overrides = {models.CharField: {'widget': SubjectField}}
 
     def get_queryset(self, request):
@@ -318,8 +368,14 @@ class AttachmentAdmin(admin.ModelAdmin):
     search_fields = ['name']
     autocomplete_fields = ['emails']
 
+
 @admin.register(EmailAddress)
 class EmailAddressAdmin(admin.ModelAdmin):
+    pass
+
+
+@admin.register(EmailContent)
+class EmailContentAdmin(admin.ModelAdmin):
     pass
 
 

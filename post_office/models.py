@@ -11,6 +11,9 @@ from django.utils.encoding import smart_str
 from django.utils.translation import pgettext_lazy, gettext_lazy as _
 from django.utils import timezone
 
+from ckeditor.fields import RichTextField
+
+
 from post_office import cache
 from post_office.fields import CommaSeparatedEmailField
 
@@ -44,6 +47,7 @@ class EmailAddress(models.Model):
 
     def __str__(self):
         return self.email
+
     class Meta:
         app_label = 'post_office'
 
@@ -67,7 +71,7 @@ class EmailModel(models.Model):
     ]
 
     from_email = models.CharField(_('Email From'), max_length=254, validators=[validate_email_with_name])
-    to = models.ManyToManyField(EmailAddress,  related_name='to_emails')
+    to = models.ManyToManyField(EmailAddress, related_name='to_emails')
     cc = models.ManyToManyField(EmailAddress, related_name='cc_emails')
     bcc = models.ManyToManyField(EmailAddress, related_name='bcc_emails')
     subject = models.CharField(_('Subject'), max_length=989, blank=True)
@@ -290,6 +294,7 @@ class EmailMergeModel(models.Model):
     Model to hold template information from db
     """
 
+    base_file = models.CharField(max_length=255, verbose_name=_('File name'))
     name = models.CharField(_('Name'), max_length=255, help_text=_("e.g: 'welcome_email'"))
     description = models.TextField(_('Description'), blank=True, help_text=_('Description of this template.'))
     created = models.DateTimeField(auto_now_add=True)
@@ -298,7 +303,7 @@ class EmailMergeModel(models.Model):
         max_length=255, blank=True, verbose_name=_('Subject'), validators=[validate_template_syntax]
     )
     content = models.TextField(blank=True, verbose_name=_('Content'), validators=[validate_template_syntax])
-    html_content = models.TextField(blank=True, verbose_name=_('HTML content'), validators=[validate_template_syntax])
+    #html_content = models.TextField(blank=True, verbose_name=_('HTML content'), validators=[validate_template_syntax])
     language = models.CharField(
         max_length=12,
         verbose_name=_('Language'),
@@ -314,7 +319,12 @@ class EmailMergeModel(models.Model):
         verbose_name=_('Default template'),
         on_delete=models.CASCADE,
     )
-    recipients = models.ManyToManyField(EmailAddress, null=True, blank=True)
+    extra_recipients = models.ManyToManyField(
+        EmailAddress,
+        null=True,
+        blank=True,
+        help_text='extra bcc recipients',
+    )
     objects = EmailTemplateManager()
 
     class Meta:
@@ -388,3 +398,16 @@ class DBMutex(models.Model):
 
     def __str__(self):
         return f"<DBMutex(pk={self.pk}, lock_id={self.lock_id}>"
+
+
+class EmailContent(models.Model):
+    template = models.ForeignKey(EmailMergeModel, on_delete=models.CASCADE, related_name='contents')
+    placeholder_name = models.CharField(_('Placeholder name'), max_length=63)
+    content = RichTextField(_('Content'))
+
+    class Meta:
+        app_label = 'post_office'
+
+    def save(self, *args, **kwargs):
+        print('beeing saved....')
+        super().save(*args, **kwargs)

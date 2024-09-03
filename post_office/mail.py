@@ -30,7 +30,7 @@ from .utils import (
     get_email_template,
     parse_emails,
     parse_priority,
-    split_emails, get_or_create_recipient, get_recipients_objects
+    split_emails, get_or_create_recipient, get_recipients_objects, render_email_template
 )
 
 logger = setup_loghandlers('INFO')
@@ -103,7 +103,7 @@ def create(
         if template:
             subject = template.subject
             message = template.content
-            html_message = template.html_content
+            html_message = render_email_template(template)
 
         _context = Context(context or {})
         subject = Template(subject).render(_context)

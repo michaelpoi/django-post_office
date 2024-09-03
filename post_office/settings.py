@@ -1,4 +1,6 @@
+import os
 import warnings
+from django.template import loader
 
 from django.conf import settings
 from django.core.cache import caches
@@ -9,6 +11,28 @@ from django.template import engines as template_engines
 from django.utils.module_loading import import_string
 
 import datetime
+
+
+def get_email_templates():
+    templates_settings = getattr(settings, 'TEMPLATES', {})
+    template_dirs = []
+    for template_set in templates_settings:
+        template_dirs.extend([os.path.join(path, 'email') for path in template_set['DIRS']])
+
+    template_choices = []
+
+    for template_dir in template_dirs:
+        if os.path.exists(template_dir) and os.path.isdir(template_dir):
+            for root, dirs, files in os.walk(template_dir):
+                for file_name in files:
+                    if file_name.endswith('.html'):  # Only include HTML files
+                        # Store the relative path to use as the template name
+                        template_path = os.path.relpath(os.path.join(root, file_name), template_dir)
+                        template_choices.append((os.path.join('email', template_path), os.path.join('email', template_path)))
+    return template_choices
+
+def get_template(template_name):
+    return loader.get_template(template_name)
 
 
 def get_backend(alias='default'):

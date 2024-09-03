@@ -37,3 +37,8 @@ def inline_image(context, file):
     image.add_header('Content-ID', f'<{md5sum}>')
     context.template._attached_images.append(image)
     return f'cid:{md5sum}'
+
+
+@register.simple_tag
+def placeholder(name: str) -> str:
+    return f"{{{{{name}}}}}"

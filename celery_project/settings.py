@@ -31,6 +31,7 @@ INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.staticfiles',
     'django.contrib.messages',
+    'ckeditor',
     'post_office',
 ]
 
@@ -66,6 +67,7 @@ SILENCED_SYSTEM_CHECKS = ['admin.E408']
 # URL that handles the static files served from STATIC_ROOT.
 # Example: "http://media.lawrence.com/static/"
 STATIC_URL = '/static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
 #CELERY_ENABLED = True
 EMAIL_BACKEND = 'post_office.EmailBackend'
 EMAIL_HOST = '127.0.0.1'
@@ -79,7 +81,7 @@ TEMPLATES = [
 {
         'BACKEND': 'post_office.template.backends.post_office.PostOfficeTemplates',
         'APP_DIRS': True,
-        'DIRS': [],
+        'DIRS': [os.path.join(BASE_DIR, 'celery_project/templates')],
         'OPTIONS': {
             'context_processors': [
                 'django.contrib.auth.context_processors.auth',

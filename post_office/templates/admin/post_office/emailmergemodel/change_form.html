@@ -28,10 +28,26 @@
 
         CodeMirror.fromTextArea($('#id_subject')[0], options);
         CodeMirror.fromTextArea($('#id_content')[0], options);
-        CodeMirror.fromTextArea($('#id_html_content')[0], options);
 
         $('.CodeMirror').css('height', 'auto');
       })(django.jQuery);
+
+        console.log("hi")
+
+      document.addEventListener("DOMContentLoaded", function (){
+          var selectField = document.getElementById("id_base_file")
+
+          if (selectField){
+              selectField.onchange = function (){
+                  var form = this.closest('form');
+
+                  if (form){
+                      form.submit();
+                  }
+
+              }
+          }
+      })
     </script>
 {% endblock %}
 

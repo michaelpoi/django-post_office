@@ -73,7 +73,6 @@ def render_email_template(template_instance: EmailMergeModel):
     first_pass_content = django_template_first_pass.render(Context())
 
     placeholders = EmailContent.objects.filter(template=template_instance)
-    print(placeholders)
     context_data = {placeholder.placeholder_name: placeholder.content for placeholder in placeholders}
 
     django_template_second_pass = Template(first_pass_content)
@@ -81,6 +80,14 @@ def render_email_template(template_instance: EmailMergeModel):
     final_content = django_template_second_pass.render(context)
 
     return final_content
+
+
+def render_message(html: str, context: dict) -> str:
+    for placeholder, value in context.items():
+        placeholder_notation = f"#{placeholder}#"
+        html = html.replace(placeholder_notation, str(value))
+
+    return html
 
 
 def get_email_template(name, language=''):

@@ -292,6 +292,7 @@ class EmailTemplateAdminFormSet(BaseInlineFormSet):
 
 
 class EmailTemplateAdminForm(forms.ModelForm):
+    change_form_template = 'admin/post_office/emailtemplate/change_form.html'
     language = forms.ChoiceField(
         choices=settings.LANGUAGES,
         required=False,

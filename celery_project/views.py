@@ -31,7 +31,7 @@ def send_template(request):
         'poenko.mishany@gmail.com',
         'Mykhailo.Poienko@uibk.ac.at',
         template=EmailMergeModel.objects.get(name='test_1'),
-        context={'name': 'Idiot'}
+        context={'name': 'Michael', 'surname': 'Poienko', 'age': 19}
     )
     return HttpResponse('Success')
 

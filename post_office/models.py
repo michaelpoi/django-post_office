@@ -13,9 +13,8 @@ from django.utils import timezone
 
 from ckeditor.fields import RichTextField
 
-
 from post_office import cache
-from post_office.fields import CommaSeparatedEmailField
+#from post_office.fields import CommaSeparatedEmailField
 
 from .connections import connections
 from .logutils import setup_loghandlers
@@ -30,10 +29,8 @@ STATUS = namedtuple('STATUS', 'sent failed queued requeued')._make(range(4))
 
 class EmailAddress(models.Model):
     email = models.CharField(_('Email From'),
-                             primary_key=True,
                              max_length=254,
-                             validators=[validate_email_with_name],
-                             db_index=True)
+                             validators=[validate_email_with_name])
     first_name = models.CharField(_('First Name'), max_length=254, blank=True, null=True)
     last_name = models.CharField(_('Last Name'), max_length=254, blank=True, null=True)
     preferred_language = models.CharField(
@@ -134,14 +131,14 @@ class EmailModel(models.Model):
             engine = get_template_engine()
             subject = engine.from_string(self.template.subject).render(self.context)
             plaintext_message = engine.from_string(self.template.content).render(self.context)
-            multipart_template = engine.from_string(self.template.html_content)
+            multipart_template = engine.from_string(self.template.html_content) # TODO
             html_message = multipart_template.render(self.context)
 
         else:
             subject = smart_str(self.subject)
             plaintext_message = self.message
             multipart_template = None
-            html_message = self.html_message
+            html_message = self.html_message    # TODO
 
         connection = connections[self.backend_alias or 'default']
         if isinstance(self.headers, dict) or self.expires_at or self.message_id:
@@ -401,9 +398,15 @@ class DBMutex(models.Model):
 
 
 class EmailContent(models.Model):
-    template = models.ForeignKey(EmailMergeModel, on_delete=models.CASCADE, related_name='contents')
-    placeholder_name = models.CharField(_('Placeholder name'), max_length=63)
-    content = RichTextField(_('Content'))
+
+
+    template = models.ForeignKey(EmailMergeModel,
+                                 on_delete=models.CASCADE,
+                                 related_name='contents', )
+    placeholder_name = models.CharField(_('Placeholder name'),
+                                        max_length=63, )
+    content = RichTextField(_('Content'),
+                            config_name='default')
 
     class Meta:
         app_label = 'post_office'

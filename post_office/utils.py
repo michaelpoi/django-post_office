@@ -1,4 +1,5 @@
 import os
+import html
 from typing import List
 from django.template import loader
 
@@ -9,6 +10,7 @@ from django.core.files import File
 from django.utils.encoding import force_str
 from django.core.exceptions import ObjectDoesNotExist
 from django.template import Template, Context
+from django.utils.safestring import SafeText
 
 from post_office import cache
 from .models import EmailModel, PRIORITY, STATUS, EmailMergeModel, Attachment, EmailAddress, EmailContent
@@ -73,7 +75,7 @@ def render_email_template(template_instance: EmailMergeModel):
     first_pass_content = django_template_first_pass.render(Context())
 
     placeholders = EmailContent.objects.filter(template=template_instance)
-    context_data = {placeholder.placeholder_name: placeholder.content for placeholder in placeholders}
+    context_data = {placeholder.placeholder_name: SafeText(placeholder.content) for placeholder in placeholders}
 
     django_template_second_pass = Template(first_pass_content)
     context = Context(context_data)
@@ -82,12 +84,13 @@ def render_email_template(template_instance: EmailMergeModel):
     return final_content
 
 
-def render_message(html: str, context: dict) -> str:
+def render_message(html_str: str, context: dict) -> str:
     for placeholder, value in context.items():
         placeholder_notation = f"#{placeholder}#"
-        html = html.replace(placeholder_notation, str(value))
+        html_str = html_str.replace(placeholder_notation, str(value))
 
-    return html
+    return html_str
+
 
 
 def get_email_template(name, language=''):

@@ -10,14 +10,11 @@ from post_office.utils import render_email_template
 
 
 def index(request):
-    try:
-        mail.send(
-            'poenko.mishany@gmail.com',
-            'Mykhailo.Poienko@uibk.ac.at',
-            html_message='<b>HI there</b>'
-        )
-    except Exception as e:
-        return HttpResponse(e)
+    mail.send(
+        'poenko.mishany@gmail.com',
+        'Mykhailo.Poienko@uibk.ac.at',
+        html_message='This is a sample html to <p><strong>Hi</strong> Michael</p>. The idea is to demonstrate <p>How are you<strong> doing?</strong></p> Number of placeholders in <p>10</p> This will be writen by <p>Misha, Sasha, Test</p>'
+    )
     return HttpResponse('Success')
 
 
@@ -28,10 +25,12 @@ def send_template(request):
     # template.recipients.set(EmailAddress.objects.all())
 
     mail.send(
-        'poenko.mishany@gmail.com',
+        ['poenko.mishany@gmail.com', 'test_recipient@gmail.com'],
         'Mykhailo.Poienko@uibk.ac.at',
-        template=EmailMergeModel.objects.get(name='test_1'),
-        context={'name': 'Michael', 'surname': 'Poienko', 'age': 19}
+        cc='cc@gmail.com',
+        template=EmailMergeModel.objects.get(name='test_email'),
+        context={'cont': 'Interesting', 'c': 10, 'name': 'Mishenka', 'pow': 'strenght'},
+        render_on_delivery= True
     )
     return HttpResponse('Success')
 
@@ -76,3 +75,22 @@ def test_new_system(request):
     template = EmailMergeModel.objects.get(name='test_1')
     html_content = render_email_template(template)
     return HttpResponse(html_content)
+
+def send_many(request):
+    first_email = {
+        'sender': 'from@example.com',
+        'recipients': ['alice@example.com'],
+        'subject': 'Hi!',
+        'message': 'Hi Alice!'
+    }
+    second_email = {
+        'sender': 'from@example.com',
+        'recipients': ['bob@example.com'],
+        'subject': 'Hi!',
+        'message': 'Hi Bob!'
+    }
+    kwargs_list = [first_email, second_email]
+
+    mail.send_many(kwargs_list)
+
+    return HttpResponse('Sucess')

@@ -9,4 +9,5 @@ urlpatterns = [
     path('send_image/', views.send_image, name="send_image"),
     path('send_attachment/', views.send_attachment, name="send_attachment"),
     path('templating/', views.test_new_system, name="test_new_system"),
+    path('many/', views.send_many, name="send_many"),
 ]

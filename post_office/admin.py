@@ -15,7 +15,7 @@ from django.utils.html import format_html
 from django.utils.text import Truncator
 from django.utils.translation import gettext_lazy as _
 
-from .fields import CommaSeparatedEmailField
+#from .fields import CommaSeparatedEmailField
 from .models import STATUS, Attachment, EmailModel, EmailMergeModel, Log, EmailAddress, EmailContent
 from .sanitizer import clean_html
 from .settings import get_email_templates
@@ -147,7 +147,7 @@ class EmailAdmin(admin.ModelAdmin):
     readonly_fields = ['message_id', 'render_subject', 'render_plaintext_body', 'render_html_body']
     inlines = [AttachmentInline, LogInline]
     list_filter = ['status', 'template__language', 'template__name']
-    formfield_overrides = {CommaSeparatedEmailField: {'widget': CommaSeparatedEmailWidget}}
+    #formfield_overrides = {CommaSeparatedEmailField: {'widget': CommaSeparatedEmailWidget}}
     actions = [requeue]
 
     def get_urls(self):

@@ -15,7 +15,7 @@ from django.utils import timezone
 
 from ..mail import _send_bulk, create, get_queued, send, send_many, send_queued
 from ..models import PRIORITY, STATUS, Attachment, EmailModel, EmailMergeModel
-from ..settings import get_batch_size, get_log_level, get_max_retries, get_retry_timedelta, get_threads_per_process
+from ..settings import get_batch_size, get_log_level, get_max_retries, get_retry_timedelta
 
 connection_counter = 0
 

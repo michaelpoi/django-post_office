@@ -6,7 +6,6 @@ from django.template import Context, Template
 from django.utils import timezone
 from email.utils import make_msgid
 from multiprocessing import Pool
-from multiprocessing.dummy import Pool as ThreadPool
 
 from .connections import connections
 from .dblock import db_lock, TimeoutException, LockedException
@@ -22,7 +21,6 @@ from .settings import (
     get_message_id_fqdn,
     get_retry_timedelta,
     get_sending_order,
-    get_threads_per_process,
 )
 from .signals import email_queued
 from .utils import (
@@ -30,29 +28,29 @@ from .utils import (
     get_email_template,
     parse_emails,
     parse_priority,
-    split_emails, get_or_create_recipient, get_recipients_objects, render_email_template, render_message
+    split_emails, get_recipients_objects, render_email_template, render_message
 )
 
 logger = setup_loghandlers('INFO')
 
 
 def create(
-    sender,
-    recipients=None,
-    cc=None,
-    bcc=None,
-    subject='',
-    message='',
-    html_message='',
-    context=None,
-    scheduled_time=None,
-    expires_at=None,
-    headers=None,
-    template=None,
-    priority=None,
-    render_on_delivery=False,
-    commit=True,
-    backend='',
+        sender,
+        recipients=None,
+        cc=None,
+        bcc=None,
+        subject='',
+        message='',
+        html_message='',
+        context=None,
+        scheduled_time=None,
+        expires_at=None,
+        headers=None,
+        template=None,
+        priority=None,
+        render_on_delivery=False,
+        commit=True,
+        backend='',
 ):
     """
     Creates an email from supplied keyword arguments. If template is
@@ -94,10 +92,10 @@ def create(
 
         if commit:
             email.save()
+            email.to.set(recipients_addresses)
+            email.cc.set(cc_addresses)
+            email.bcc.set(bcc_addresses)
 
-        email.to.set(recipients_addresses)
-        email.cc.set(cc_addresses)
-        email.bcc.set(bcc_addresses)
 
     else:
         if template:
@@ -106,10 +104,10 @@ def create(
             html_message = render_email_template(template)
 
         _context = Context(context or {})
-        subject = Template(subject).render(_context)
-        message = Template(message).render(_context)
-        html_message = render_message(html_message, context)
-
+        if context:
+            subject = render_message(subject, context)
+            message = render_message(message, context)
+            html_message = render_message(html_message, context)
 
         email = EmailModel(
             from_email=sender,
@@ -131,40 +129,36 @@ def create(
 
         if commit:
             email.save()
-
-        email.to.set(recipients_addresses)
-        email.cc.set(cc_addresses)
-        email.bcc.set(bcc_addresses)
-
-
+            email.to.set(recipients_addresses)
+            email.cc.set(cc_addresses)
+            email.bcc.set(bcc_addresses)
 
     return email
 
 
 def send(
-    recipients=None,
-    sender=None,
-    template=None,
-    context=None,
-    subject='',
-    message='',
-    html_message='',
-    scheduled_time=None,
-    expires_at=None,
-    headers=None,
-    priority=None,
-    attachments=None,
-    render_on_delivery=False,
-    log_level=None,
-    commit=True,
-    cc=None,
-    bcc=None,
-    language='',
-    backend='',
+        recipients=None,
+        sender=None,
+        template=None,
+        context=None,
+        subject='',
+        message='',
+        html_message='',
+        scheduled_time=None,
+        expires_at=None,
+        headers=None,
+        priority=None,
+        attachments=None,
+        render_on_delivery=False,
+        log_level=None,
+        commit=True,
+        cc=None,
+        bcc=None,
+        language='',
+        backend='',
 ):
     try:
         recipients = parse_emails(recipients)
-        print(recipients)
     except ValidationError as e:
         raise ValidationError('recipients: %s' % e.message)
 
@@ -250,8 +244,18 @@ def send_many(kwargs_list):
     Currently send_many() can't be used to send emails with priority = 'now'.
     """
     emails = [send(commit=False, **kwargs) for kwargs in kwargs_list]
+    recipients = [get_recipients_objects(kwargs['recipients']) for kwargs in kwargs_list]
+
     if emails:
-        EmailModel.objects.bulk_create(emails)
+
+        emails = EmailModel.objects.bulk_create(emails)
+
+        email_recipients = []
+        for index, email in enumerate(emails):
+            for recipient in recipients[index]:
+                email_recipients.append(EmailModel.to.through(emailmodel_id=email.id, emailaddress_id=recipient.id))
+
+        EmailModel.to.through.objects.bulk_create(email_recipients)
         email_queued.send(sender=EmailModel, emails=emails)
 
 
@@ -375,19 +379,19 @@ def _send_bulk(emails, uses_multiprocessing=True, log_level=None):
             logger.exception('Failed to prepare email #%d' % email.id)
             failed_emails.append((email, e))
 
-    number_of_threads = min(get_threads_per_process(), email_count)
-    pool = ThreadPool(number_of_threads)
+    # number_of_threads = min(get_threads_per_process(), email_count)
+    # pool = ThreadPool(number_of_threads)
 
-    results = []
+    # results = []
     for email in emails:
-        results.append(pool.apply_async(send, args=(email,)))
+        send(email)
 
-    timeout = get_batch_delivery_timeout()
+    # timeout = get_batch_delivery_timeout()
 
     # Wait for all tasks to complete with a timeout
     # The get method is used with a timeout to wait for each result
-    for result in results:
-        result.get(timeout=timeout)
+    # for result in results:
+    #     result.get(timeout=timeout)
     # for result in results:
     #     try:
     #         # Wait for all tasks to complete with a timeout
@@ -396,8 +400,8 @@ def _send_bulk(emails, uses_multiprocessing=True, log_level=None):
     #     except TimeoutError:
     #         logger.exception("Process timed out after %d seconds" % timeout)
 
-    pool.close()
-    pool.join()
+    # pool.close()
+    # pool.join()
 
     connections.close()
 

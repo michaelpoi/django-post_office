@@ -39,10 +39,10 @@
 
           if (selectField){
               selectField.onchange = function (){
-                  var form = this.closest('form');
+                  var continueButton = document.querySelector('input[name="_continue"]');
 
-                  if (form){
-                      form.submit();
+                  if (continueButton){
+                      continueButton.click();
                   }
 
               }

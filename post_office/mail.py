@@ -10,7 +10,7 @@ from multiprocessing import Pool
 from .connections import connections
 from .dblock import db_lock, TimeoutException, LockedException
 from .logutils import setup_loghandlers
-from .models import EmailModel, EmailMergeModel, Log, PRIORITY, STATUS
+from .models import EmailModel, EmailMergeModel, Log, PRIORITY, STATUS, Recipient
 from .settings import (
     get_available_backends,
     get_batch_delivery_timeout,
@@ -28,7 +28,7 @@ from .utils import (
     get_email_template,
     parse_emails,
     parse_priority,
-    split_emails, get_recipients_objects, render_email_template, render_message
+    split_emails, get_recipients_objects, render_email_template, render_message, set_recipients
 )
 
 logger = setup_loghandlers('INFO')
@@ -66,7 +66,7 @@ def create(
     if bcc is None:
         bcc = []
     if context is None:
-        context = ''
+        context = {}
     message_id = make_msgid(domain=get_message_id_fqdn()) if get_message_id_enabled() else None
     recipients_addresses = get_recipients_objects(recipients)
     cc_addresses = get_recipients_objects(cc)
@@ -76,9 +76,6 @@ def create(
     if render_on_delivery:
         email = EmailModel(
             from_email=sender,
-            # to=recipients,
-            # cc=cc,
-            # bcc=bcc,
             scheduled_time=scheduled_time,
             expires_at=expires_at,
             message_id=message_id,
@@ -92,16 +89,15 @@ def create(
 
         if commit:
             email.save()
-            email.to.set(recipients_addresses)
-            email.cc.set(cc_addresses)
-            email.bcc.set(bcc_addresses)
+            set_recipients(email, recipients_addresses, cc_addresses, bcc_addresses)
 
 
     else:
         if template:
             subject = template.subject
             message = template.content
-            html_message = render_email_template(template)
+            recipient_context = context.get('recipient', None)
+            html_message = render_email_template(template, recipient_context)
 
         _context = Context(context or {})
         if context:
@@ -111,9 +107,6 @@ def create(
 
         email = EmailModel(
             from_email=sender,
-            # to=recipients,
-            # cc=cc,
-            # bcc=bcc,
             subject=subject,
             message=message,
             html_message=html_message,
@@ -129,9 +122,7 @@ def create(
 
         if commit:
             email.save()
-            email.to.set(recipients_addresses)
-            email.cc.set(cc_addresses)
-            email.bcc.set(bcc_addresses)
+            set_recipients(email, recipients_addresses, cc_addresses, bcc_addresses)
 
     return email
 
@@ -237,25 +228,28 @@ def send(
     return email
 
 
-def send_many(kwargs_list):
+def send_many(**kwargs):
     """
-    Similar to mail.send(), but this function accepts a list of kwargs.
-    Internally, it uses Django's bulk_create command for efficiency reasons.
-    Currently send_many() can't be used to send emails with priority = 'now'.
+    This function allows to send multiple emails separately. Using it is beneficial if you need a user data as a
+    context and you want to serve every recipient separately.
     """
-    emails = [send(commit=False, **kwargs) for kwargs in kwargs_list]
-    recipients = [get_recipients_objects(kwargs['recipients']) for kwargs in kwargs_list]
+    if not (recipients := parse_emails(kwargs.pop('recipients'))):
+        raise ValueError('You must specify recipients')
+
+    recipients_objs = get_recipients_objects(recipients)
+
+    context = kwargs.pop('context', {})
+    emails = [send(recipients=[recipient.email], context={**context,'recipient': recipient}, commit=False, **kwargs) for recipient in recipients_objs]
 
     if emails:
 
         emails = EmailModel.objects.bulk_create(emails)
 
         email_recipients = []
-        for index, email in enumerate(emails):
-            for recipient in recipients[index]:
-                email_recipients.append(EmailModel.to.through(emailmodel_id=email.id, emailaddress_id=recipient.id))
+        for email, recipient in list(zip(emails, recipients_objs)):
+            email_recipients.append(Recipient(email=email, address=recipient, send_type='to'))
+        Recipient.objects.bulk_create(email_recipients)
 
-        EmailModel.to.through.objects.bulk_create(email_recipients)
         email_queued.send(sender=EmailModel, emails=emails)
 
 

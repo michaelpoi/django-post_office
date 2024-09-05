@@ -7,6 +7,7 @@
     <title>Title</title>
 </head>
 <body>
+    <h1>Dear {{ recipient.first_name|default_if_none:'First name' }} {{ recipient.last_name }}</h1>
     This is a sample html to {% placeholder 'name' %}.
     The idea is to demonstrate {% placeholder 'power' %}
     Number of placeholders in {% placeholder 'number' %}

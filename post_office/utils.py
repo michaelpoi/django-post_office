@@ -1,6 +1,6 @@
 import os
 import html
-from typing import List
+from typing import List, Optional, Union
 from django.template import loader
 
 from .logutils import setup_loghandlers
@@ -11,9 +11,9 @@ from django.utils.encoding import force_str
 from django.core.exceptions import ObjectDoesNotExist
 from django.template import Template, Context
 from django.utils.safestring import SafeText
-
+from django.core.mail import EmailMessage, EmailMultiAlternatives
 from post_office import cache
-from .models import EmailModel, PRIORITY, STATUS, EmailMergeModel, Attachment, EmailAddress, EmailContent
+from .models import EmailModel, PRIORITY, STATUS, EmailMergeModel, Attachment, EmailAddress, EmailContent, Recipient
 from .settings import get_default_priority
 from .signals import email_queued
 from .validators import validate_email_with_name
@@ -66,13 +66,15 @@ def get_html_content(template_instance: EmailMergeModel):
     return html_content
 
 
-def render_email_template(template_instance: EmailMergeModel):
+def render_email_template(template_instance: EmailMergeModel, recipient_context=None):
     """
     Function to render an email from the template html code and placeholders in database
     """
+    print(type(recipient_context))
+    context = Context({'recipient': recipient_context}) if recipient_context else Context()
     html_content = get_html_content(template_instance)
     django_template_first_pass = Template(html_content)
-    first_pass_content = django_template_first_pass.render(Context())
+    first_pass_content = django_template_first_pass.render(context)
 
     placeholders = EmailContent.objects.filter(template=template_instance)
     context_data = {placeholder.placeholder_name: SafeText(placeholder.content) for placeholder in placeholders}
@@ -90,7 +92,6 @@ def render_message(html_str: str, context: dict) -> str:
         html_str = html_str.replace(placeholder_notation, str(value))
 
     return html_str
-
 
 
 def get_email_template(name, language=''):
@@ -216,6 +217,33 @@ def get_recipients_objects(emails: List[str]) -> List[EmailAddress]:
         else:
             recipient_objects.append(obj)
     return recipient_objects
+
+
+def set_recipients(email: EmailModel,
+                   to_addresses: List[EmailAddress],
+                   cc_addresses: Optional[List[EmailAddress]] = None,
+                   bcc_addresses: Optional[List[EmailAddress]] = None, ):
+    to_recipients = [Recipient(email=email,
+                               address=addr,
+                               send_type='to')
+                     for addr in to_addresses]
+
+    if cc_addresses:
+        to_recipients.extend([Recipient(email=email,
+                                        address=addr,
+                                        send_type='cc')
+                              for addr in cc_addresses])
+
+    if bcc_addresses:
+        to_recipients.extend([Recipient(email=email,
+                                        address=addr,
+                                        send_type='bcc')
+                              for addr in bcc_addresses])
+
+    Recipient.objects.bulk_create(to_recipients)
+
+    return to_recipients
+
 
 
 def cleanup_expired_mails(cutoff_date, delete_attachments=True, batch_size=1000):

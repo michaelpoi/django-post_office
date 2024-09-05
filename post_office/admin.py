@@ -142,7 +142,7 @@ class EmailAdmin(admin.ModelAdmin):
         'scheduled_time',
         'use_template',
     ]
-    filter_horizontal = ('to', 'cc', 'bcc')
+    #filter_horizontal = ('to', 'cc', 'bcc')
     search_fields = ['to', 'subject']
     readonly_fields = ['message_id', 'render_subject', 'render_plaintext_body', 'render_html_body']
     inlines = [AttachmentInline, LogInline]

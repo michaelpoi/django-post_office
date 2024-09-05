@@ -1,6 +1,7 @@
 import os
 
 from collections import namedtuple
+from typing import Union
 from uuid import uuid4
 from email.mime.nonmultipart import MIMENonMultipart
 
@@ -25,6 +26,20 @@ logger = setup_loghandlers('INFO')
 
 PRIORITY = namedtuple('PRIORITY', 'low medium high now')._make(range(4))
 STATUS = namedtuple('STATUS', 'sent failed queued requeued')._make(range(4))
+
+
+class Recipient(models.Model):
+    SEND_TYPES = [
+        ('to', _('To')),
+        ('cc', _('Cc')),
+        ('bcc', _('Bcc')),
+    ]
+    email = models.ForeignKey('post_office.EmailModel', on_delete=models.CASCADE)
+    address = models.ForeignKey('post_office.EmailAddress', on_delete=models.CASCADE)
+    send_type = models.CharField(max_length=12, choices=SEND_TYPES, default='to')
+
+    def __str__(self):
+        return self.address.email
 
 
 class EmailAddress(models.Model):
@@ -68,9 +83,7 @@ class EmailModel(models.Model):
     ]
 
     from_email = models.CharField(_('Email From'), max_length=254, validators=[validate_email_with_name])
-    to = models.ManyToManyField(EmailAddress, related_name='to_emails')
-    cc = models.ManyToManyField(EmailAddress, related_name='cc_emails')
-    bcc = models.ManyToManyField(EmailAddress, related_name='bcc_emails')
+    recipients = models.ManyToManyField(EmailAddress, related_name='to_emails', through=Recipient)
     subject = models.CharField(_('Subject'), max_length=989, blank=True)
     message = models.TextField(_('Message'), blank=True)
     html_message = models.TextField(_('HTML Message'), blank=True)
@@ -108,7 +121,41 @@ class EmailModel(models.Model):
         self._cached_email_message = None
 
     def __str__(self):
-        return '%s' % self.to
+        return [str(recipient) for recipient in self.recipients.all()]
+
+    def get_message_object(self,
+                           html_message,
+                           plaintext_message,
+                           headers,
+                           subject,
+                           connection,
+                           multipart_template) \
+            -> Union[EmailMessage, EmailMultiAlternatives]:
+        to_list = [str(to) for to in self.recipients.through.objects.filter(email=self, send_type='to')]
+        cc_list = [str(cc) for cc in self.recipients.through.objects.filter(email=self, send_type='cc')]
+        bcc_list = [str(bcc) for bcc in self.recipients.through.objects.filter(email=self, send_type='bcc')]
+        common_args = {
+            'subject': subject,
+            'from_email': self.from_email,
+            'to': to_list,
+            'bcc': bcc_list,
+            'cc': cc_list,
+            'headers': headers,
+            'connection': connection,
+        }
+
+        if html_message:
+            msg = EmailMultiAlternatives(body=plaintext_message or html_message, **common_args)
+            if plaintext_message:
+                msg.attach_alternative(html_message, 'text/html')
+            else:
+                msg.content_subtype = 'html'
+            if hasattr(multipart_template, 'attach_related'):
+                multipart_template.attach_related(msg)
+        else:
+            msg = EmailMessage(body=plaintext_message, **common_args)
+
+        return msg
 
     def email_message(self):
         """
@@ -124,21 +171,21 @@ class EmailModel(models.Model):
         Returns a django ``EmailMessage`` or ``EmailMultiAlternatives`` object,
         depending on whether html_message is empty.
         """
-        if get_override_recipients():
-            self.to = get_override_recipients()
+        # if get_override_recipients():
+        #     self.to = get_override_recipients()
 
         if self.template is not None and self.context is not None:
             engine = get_template_engine()
             subject = engine.from_string(self.template.subject).render(self.context)
             plaintext_message = engine.from_string(self.template.content).render(self.context)
-            multipart_template = engine.from_string(self.template.html_content) # TODO
+            multipart_template = engine.from_string(self.template.html_content)  # TODO
             html_message = multipart_template.render(self.context)
 
         else:
             subject = smart_str(self.subject)
             plaintext_message = self.message
             multipart_template = None
-            html_message = self.html_message    # TODO
+            html_message = self.html_message  # TODO
 
         connection = connections[self.backend_alias or 'default']
         if isinstance(self.headers, dict) or self.expires_at or self.message_id:
@@ -150,45 +197,14 @@ class EmailModel(models.Model):
         else:
             headers = None
 
-        if html_message:
-            if plaintext_message:
-                msg = EmailMultiAlternatives(
-                    subject=subject,
-                    body=plaintext_message,
-                    from_email=self.from_email,
-                    to=[str(to) for to in self.to.all()],
-                    bcc=[str(bcc) for bcc in self.bcc.all()],
-                    cc=[str(cc) for cc in self.cc.all()],
-                    headers=headers,
-                    connection=connection,
-                )
-                msg.attach_alternative(html_message, 'text/html')
-            else:
-                msg = EmailMultiAlternatives(
-                    subject=subject,
-                    body=html_message,
-                    from_email=self.from_email,
-                    to=[str(to) for to in self.to.all()],
-                    bcc=[str(bcc) for bcc in self.bcc.all()],
-                    cc=[str(cc) for cc in self.cc.all()],
-                    headers=headers,
-                    connection=connection,
-                )
-                msg.content_subtype = 'html'
-            if hasattr(multipart_template, 'attach_related'):
-                multipart_template.attach_related(msg)
+        msg = self.get_message_object(html_message=html_message,
+                                      plaintext_message=plaintext_message,
+                                      headers=headers,
+                                      subject=subject,
+                                      connection=connection,
+                                      multipart_template=multipart_template)
 
-        else:
-            msg = EmailMessage(
-                subject=subject,
-                body=plaintext_message,
-                from_email=self.from_email,
-                to=[str(to) for to in self.to.all()],
-                bcc=[str(bcc) for bcc in self.bcc.all()],
-                cc=[str(cc) for cc in self.cc.all()],
-                headers=headers,
-                connection=connection,
-            )
+        print(type(msg))
 
         for attachment in self.attachments.all():
             if attachment.headers:
@@ -398,8 +414,6 @@ class DBMutex(models.Model):
 
 
 class EmailContent(models.Model):
-
-
     template = models.ForeignKey(EmailMergeModel,
                                  on_delete=models.CASCADE,
                                  related_name='contents', )

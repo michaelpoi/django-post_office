@@ -13,7 +13,7 @@ from django.template import Template, Context
 from django.utils.safestring import SafeText
 from django.core.mail import EmailMessage, EmailMultiAlternatives
 from post_office import cache
-from .models import EmailModel, PRIORITY, STATUS, EmailMergeModel, Attachment, EmailAddress, EmailContent, Recipient
+from .models import EmailModel, PRIORITY, STATUS, EmailMergeModel, Attachment, EmailAddress, PlaceholderContent, Recipient
 from .settings import get_default_priority
 from .signals import email_queued
 from .validators import validate_email_with_name
@@ -76,7 +76,7 @@ def render_email_template(template_instance: EmailMergeModel, recipient_context=
     django_template_first_pass = Template(html_content)
     first_pass_content = django_template_first_pass.render(context)
 
-    placeholders = EmailContent.objects.filter(template=template_instance)
+    placeholders = PlaceholderContent.objects.filter(emailmerge=template_instance)
     context_data = {placeholder.placeholder_name: SafeText(placeholder.content) for placeholder in placeholders}
 
     django_template_second_pass = Template(first_pass_content)
@@ -87,6 +87,19 @@ def render_email_template(template_instance: EmailMergeModel, recipient_context=
 
 
 def render_message(html_str: str, context: dict) -> str:
+    if recipient := context.get('recipient', None):
+        for field in recipient._meta.get_fields():
+            if field.concrete:
+                placeholder_notation = f"#recipient.{field.name}#"
+                value = getattr(recipient, field.name, "")
+                html_str = html_str.replace(placeholder_notation, str(value))
+                print(placeholder_notation)
+
+            # fields = ['first_name', 'last_name']
+            # for field in fields:
+            #     placeholder_notation = f"#recipient.{field}#"
+            #     html_str = html_str.replace(placeholder_notation, str(getattr(recipient, field, "")))
+
     for placeholder, value in context.items():
         placeholder_notation = f"#{placeholder}#"
         html_str = html_str.replace(placeholder_notation, str(value))
@@ -243,7 +256,6 @@ def set_recipients(email: EmailModel,
     Recipient.objects.bulk_create(to_recipients)
 
     return to_recipients
-
 
 
 def cleanup_expired_mails(cutoff_date, delete_attachments=True, batch_size=1000):

@@ -7,7 +7,11 @@ from post_office.models import EmailMergeModel, EmailAddress
 from django.template.loader import get_template
 from django.core.mail import EmailMultiAlternatives
 from post_office.utils import render_email_template
+from django.shortcuts import render, redirect
 
+
+def home(request):
+    return render(request,'tester.html')
 
 def index(request):
     mail.send(
@@ -17,7 +21,7 @@ def index(request):
         cc=['cc@email.com'],
         html_message='This is a sample html to <p><strong>Hi</strong> Michael</p>. The idea is to demonstrate <p>How are you<strong> doing?</strong></p> Number of placeholders in <p>10</p> This will be writen by <p>Misha/p>'
     )
-    return HttpResponse('Success')
+    return redirect('home')
 
 
 def send_template(request):
@@ -31,8 +35,7 @@ def send_template(request):
         template=EmailMergeModel.objects.get(name='test_email'),
         context={'cont': 'Interesting', 'c': 10, 'name': 'Mishenka', 'pow': 'strenght'},
     )
-    return HttpResponse('Success')
-
+    return redirect('home')
 
 def send_image(request):
     # EmailTemplate.objects.create(
@@ -49,8 +52,7 @@ def send_image(request):
     template.attach_related(email_message)
     email_message.send()
 
-    return HttpResponse('Success')
-
+    return redirect('home')
 
 import tempfile
 
@@ -66,8 +68,7 @@ def send_attachment(request):
             attachments={'test.txt': f}
         )
 
-    return HttpResponse('Success')
-
+    return redirect('home')
 
 def test_new_system(request):
     temp = loader.get_template('email/placeholders.html')
@@ -81,6 +82,6 @@ def send_many(request):
         recipients=['bob@gmail.com', 'alisa@email.com', 'grisha@gmail.com'],
         sender='Mykhailo.Poienko@uibk.ac.at',
         template=EmailMergeModel.objects.get(name='test_email'),
+        context={'pow':'POW PLACE', 'c':10}
     )
-    return HttpResponse('Success')
-
+    return redirect('home')

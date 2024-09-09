@@ -11,6 +11,7 @@ from django.db import models
 from django.utils.encoding import smart_str
 from django.utils.translation import pgettext_lazy, gettext_lazy as _
 from django.utils import timezone
+from django.db.models.constraints import UniqueConstraint
 
 from ckeditor.fields import RichTextField
 
@@ -19,7 +20,7 @@ from post_office import cache
 
 from .connections import connections
 from .logutils import setup_loghandlers
-from .settings import context_field_class, get_log_level, get_template_engine, get_override_recipients
+from .settings import get_log_level, get_template_engine, get_override_recipients
 from .validators import validate_email_with_name, validate_template_syntax
 
 logger = setup_loghandlers('INFO')
@@ -41,13 +42,24 @@ class Recipient(models.Model):
     def __str__(self):
         return self.address.email
 
+    class Meta:
+        app_label = 'post_office'
+
 
 class EmailAddress(models.Model):
+
+    GENDERS = [
+        ('male', _('Male')),
+        ('female', _('Female')),
+        ('other', _('Other')),
+    ]
     email = models.CharField(_('Email From'),
                              max_length=254,
-                             validators=[validate_email_with_name])
+                             validators=[validate_email_with_name],
+                             unique=True)
     first_name = models.CharField(_('First Name'), max_length=254, blank=True, null=True)
     last_name = models.CharField(_('Last Name'), max_length=254, blank=True, null=True)
+    gender = models.CharField(_('Gender'), max_length=15, blank=True, null=True, choices=GENDERS)
     preferred_language = models.CharField(
         max_length=12,
         verbose_name=_('Language'),
@@ -108,7 +120,7 @@ class EmailModel(models.Model):
     template = models.ForeignKey(
         'post_office.EmailMergeModel', blank=True, null=True, verbose_name=_('Email template'), on_delete=models.CASCADE
     )
-    context = context_field_class(_('Context'), blank=True, null=True)
+    context = models.JSONField(_('Context'), blank=True, null=True)
     backend_alias = models.CharField(_('Backend alias'), blank=True, default='', max_length=64)
 
     class Meta:
@@ -121,7 +133,7 @@ class EmailModel(models.Model):
         self._cached_email_message = None
 
     def __str__(self):
-        return [str(recipient) for recipient in self.recipients.all()]
+        return str([str(recipient) for recipient in self.recipients.all()])
 
     def get_message_object(self,
                            html_message,
@@ -334,7 +346,6 @@ class EmailMergeModel(models.Model):
     )
     extra_recipients = models.ManyToManyField(
         EmailAddress,
-        null=True,
         blank=True,
         help_text='extra bcc recipients',
     )
@@ -342,7 +353,10 @@ class EmailMergeModel(models.Model):
 
     class Meta:
         app_label = 'post_office'
-        unique_together = ('name', 'language', 'default_template')
+        #unique_together = ('name', 'language', 'default_template')
+        constraints = [
+            UniqueConstraint(fields=['name', 'language', 'default_template'], name='unique_emailmerge'),
+        ]
         verbose_name = _('Email Template')
         verbose_name_plural = _('Email Templates')
         ordering = ['name']
@@ -413,10 +427,15 @@ class DBMutex(models.Model):
         return f"<DBMutex(pk={self.pk}, lock_id={self.lock_id}>"
 
 
-class EmailContent(models.Model):
-    template = models.ForeignKey(EmailMergeModel,
+class PlaceholderContent(models.Model):
+    emailmerge = models.ForeignKey(EmailMergeModel,
                                  on_delete=models.CASCADE,
                                  related_name='contents', )
+    language = models.CharField(
+        max_length=12,
+        default='',
+        blank=True,
+    )
     placeholder_name = models.CharField(_('Placeholder name'),
                                         max_length=63, )
     content = RichTextField(_('Content'),
@@ -424,7 +443,7 @@ class EmailContent(models.Model):
 
     class Meta:
         app_label = 'post_office'
+        constraints = [
+            models.UniqueConstraint(fields=['emailmerge', 'placeholder_name', 'language'], name='unique_placeholder'),
+        ]
 
-    def save(self, *args, **kwargs):
-        print('beeing saved....')
-        super().save(*args, **kwargs)

@@ -4,6 +4,7 @@ from post_office import mail
 from post_office.mail import send_queued_mail_until_done
 import pytest
 
+
 def cleanup_messages():
     requests.delete('http://127.0.0.1:8025/api/v1/messages/')
 

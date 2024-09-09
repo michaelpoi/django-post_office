@@ -28,7 +28,7 @@ from .utils import (
     get_email_template,
     parse_emails,
     parse_priority,
-    split_emails, get_recipients_objects, render_email_template, render_message, set_recipients
+    split_emails, get_recipients_objects, render_email_template, render_message, set_recipients, get_or_create_recipient
 )
 
 logger = setup_loghandlers('INFO')
@@ -93,17 +93,20 @@ def create(
 
 
     else:
+
+        if not context.get('recipient', None):
+            context['recipient'] = get_or_create_recipient(recipients[0])
+
+        print(context)
         if template:
             subject = template.subject
             message = template.content
             recipient_context = context.get('recipient', None)
             html_message = render_email_template(template, recipient_context)
 
-        _context = Context(context or {})
-        if context:
-            subject = render_message(subject, context)
-            message = render_message(message, context)
-            html_message = render_message(html_message, context)
+        subject = render_message(subject, context)
+        message = render_message(message, context)
+        html_message = render_message(html_message, context)
 
         email = EmailModel(
             from_email=sender,
@@ -239,7 +242,8 @@ def send_many(**kwargs):
     recipients_objs = get_recipients_objects(recipients)
 
     context = kwargs.pop('context', {})
-    emails = [send(recipients=[recipient.email], context={**context,'recipient': recipient}, commit=False, **kwargs) for recipient in recipients_objs]
+    emails = [send(recipients=[recipient.email], context={**context, 'recipient': recipient}, commit=False, **kwargs)
+              for recipient in recipients_objs]
 
     if emails:
 

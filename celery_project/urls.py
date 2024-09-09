@@ -3,6 +3,7 @@ from django.urls import path, include
 from celery_project import views
 
 urlpatterns = [
+    path('', views.home, name='home'),
     path("admin/", admin.site.urls),
     path("index/", views.index, name="index"),
     path('send_template/', views.send_template, name="send_template"),

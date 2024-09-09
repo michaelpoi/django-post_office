@@ -16,7 +16,7 @@ from django.utils.text import Truncator
 from django.utils.translation import gettext_lazy as _
 
 #from .fields import CommaSeparatedEmailField
-from .models import STATUS, Attachment, EmailModel, EmailMergeModel, Log, EmailAddress, EmailContent
+from .models import STATUS, Attachment, EmailModel, EmailMergeModel, Log, EmailAddress, PlaceholderContent
 from .sanitizer import clean_html
 from .settings import get_email_templates
 
@@ -91,13 +91,14 @@ requeue.short_description = 'Requeue selected emails'
 
 class EmailContentInlineForm(forms.ModelForm):
     class Meta:
-        model = EmailContent
-        fields = ['placeholder_name', 'content']
+        model = PlaceholderContent
+        fields = ['placeholder_name', 'content', 'language']
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # Make the `placeholder_name` field readonly
         self.fields['placeholder_name'].disabled = True
+        self.fields['language'].disabled = True
+
 
 
 from .utils import get_html_content
@@ -109,18 +110,24 @@ class EmailContentInlineFormset(forms.BaseInlineFormSet):
         if self.instance and self.instance.pk:
             placeholders = get_html_content(self.instance).split("{% placeholder '")[1:]
             placeholder_names = [ph.split("' %}")[0] for ph in placeholders]
-            print(placeholders)
-            existing_placeholders = set(self.instance.contents.values_list('placeholder_name', flat=True))
+            existing_placeholders = set(self.instance.contents.values_list('placeholder_name', 'language'))
+
+            languages = [self.instance.language]
+            languages += list(
+                self.instance.translated_templates.values_list('language', flat=True)
+            )
 
             for placeholder_name in placeholder_names:
-                if placeholder_name not in existing_placeholders:
-                    self.forms.append(self._construct_form(len(self.forms), initial={
-                        'placeholder_name': placeholder_name
-                    }))
+                for lang in languages:
+                    if (placeholder_name, lang) not in existing_placeholders:
+                        self.forms.append(self._construct_form(len(self.forms), initial={
+                            'placeholder_name': placeholder_name,
+                            'language': lang
+                        }))
 
 
 class EmailContentInline(admin.TabularInline):
-    model = EmailContent
+    model = PlaceholderContent
     formset = EmailContentInlineFormset
     form = EmailContentInlineForm
     extra = 0
@@ -356,6 +363,10 @@ class EmailTemplateAdmin(admin.ModelAdmin):
     languages_compact.short_description = _('Languages')
 
     def save_model(self, request, obj, form, change):
+
+        if 'base_file' in form.changed_data:
+            obj.contents.all().delete()
+
         obj.save()
 
         # if the name got changed, also change the translated templates to match again
@@ -375,7 +386,7 @@ class EmailAddressAdmin(admin.ModelAdmin):
     pass
 
 
-@admin.register(EmailContent)
+@admin.register(PlaceholderContent)
 class EmailContentAdmin(admin.ModelAdmin):
     pass
 

@@ -14,11 +14,12 @@ from django.urls import re_path, reverse
 from django.utils.html import format_html
 from django.utils.text import Truncator
 from django.utils.translation import gettext_lazy as _
+from django.utils.safestring import mark_safe
 
 #from .fields import CommaSeparatedEmailField
 from .models import STATUS, Attachment, EmailModel, EmailMergeModel, Log, EmailAddress, PlaceholderContent
 from .sanitizer import clean_html
-from .settings import get_email_templates
+from .settings import get_email_templates, get_languages_list
 
 
 def get_message_preview(instance):
@@ -92,13 +93,14 @@ requeue.short_description = 'Requeue selected emails'
 class EmailContentInlineForm(forms.ModelForm):
     class Meta:
         model = PlaceholderContent
-        fields = ['placeholder_name', 'content', 'language']
+        fields = ['placeholder_name', 'content', 'language', 'base_file']
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields['placeholder_name'].disabled = True
         self.fields['language'].disabled = True
 
+        self.fields['base_file'].disabled = True
 
 
 from .utils import get_html_content
@@ -110,19 +112,22 @@ class EmailContentInlineFormset(forms.BaseInlineFormSet):
         if self.instance and self.instance.pk:
             placeholders = get_html_content(self.instance).split("{% placeholder '")[1:]
             placeholder_names = [ph.split("' %}")[0] for ph in placeholders]
-            existing_placeholders = set(self.instance.contents.values_list('placeholder_name', 'language'))
+            existing_placeholders = set(
+                self.instance.contents.filter(base_file=self.instance.base_file).values_list('placeholder_name',
+                                                                                             'language'))
 
-            languages = [self.instance.language]
-            languages += list(
-                self.instance.translated_templates.values_list('language', flat=True)
-            )
+            # languages = [self.instance.language]
+            # languages += list(
+            #     self.instance.translated_templates.values_list('language', flat=True)
+            # )
 
             for placeholder_name in placeholder_names:
-                for lang in languages:
+                for lang in get_languages_list():
                     if (placeholder_name, lang) not in existing_placeholders:
                         self.forms.append(self._construct_form(len(self.forms), initial={
                             'placeholder_name': placeholder_name,
-                            'language': lang
+                            'language': lang,
+                            'base_file': self.instance.base_file
                         }))
 
 
@@ -131,6 +136,18 @@ class EmailContentInline(admin.TabularInline):
     formset = EmailContentInlineFormset
     form = EmailContentInlineForm
     extra = 0
+
+    def get_formset(self, request, obj=None, **kwargs):
+        self.parent_obj = obj
+        return super(EmailContentInline, self).get_formset(request, obj, **kwargs)
+
+    def get_queryset(self, request, obj=None):
+        queryset = super().get_queryset(request)
+
+        if self.parent_obj and self.parent_obj.base_file:
+            return queryset.filter(base_file=self.parent_obj.base_file)
+
+        return queryset
 
     # def has_add_permission(self, request, obj=None):
     #     return False
@@ -210,7 +227,7 @@ class EmailAdmin(admin.ModelAdmin):
     use_template.boolean = True
 
     def get_fieldsets(self, request, obj=None):
-        fields = ['from_email', 'to', 'cc', 'bcc', 'priority', ('status', 'scheduled_time')]
+        fields = ['from_email', 'priority', ('status', 'scheduled_time')]
         if obj.message_id:
             fields.insert(0, 'message_id')
         fieldsets = [(None, {'fields': fields})]
@@ -253,7 +270,7 @@ class EmailAdmin(admin.ModelAdmin):
         for message in instance.email_message().message().walk():
             if isinstance(message, SafeMIMEText) and message.get_content_type() == 'text/html':
                 payload = message.get_payload(decode=True).decode('utf-8')
-                return clean_html(pattern.sub(url, payload))
+                return clean_html(payload)
 
     render_html_body.short_description = _('HTML Body')
 
@@ -282,6 +299,15 @@ class SubjectField(TextInput):
 
 
 class EmailTemplateAdminFormSet(BaseInlineFormSet):
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.instance and self.instance.pk:
+            for lang in get_languages_list():
+                self.forms.append(self._construct_form(len(self.forms), initial={
+                    'language': lang,
+                }))
+
     def clean(self):
         """
         Check that no two Email templates have the same default_template and language.
@@ -308,7 +334,7 @@ class EmailTemplateAdminForm(forms.ModelForm):
     )
     base_file = forms.ChoiceField(
         choices=get_email_templates(),  # Set choices to the result of get_email_templates
-        required=False,
+        required=True,
         label=_('Base File'),
         help_text=_('Select the base email template file'),
     )
@@ -320,8 +346,7 @@ class EmailTemplateAdminForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         instance = kwargs.get('instance')
         super().__init__(*args, **kwargs)
-        if instance and instance.language:
-            self.fields['language'].disabled = True
+        self.fields['language'].disabled = True
 
 
 class EmailTemplateInline(admin.StackedInline):
@@ -363,9 +388,8 @@ class EmailTemplateAdmin(admin.ModelAdmin):
     languages_compact.short_description = _('Languages')
 
     def save_model(self, request, obj, form, change):
-
-        if 'base_file' in form.changed_data:
-            obj.contents.all().delete()
+        # if 'base_file' in form.changed_data:
+        #     obj.contents.all().delete()
 
         obj.save()
 

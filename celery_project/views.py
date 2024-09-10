@@ -11,7 +11,8 @@ from django.shortcuts import render, redirect
 
 
 def home(request):
-    return render(request,'tester.html')
+    return render(request, 'tester.html')
+
 
 def index(request):
     mail.send(
@@ -19,7 +20,9 @@ def index(request):
         'Mykhailo.Poienko@uibk.ac.at',
         subject='Test letter',
         cc=['cc@email.com'],
-        html_message='This is a sample html to <p><strong>Hi</strong> Michael</p>. The idea is to demonstrate <p>How are you<strong> doing?</strong></p> Number of placeholders in <p>10</p> This will be writen by <p>Misha/p>'
+        html_message='This is a sample html to <p><strong>Hi</strong> #recipient.first_name#</p>. The idea is to '
+                     'demonstrate <p>How are you<strong> doing?</strong></p> Number of placeholders in <p>10</p> This '
+                     'will be writen by <p>Misha</p><script>alert ("hello")</script>',
     )
     return redirect('home')
 
@@ -36,6 +39,7 @@ def send_template(request):
         context={'cont': 'Interesting', 'c': 10, 'name': 'Mishenka', 'pow': 'strenght'},
     )
     return redirect('home')
+
 
 def send_image(request):
     # EmailTemplate.objects.create(
@@ -54,6 +58,7 @@ def send_image(request):
 
     return redirect('home')
 
+
 import tempfile
 
 
@@ -70,6 +75,7 @@ def send_attachment(request):
 
     return redirect('home')
 
+
 def test_new_system(request):
     temp = loader.get_template('email/placeholders.html')
     template = EmailMergeModel.objects.get(name='test_1')
@@ -81,7 +87,8 @@ def send_many(request):
     mail.send_many(
         recipients=['bob@gmail.com', 'alisa@email.com', 'grisha@gmail.com'],
         sender='Mykhailo.Poienko@uibk.ac.at',
-        template=EmailMergeModel.objects.get(name='test_email'),
-        context={'pow':'POW PLACE', 'c':10}
+        template='test_email',
+        context={'pow': 'hi', 'c': 10},
+        language=''
     )
     return redirect('home')

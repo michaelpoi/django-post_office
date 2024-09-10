@@ -20,7 +20,7 @@ from .settings import (
     get_message_id_enabled,
     get_message_id_fqdn,
     get_retry_timedelta,
-    get_sending_order,
+    get_sending_order, get_default_language, get_languages_list,
 )
 from .signals import email_queued
 from .utils import (
@@ -51,6 +51,7 @@ def create(
         render_on_delivery=False,
         commit=True,
         backend='',
+        language='',
 ):
     """
     Creates an email from supplied keyword arguments. If template is
@@ -102,7 +103,7 @@ def create(
             subject = template.subject
             message = template.content
             recipient_context = context.get('recipient', None)
-            html_message = render_email_template(template, recipient_context)
+            html_message = render_email_template(template, recipient_context, language=language)
 
         subject = render_message(subject, context)
         message = render_message(message, context)
@@ -151,6 +152,11 @@ def send(
         language='',
         backend='',
 ):
+    # if not language:
+    #     language = get_default_language()
+    # else:
+    #     if language not in get_languages_list():
+    #         raise ValidationError(f'Language "{language}" is not found in LANGUAGES configuration.')
     try:
         recipients = parse_emails(recipients)
     except ValidationError as e:
@@ -217,6 +223,7 @@ def send(
         render_on_delivery,
         commit=commit,
         backend=backend,
+        language=language or template.language
     )
 
     if attachments:

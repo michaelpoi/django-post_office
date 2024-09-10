@@ -2,10 +2,10 @@ from django.utils.html import mark_safe, format_html
 from django.utils.translation import gettext_lazy
 
 try:
-    import bleach
+    import nh3
 except ImportError:
     # if bleach is not installed, render HTML as escaped text to prevent XSS attacks
-    heading = gettext_lazy("Install 'bleach' to render HTML properly.")
+    heading = gettext_lazy("Install 'nh3' to render HTML properly.")
     clean_html = lambda body: format_html('<p><em>{heading}</em></p>\n<div>{body}</div>', heading=heading, body=body)
 else:
     styles = [
@@ -78,7 +78,7 @@ else:
         'list-style-position',
         'list-style-tyle',
     ]
-    tags = [
+    tags = {
         'a',
         'abbr',
         'acronym',
@@ -117,7 +117,7 @@ else:
         'tr',
         'u',
         'ul',
-    ]
+    }
     attributes = {
         'a': ['class', 'href', 'id', 'style', 'target'],
         'abbr': ['class', 'id', 'style'],
@@ -203,31 +203,19 @@ else:
         'u': ['class', 'id', 'style'],
         'ul': ['class', 'id', 'style', 'dir', 'type'],
     }
-    try:
-        from bleach.css_sanitizer import CSSSanitizer
 
-        css_sanitizer = CSSSanitizer(
-            allowed_css_properties=styles,
+    from nh3 import clean
+
+    new_attrs = {}
+
+    for tag, attrs in attributes.items():
+        new_attrs[tag] = set(attrs)
+
+    clean_html = lambda body: mark_safe(
+        nh3.clean(
+            body,
+            tags=tags,
+            attributes=new_attrs,
+            strip_comments=True,
         )
-        clean_html = lambda body: mark_safe(
-            bleach.clean(
-                body,
-                tags=tags,
-                attributes=attributes,
-                strip=True,
-                strip_comments=True,
-                css_sanitizer=css_sanitizer,
-            )
-        )
-    except ModuleNotFoundError:
-        # if bleach version is prior to 5.0.0
-        clean_html = lambda body: mark_safe(
-            bleach.clean(
-                body,
-                tags=tags,
-                attributes=attributes,
-                strip=True,
-                strip_comments=True,
-                styles=styles,
-            )
-        )
+    )

@@ -35,6 +35,13 @@ INSTALLED_APPS = [
     'post_office',
 ]
 
+LANGUAGE_CODE = 'en'
+
+LANGUAGES = [
+    ('en', 'English'),
+    ('de', 'German')
+]
+
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',

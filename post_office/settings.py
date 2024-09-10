@@ -28,8 +28,10 @@ def get_email_templates():
                     if file_name.endswith('.html'):  # Only include HTML files
                         # Store the relative path to use as the template name
                         template_path = os.path.relpath(os.path.join(root, file_name), template_dir)
-                        template_choices.append((os.path.join('email', template_path), os.path.join('email', template_path)))
+                        template_choices.append(
+                            (os.path.join('email', template_path), os.path.join('email', template_path)))
     return template_choices
+
 
 def get_template(template_name):
     return loader.get_template(template_name)
@@ -96,6 +98,15 @@ def get_config():
     return getattr(settings, 'POST_OFFICE', {})
 
 
+def get_languages_list():
+    lang_conf = getattr(settings, 'LANGUAGES', [])
+    return [lang[0] for lang in lang_conf]
+
+
+def get_default_language():
+    return settings.LANGUAGE_CODE
+
+
 def get_batch_size():
     return get_config().get('BATCH_SIZE', 100)
 
@@ -152,5 +163,3 @@ def get_message_id_fqdn():
 # BATCH_DELIVERY_TIMEOUT defaults to 180 seconds (3 minutes)
 def get_batch_delivery_timeout():
     return get_config().get('BATCH_DELIVERY_TIMEOUT', 180)
-
-

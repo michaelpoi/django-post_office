@@ -13,10 +13,12 @@ from django.template import Template, Context
 from django.utils.safestring import SafeText
 from django.core.mail import EmailMessage, EmailMultiAlternatives
 from post_office import cache
-from .models import EmailModel, PRIORITY, STATUS, EmailMergeModel, Attachment, EmailAddress, PlaceholderContent, Recipient
+from .models import EmailModel, PRIORITY, STATUS, EmailMergeModel, Attachment, EmailAddress, PlaceholderContent, \
+    Recipient
 from .settings import get_default_priority
 from .signals import email_queued
 from .validators import validate_email_with_name
+from .sanitizer import clean_html
 
 logger = setup_loghandlers('WARN')
 
@@ -60,13 +62,21 @@ def send_mail(
     return emails
 
 
+def get_main_template(template_instance):
+    if template_instance.default_template:
+        return template_instance.default_template
+
+    return template_instance
+
+
 def get_html_content(template_instance: EmailMergeModel):
-    template = loader.get_template(template_instance.base_file).template
+    main_template = get_main_template(template_instance)
+    template = loader.get_template(main_template.base_file).template
     html_content = template.source
     return html_content
 
 
-def render_email_template(template_instance: EmailMergeModel, recipient_context=None):
+def render_email_template(template_instance: EmailMergeModel, recipient_context=None, language=''):
     """
     Function to render an email from the template html code and placeholders in database
     """
@@ -76,8 +86,10 @@ def render_email_template(template_instance: EmailMergeModel, recipient_context=
     django_template_first_pass = Template(html_content)
     first_pass_content = django_template_first_pass.render(context)
 
-    placeholders = PlaceholderContent.objects.filter(emailmerge=template_instance)
-    context_data = {placeholder.placeholder_name: SafeText(placeholder.content) for placeholder in placeholders}
+    main_template = get_main_template(template_instance)
+
+    placeholders = PlaceholderContent.objects.filter(emailmerge=main_template, language=language)
+    context_data = {placeholder.placeholder_name: clean_html(placeholder.content) for placeholder in placeholders}
 
     django_template_second_pass = Template(first_pass_content)
     context = Context(context_data)
@@ -92,17 +104,11 @@ def render_message(html_str: str, context: dict) -> str:
             if field.concrete:
                 placeholder_notation = f"#recipient.{field.name}#"
                 value = getattr(recipient, field.name, "")
-                html_str = html_str.replace(placeholder_notation, str(value))
-                print(placeholder_notation)
-
-            # fields = ['first_name', 'last_name']
-            # for field in fields:
-            #     placeholder_notation = f"#recipient.{field}#"
-            #     html_str = html_str.replace(placeholder_notation, str(getattr(recipient, field, "")))
+                html_str = html_str.replace(placeholder_notation, clean_html(str(value)))
 
     for placeholder, value in context.items():
         placeholder_notation = f"#{placeholder}#"
-        html_str = html_str.replace(placeholder_notation, str(value))
+        html_str = html_str.replace(placeholder_notation, clean_html(str(value)))
 
     return html_str
 

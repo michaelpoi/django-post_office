@@ -441,9 +441,11 @@ class PlaceholderContent(models.Model):
     content = RichTextField(_('Content'),
                             config_name='default')
 
+    base_file = models.CharField(max_length=255, verbose_name=_('File name'))
+
     class Meta:
         app_label = 'post_office'
         constraints = [
-            models.UniqueConstraint(fields=['emailmerge', 'placeholder_name', 'language'], name='unique_placeholder'),
+            models.UniqueConstraint(fields=['emailmerge', 'placeholder_name', 'language', 'base_file'], name='unique_placeholder'),
         ]
 

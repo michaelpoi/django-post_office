@@ -152,11 +152,11 @@ def send(
         language='',
         backend='',
 ):
-    # if not language:
-    #     language = get_default_language()
-    # else:
-    #     if language not in get_languages_list():
-    #         raise ValidationError(f'Language "{language}" is not found in LANGUAGES configuration.')
+    if not language:
+        language = get_default_language()
+    else:
+        if language not in get_languages_list():
+            raise ValidationError(f'Language "{language}" is not found in LANGUAGES configuration.')
     try:
         recipients = parse_emails(recipients)
     except ValidationError as e:
@@ -223,7 +223,7 @@ def send(
         render_on_delivery,
         commit=commit,
         backend=backend,
-        language=language or template.language
+        language=language
     )
 
     if attachments:

@@ -85,10 +85,10 @@ def test_new_system(request):
 
 def send_many(request):
     mail.send_many(
-        recipients=['bob@gmail.com', 'alisa@email.com', 'grisha@gmail.com'],
+        recipients=['bob@gmail.com', 'lena@email.com', 'grisha@gmail.com'],
         sender='Mykhailo.Poienko@uibk.ac.at',
-        template='test_email',
+        template='test_langs',
         context={'pow': 'hi', 'c': 10},
-        language=''
+        language='de'
     )
     return redirect('home')

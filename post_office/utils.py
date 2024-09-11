@@ -99,16 +99,16 @@ def render_email_template(template_instance: EmailMergeModel, recipient_context=
 
 
 def render_message(html_str: str, context: dict) -> str:
+    for placeholder, value in context.items():
+        placeholder_notation = f"#{placeholder}#"
+        html_str = html_str.replace(placeholder_notation, clean_html(str(value)))
+
     if recipient := context.get('recipient', None):
         for field in recipient._meta.get_fields():
             if field.concrete:
                 placeholder_notation = f"#recipient.{field.name}#"
                 value = getattr(recipient, field.name, "")
                 html_str = html_str.replace(placeholder_notation, clean_html(str(value)))
-
-    for placeholder, value in context.items():
-        placeholder_notation = f"#{placeholder}#"
-        html_str = html_str.replace(placeholder_notation, clean_html(str(value)))
 
     return html_str
 
@@ -221,18 +221,17 @@ def parse_emails(emails):
 
 
 def get_or_create_recipient(email: str) -> EmailAddress:
-    try:
-        return EmailAddress.objects.get(email=email)
-    except ObjectDoesNotExist:
-        return EmailAddress.objects.create(email=email)
+    obj, _ = EmailAddress.objects.get_or_create(email=email)
+    return obj
 
 
 def get_recipients_objects(emails: List[str]) -> List[EmailAddress]:
     recipient_objects = []
     for email in emails:
         obj = get_or_create_recipient(email)
+        print(obj)
         if obj.is_blocked:
-            logger.warn(f"User {email} is blocked and hence will be excluded")
+            logger.warning(f"User {email} is blocked and hence will be excluded")
         else:
             recipient_objects.append(obj)
     return recipient_objects

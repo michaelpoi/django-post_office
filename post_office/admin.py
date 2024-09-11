@@ -19,7 +19,8 @@ from django.utils.safestring import mark_safe
 #from .fields import CommaSeparatedEmailField
 from .models import STATUS, Attachment, EmailModel, EmailMergeModel, Log, EmailAddress, PlaceholderContent
 from .sanitizer import clean_html
-from .settings import get_email_templates, get_languages_list
+from .settings import get_email_templates, get_languages_list, get_default_language
+from .utils import get_html_content
 
 
 def get_message_preview(instance):
@@ -103,7 +104,6 @@ class EmailContentInlineForm(forms.ModelForm):
         self.fields['base_file'].disabled = True
 
 
-from .utils import get_html_content
 
 
 class EmailContentInlineFormset(forms.BaseInlineFormSet):
@@ -115,11 +115,6 @@ class EmailContentInlineFormset(forms.BaseInlineFormSet):
             existing_placeholders = set(
                 self.instance.contents.filter(base_file=self.instance.base_file).values_list('placeholder_name',
                                                                                              'language'))
-
-            # languages = [self.instance.language]
-            # languages += list(
-            #     self.instance.translated_templates.values_list('language', flat=True)
-            # )
 
             for placeholder_name in placeholder_names:
                 for lang in get_languages_list():
@@ -303,25 +298,27 @@ class EmailTemplateAdminFormSet(BaseInlineFormSet):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         if self.instance and self.instance.pk:
-            for lang in get_languages_list():
+            existing_languages = set(self.instance.translated_templates.values_list('language', flat=True))
+            existing_languages.add(get_default_language())
+            for lang in set(get_languages_list()) - existing_languages:
                 self.forms.append(self._construct_form(len(self.forms), initial={
                     'language': lang,
                 }))
 
-    def clean(self):
-        """
-        Check that no two Email templates have the same default_template and language.
-        """
-        super().clean()
-        data = set()
-        for form in self.forms:
-            default_template = form.cleaned_data['default_template']
-            language = form.cleaned_data['language']
-            if (default_template.id, language) in data:
-                msg = _("Duplicate template for language '{language}'.")
-                language = dict(form.fields['language'].choices)[language]
-                raise ValidationError(msg.format(language=language))
-            data.add((default_template.id, language))
+    # def clean(self):
+    #     """
+    #     Check that no two Email templates have the same default_template and language.
+    #     """
+    #     super().clean()
+    #     data = set()
+    #     for form in self.forms:
+    #         default_template = form.cleaned_data['default_template']
+    #         language = form.cleaned_data['language']
+    #         if (default_template.id, language) in data:
+    #             msg = _("Duplicate template for language '{language}'.")
+    #             language = dict(form.fields['language'].choices)[language]
+    #             raise ValidationError(msg.format(language=language))
+    #         data.add((default_template.id, language))
 
 
 class EmailTemplateAdminForm(forms.ModelForm):
@@ -334,7 +331,7 @@ class EmailTemplateAdminForm(forms.ModelForm):
     )
     base_file = forms.ChoiceField(
         choices=get_email_templates(),  # Set choices to the result of get_email_templates
-        required=True,
+        required=False,
         label=_('Base File'),
         help_text=_('Select the base email template file'),
     )
@@ -344,7 +341,6 @@ class EmailTemplateAdminForm(forms.ModelForm):
         fields = ['name', 'description', 'subject', 'content', 'language', 'default_template', 'base_file']
 
     def __init__(self, *args, **kwargs):
-        instance = kwargs.get('instance')
         super().__init__(*args, **kwargs)
         self.fields['language'].disabled = True
 
@@ -388,8 +384,9 @@ class EmailTemplateAdmin(admin.ModelAdmin):
     languages_compact.short_description = _('Languages')
 
     def save_model(self, request, obj, form, change):
-        # if 'base_file' in form.changed_data:
-        #     obj.contents.all().delete()
+
+        if not obj.language:
+            obj.language = get_default_language()
 
         obj.save()
 

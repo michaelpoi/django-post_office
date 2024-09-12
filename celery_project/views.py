@@ -6,7 +6,7 @@ from post_office import mail
 from post_office.models import EmailMergeModel, EmailAddress
 from django.template.loader import get_template
 from django.core.mail import EmailMultiAlternatives
-from post_office.utils import render_email_template
+from post_office.utils import render_email_template, get_email_template
 from django.shortcuts import render, redirect
 
 
@@ -22,7 +22,7 @@ def index(request):
         cc=['cc@email.com'],
         html_message='This is a sample html to <p><strong>Hi</strong> #recipient.first_name#</p>. The idea is to '
                      'demonstrate <p>How are you<strong> doing?</strong></p> Number of placeholders in <p>10</p> This '
-                     'will be writen by <p>Misha</p><script>alert ("hello")</script>',
+                     'will be writen by <p>Misha</p>',
     )
     return redirect('home')
 
@@ -55,6 +55,7 @@ def send_image(request):
     email_message.attach_alternative(html, 'text/html')
     template.attach_related(email_message)
     email_message.send()
+    print(html)
 
     return redirect('home')
 
@@ -87,8 +88,32 @@ def send_many(request):
     mail.send_many(
         recipients=['bob@gmail.com', 'lena@email.com', 'grisha@gmail.com'],
         sender='Mykhailo.Poienko@uibk.ac.at',
-        template='test_langs',
+        template='cool_email',
         context={'pow': 'hi', 'c': 10},
-        language='de'
+        inlines=True,
     )
     return redirect('home')
+
+
+def test_render_image(request):
+    # template = get_template('email/default.html', using='post_office')
+    # emailmerge = EmailMergeModel.objects.get(name='cool_email', language='en')
+    # subject, body = 'Testing inlines', 'Inline test'
+    # from_email, to_email = 'tester@email.com', ['alisa@email.com', 'bob@email.com']
+    # email_message = EmailMultiAlternatives(subject, body, from_email, to_email)
+    # html_content = render_email_template(emailmerge, language='en')
+    # email_message.attach_alternative(html_content, 'text/html')
+    # template.render()
+    # template.attach_related(email_message)
+    # email_message.send()
+
+    mail.send(
+        ['poenko.mishany@gmail.com', 'test_recipient@gmail.com'],
+        'Mykhailo.Poienko@uibk.ac.at',
+        cc='cc@gmail.com',
+        template=EmailMergeModel.objects.get(name='cool_email', language='en'),
+        context={'cont': 'Interesting', 'c': 10, 'name': 'Mishenka', 'pow': 'strenght'},
+        inlines=True
+    )
+
+    return HttpResponse('Sucess')

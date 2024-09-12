@@ -1,4 +1,4 @@
-import os
+from pathlib import Path
 import warnings
 from django.template import loader
 
@@ -17,19 +17,16 @@ def get_email_templates():
     templates_settings = getattr(settings, 'TEMPLATES', {})
     template_dirs = []
     for template_set in templates_settings:
-        template_dirs.extend([os.path.join(path, 'email') for path in template_set['DIRS']])
+        template_dirs.extend([Path(path) / 'email' for path in template_set['DIRS']])
 
     template_choices = []
 
     for template_dir in template_dirs:
-        if os.path.exists(template_dir) and os.path.isdir(template_dir):
-            for root, dirs, files in os.walk(template_dir):
-                for file_name in files:
-                    if file_name.endswith('.html'):  # Only include HTML files
-                        # Store the relative path to use as the template name
-                        template_path = os.path.relpath(os.path.join(root, file_name), template_dir)
-                        template_choices.append(
-                            (os.path.join('email', template_path), os.path.join('email', template_path)))
+        if template_dir.exists() and template_dir.is_dir():
+            for file_path in template_dir.rglob('*.html'):
+                relative_path = file_path.relative_to(template_dir.parent)
+                template_choices.append((str(relative_path), str(relative_path)))
+
     return template_choices
 
 

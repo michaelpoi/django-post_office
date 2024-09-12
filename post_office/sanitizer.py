@@ -107,6 +107,7 @@ else:
         'p',
         'pre',
         'span',
+        's',
         'strong',
         'table',
         'tbody',

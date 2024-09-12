@@ -15,7 +15,7 @@ from django.core.mail import EmailMessage, EmailMultiAlternatives
 from post_office import cache
 from .models import EmailModel, PRIORITY, STATUS, EmailMergeModel, Attachment, EmailAddress, PlaceholderContent, \
     Recipient
-from .settings import get_default_priority
+from .settings import get_default_priority, get_template_engine
 from .signals import email_queued
 from .validators import validate_email_with_name
 from .sanitizer import clean_html
@@ -71,7 +71,7 @@ def get_main_template(template_instance):
 
 def get_html_content(template_instance: EmailMergeModel):
     main_template = get_main_template(template_instance)
-    template = loader.get_template(main_template.base_file).template
+    template = loader.get_template(main_template.base_file, using='post_office').template
     html_content = template.source
     return html_content
 
@@ -80,20 +80,20 @@ def render_email_template(template_instance: EmailMergeModel, recipient_context=
     """
     Function to render an email from the template html code and placeholders in database
     """
-    print(type(recipient_context))
-    context = Context({'recipient': recipient_context}) if recipient_context else Context()
+    engine = get_template_engine()
+    context = {'recipient': recipient_context} if recipient_context else {}
     html_content = get_html_content(template_instance)
-    django_template_first_pass = Template(html_content)
+    django_template_first_pass = engine.from_string(html_content)
     first_pass_content = django_template_first_pass.render(context)
 
     main_template = get_main_template(template_instance)
 
     placeholders = PlaceholderContent.objects.filter(emailmerge=main_template, language=language)
+    print(placeholders)
     context_data = {placeholder.placeholder_name: clean_html(placeholder.content) for placeholder in placeholders}
 
-    django_template_second_pass = Template(first_pass_content)
-    context = Context(context_data)
-    final_content = django_template_second_pass.render(context)
+    django_template_second_pass = engine.from_string(first_pass_content)
+    final_content = django_template_second_pass.render(context_data)
 
     return final_content
 
@@ -229,7 +229,6 @@ def get_recipients_objects(emails: List[str]) -> List[EmailAddress]:
     recipient_objects = []
     for email in emails:
         obj = get_or_create_recipient(email)
-        print(obj)
         if obj.is_blocked:
             logger.warning(f"User {email} is blocked and hence will be excluded")
         else:

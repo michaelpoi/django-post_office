@@ -3,6 +3,7 @@ from django.core.exceptions import ValidationError
 from django.db import connection as db_connection
 from django.db.models import Q
 from django.template import Context, Template
+from django.core.mail import EmailMultiAlternatives
 from django.utils import timezone
 from email.utils import make_msgid
 from multiprocessing import Pool
@@ -20,7 +21,7 @@ from .settings import (
     get_message_id_enabled,
     get_message_id_fqdn,
     get_retry_timedelta,
-    get_sending_order, get_default_language, get_languages_list,
+    get_sending_order, get_default_language, get_languages_list, get_template,
 )
 from .signals import email_queued
 from .utils import (
@@ -28,7 +29,8 @@ from .utils import (
     get_email_template,
     parse_emails,
     parse_priority,
-    split_emails, get_recipients_objects, render_email_template, render_message, set_recipients, get_or_create_recipient
+    split_emails, get_recipients_objects, render_email_template, render_message, set_recipients,
+    get_or_create_recipient, get_main_template
 )
 
 logger = setup_loghandlers('INFO')
@@ -52,6 +54,7 @@ def create(
         commit=True,
         backend='',
         language='',
+        inlines=False,
 ):
     """
     Creates an email from supplied keyword arguments. If template is
@@ -75,6 +78,7 @@ def create(
     # If email is to be rendered during delivery, save all necessary
     # information
     if render_on_delivery:
+
         email = EmailModel(
             from_email=sender,
             scheduled_time=scheduled_time,
@@ -124,6 +128,16 @@ def create(
             template=template,
         )
 
+        if template and inlines:
+            emailmerge = get_main_template(template)
+            template = get_template(emailmerge.base_file)
+            email_message = EmailMultiAlternatives(subject, message, from_email=sender, to=recipients)
+            email_message.attach_alternative(html_message, 'text/html')
+            template.render()
+            template.attach_related(email_message)
+            email_message.send()
+            return email
+
         if commit:
             email.save()
             set_recipients(email, recipients_addresses, cc_addresses, bcc_addresses)
@@ -151,6 +165,7 @@ def send(
         bcc=None,
         language='',
         backend='',
+        inlines=False,
 ):
     if not language:
         language = get_default_language()
@@ -223,7 +238,8 @@ def send(
         render_on_delivery,
         commit=commit,
         backend=backend,
-        language=language
+        language=language,
+        inlines=inlines,
     )
 
     if attachments:
@@ -251,6 +267,10 @@ def send_many(**kwargs):
     context = kwargs.pop('context', {})
     emails = [send(recipients=[recipient.email], context={**context, 'recipient': recipient}, commit=False, **kwargs)
               for recipient in recipients_objs]
+
+    if kwargs['inlines']:
+        for email in emails:
+            email.status = STATUS.sent
 
     if emails:
 
@@ -387,6 +407,7 @@ def _send_bulk(emails, uses_multiprocessing=True, log_level=None):
     # number_of_threads = min(get_threads_per_process(), email_count)
     # pool = ThreadPool(number_of_threads)
 
+    # TODO
     # results = []
     for email in emails:
         send(email)

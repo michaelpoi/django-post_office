@@ -11,4 +11,5 @@ urlpatterns = [
     path('send_attachment/', views.send_attachment, name="send_attachment"),
     path('templating/', views.test_new_system, name="test_new_system"),
     path('many/', views.send_many, name="send_many"),
+    path('inline/', views.test_render_image, name='inlines')
 ]

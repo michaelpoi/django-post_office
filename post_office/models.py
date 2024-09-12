@@ -186,6 +186,8 @@ class EmailModel(models.Model):
         # if get_override_recipients():
         #     self.to = get_override_recipients()
 
+        #print(self.__dir__())
+
         if self.template is not None and self.context is not None:
             engine = get_template_engine()
             subject = engine.from_string(self.template.subject).render(self.context)
@@ -216,7 +218,6 @@ class EmailModel(models.Model):
                                       connection=connection,
                                       multipart_template=multipart_template)
 
-        print(type(msg))
 
         for attachment in self.attachments.all():
             if attachment.headers:

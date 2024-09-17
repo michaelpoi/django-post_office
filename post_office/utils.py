@@ -8,10 +8,6 @@ from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.files import File
 from django.utils.encoding import force_str
-from django.core.exceptions import ObjectDoesNotExist
-from django.template import Template, Context
-from django.utils.safestring import SafeText
-from django.core.mail import EmailMessage, EmailMultiAlternatives
 from post_office import cache
 from .models import EmailModel, PRIORITY, STATUS, EmailMergeModel, Attachment, EmailAddress, PlaceholderContent, \
     Recipient
@@ -98,19 +94,19 @@ def render_email_template(template_instance: EmailMergeModel, recipient_context=
     return final_content
 
 
-def render_message(html_str: str, context: dict) -> str:
-    for placeholder, value in context.items():
-        placeholder_notation = f"#{placeholder}#"
-        html_str = html_str.replace(placeholder_notation, clean_html(str(value)))
-
-    if recipient := context.get('recipient', None):
-        for field in recipient._meta.get_fields():
-            if field.concrete:
-                placeholder_notation = f"#recipient.{field.name}#"
-                value = getattr(recipient, field.name, "")
-                html_str = html_str.replace(placeholder_notation, clean_html(str(value)))
-
-    return html_str
+# def render_message(html_str: str, context: dict) -> str:
+#     for placeholder, value in context.items():
+#         placeholder_notation = f"#{placeholder}#"
+#         html_str = html_str.replace(placeholder_notation, clean_html(str(value)))
+#
+#     if recipient := context.get('recipient', None):
+#         for field in recipient._meta.get_fields():
+#             if field.concrete:
+#                 placeholder_notation = f"#recipient.{field.name}#"
+#                 value = getattr(recipient, field.name, "")
+#                 html_str = html_str.replace(placeholder_notation, clean_html(str(value)))
+#
+#     return html_str
 
 
 def get_email_template(name, language=''):

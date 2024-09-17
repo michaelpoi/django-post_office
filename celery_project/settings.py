@@ -32,8 +32,15 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'django.contrib.messages',
     'ckeditor',
+    'ckeditor_uploader',
     'post_office',
 ]
+
+CKEDITOR_UPLOAD_PATH = 'templates/images/ckeditor'
+
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'workdir' / 'media'
+print(MEDIA_ROOT)
 
 LANGUAGE_CODE = 'en'
 
@@ -47,7 +54,8 @@ DATABASES = {
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': Path(__file__).parent.parent / 'workdir/demo.sqlite3',
         'TEST': {
-            'NAME': Path(__file__).parent.parent / 'workdir/test.sqlite3',  # live_server requires a file rather than :memory:
+            'NAME': Path(__file__).parent.parent / 'workdir/test.sqlite3',
+            # live_server requires a file rather than :memory:
             'OPTIONS': {
                 'timeout': 20,
             },
@@ -85,7 +93,7 @@ EMAIL_HOST_PASSWORD = 'test'
 #print(EMAIL_HOST, EMAIL_PORT, EMAIL_HOST_USER, EMAIL_HOST_PASSWORD)
 
 TEMPLATES = [
-{
+    {
         'BACKEND': 'post_office.template.backends.post_office.PostOfficeTemplates',
         'APP_DIRS': True,
         'DIRS': [os.path.join(BASE_DIR, 'celery_project/templates')],
@@ -101,19 +109,19 @@ TEMPLATES = [
             ]
         }
     },
-{
-    'BACKEND': 'django.template.backends.django.DjangoTemplates',
-    'DIRS': [],
-    'APP_DIRS': True,
-    'OPTIONS': {
-        'context_processors': [
-            'django.template.context_processors.debug',
-            'django.template.context_processors.request',
-            'django.contrib.auth.context_processors.auth',
-            'django.contrib.messages.context_processors.messages',
-        ],
+    {
+        'BACKEND': 'django.template.backends.django.DjangoTemplates',
+        'DIRS': [],
+        'APP_DIRS': True,
+        'OPTIONS': {
+            'context_processors': [
+                'django.template.context_processors.debug',
+                'django.template.context_processors.request',
+                'django.contrib.auth.context_processors.auth',
+                'django.contrib.messages.context_processors.messages',
+            ],
+        },
     },
-},
 
 ]
 
@@ -123,10 +131,8 @@ POST_OFFICE = {
 }
 WSGI_APPLICATION = "celery_project.wsgi.application"
 
-
 # Database
 # https://docs.djangoproject.com/en/3.0/ref/settings/#databases
-
 
 
 # Password validation
@@ -136,11 +142,10 @@ AUTH_PASSWORD_VALIDATORS = [
     {
         "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator",
     },
-    {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",},
-    {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator",},
-    {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator",},
+    {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator", },
+    {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator", },
+    {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator", },
 ]
-
 
 # Internationalization
 # https://docs.djangoproject.com/en/3.0/topics/i18n/
@@ -152,11 +157,8 @@ USE_I18N = True
 
 USE_L10N = True
 
-
-
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/3.0/howto/static-files/
-
 
 
 # Celery - prefix with CELERY_
@@ -165,4 +167,3 @@ CELERY_RESULT_BACKEND = CELERY_BROKER_URL
 CELERY_ACCEPT_CONTENT = ["json"]
 CELERY_TASK_SERIALIZER = "json"
 CELERY_TASK_TRACK_STARTED = True
-

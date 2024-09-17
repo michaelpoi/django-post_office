@@ -1,4 +1,5 @@
 import os
+import uuid
 
 from collections import namedtuple
 from typing import Union
@@ -12,6 +13,7 @@ from django.utils.encoding import smart_str
 from django.utils.translation import pgettext_lazy, gettext_lazy as _
 from django.utils import timezone
 from django.db.models.constraints import UniqueConstraint
+from django.template.loader import get_template
 
 from ckeditor.fields import RichTextField
 
@@ -20,8 +22,10 @@ from post_office import cache
 
 from .connections import connections
 from .logutils import setup_loghandlers
+from .sanitizer import clean_html
 from .settings import get_log_level, get_template_engine, get_override_recipients
 from .validators import validate_email_with_name, validate_template_syntax
+from django.template import loader
 
 logger = setup_loghandlers('INFO')
 
@@ -47,7 +51,6 @@ class Recipient(models.Model):
 
 
 class EmailAddress(models.Model):
-
     GENDERS = [
         ('male', _('Male')),
         ('female', _('Female')),
@@ -74,6 +77,21 @@ class EmailAddress(models.Model):
 
     class Meta:
         app_label = 'post_office'
+
+
+def render_message(html_str, context):
+    for placeholder, value in context.items():
+        placeholder_notation = f"#{placeholder}#"
+        html_str = html_str.replace(placeholder_notation, clean_html(str(value)))
+
+    if recipient := context.get('recipient', None):
+        for field in recipient._meta.get_fields():
+            if field.concrete:
+                placeholder_notation = f"#recipient.{field.name}#"
+                value = getattr(recipient, field.name, "")
+                html_str = html_str.replace(placeholder_notation, clean_html(str(value)))
+
+    return html_str
 
 
 class EmailModel(models.Model):
@@ -178,6 +196,30 @@ class EmailModel(models.Model):
 
         return self.prepare_email_message()
 
+    def render_email_template(self, recipient_context=None):
+        """
+        Function to render an email from the template html code and placeholders in database
+        """
+        template_instance = self.template
+        engine = get_template_engine()
+        context = {'recipient': recipient_context, 'dry_run': True} if recipient_context else {'dry_run': True}
+        html_content = template_instance.get_html_content()
+        django_template_first_pass = engine.from_string(html_content)
+        first_pass_content = django_template_first_pass.render(context)
+
+        main_template = template_instance.get_main_template()
+
+        placeholders = PlaceholderContent.objects.filter(emailmerge=main_template, language=template_instance.language)
+        context_data = {placeholder.placeholder_name: clean_html(placeholder.content) for placeholder in placeholders}
+        context_data = {**context_data, 'dry_run': True}
+
+        django_template_second_pass = engine.from_string("{% load post_office %}" + first_pass_content)
+        final_content = django_template_second_pass.render(context_data)
+
+        final_content = f"{{% load post_office %}}\n {final_content}"
+
+        return final_content, django_template_second_pass
+
     def prepare_email_message(self):
         """
         Returns a django ``EmailMessage`` or ``EmailMultiAlternatives`` object,
@@ -187,19 +229,24 @@ class EmailModel(models.Model):
         #     self.to = get_override_recipients()
 
         #print(self.__dir__())
+        context = {**self.context}
+        context['recipient'] = EmailAddress.objects.get(id=self.context['recipient'])
+        # self.context['recipient'] = EmailAddress.objects.get(id=self.context['recipient'])
 
         if self.template is not None and self.context is not None:
             engine = get_template_engine()
             subject = engine.from_string(self.template.subject).render(self.context)
             plaintext_message = engine.from_string(self.template.content).render(self.context)
-            multipart_template = engine.from_string(self.template.html_content)  # TODO
-            html_message = multipart_template.render(self.context)
+            html_message, multipart_template = self.render_email_template()
+            html_message = render_message(html_message, context)
+            print(html_message)
+
 
         else:
-            subject = smart_str(self.subject)
-            plaintext_message = self.message
+            subject = smart_str(render_message(self.subject, context))
+            plaintext_message = render_message(self.message, context)
             multipart_template = None
-            html_message = self.html_message  # TODO
+            html_message = render_message(self.html_message, context)
 
         connection = connections[self.backend_alias or 'default']
         if isinstance(self.headers, dict) or self.expires_at or self.message_id:
@@ -218,6 +265,20 @@ class EmailModel(models.Model):
                                       connection=connection,
                                       multipart_template=multipart_template)
 
+        engine = get_template_engine()
+        template_html = engine.from_string(html_message)
+        new_html = template_html.render({'dry_run': False})
+        #template = get_template(self.template.get_main_template().base_file, using='post_office')
+        #template = get_template('temp/53fd1df9-e953-40fc-a413-27872d518858.html', using='post_office')
+
+        template, _ = get_template_from_html(html_message)
+        msg.body = new_html
+        print(new_html)
+        msg.html = new_html
+        msg.attach_alternative(new_html, 'text/html')
+        template.render({'dry_run': False})
+        template.attach_related(msg)
+        msg.send()
 
         for attachment in self.attachments.all():
             if attachment.headers:
@@ -368,6 +429,18 @@ class EmailMergeModel(models.Model):
     def natural_key(self):
         return (self.name, self.language, self.default_template)
 
+    def get_main_template(self):
+        if self.default_template:
+            return self.default_template
+
+        return self
+
+    def get_html_content(self):
+        main_template = self.get_main_template()
+        template = loader.get_template(main_template.base_file, using='post_office').template
+        html_content = template.source
+        return html_content
+
     def save(self, *args, **kwargs):
         # If template is a translation, use default template's name
         if self.default_template and not self.name:
@@ -428,10 +501,18 @@ class DBMutex(models.Model):
         return f"<DBMutex(pk={self.pk}, lock_id={self.lock_id}>"
 
 
+import base64
+from io import BytesIO
+from lxml import etree, html
+from django.conf import settings
+from html import unescape
+from django.utils.html import SafeString
+
+
 class PlaceholderContent(models.Model):
     emailmerge = models.ForeignKey(EmailMergeModel,
-                                 on_delete=models.CASCADE,
-                                 related_name='contents', )
+                                   on_delete=models.CASCADE,
+                                   related_name='contents', )
     language = models.CharField(
         max_length=12,
         default='',
@@ -444,9 +525,52 @@ class PlaceholderContent(models.Model):
 
     base_file = models.CharField(max_length=255, verbose_name=_('File name'))
 
+    def save(self, *args, **kwargs):
+        parser = html.HTMLParser()
+        tree = html.fromstring(self.content, parser=parser)
+        for img in tree.xpath('//img'):
+            img_src = img.get('src')
+            if img_src and img_src.startswith('data:image'):
+                header, base64_data = img_src.split(',', 1)
+                file_ext = header.split('/')[1].split(';')[0]
+                img_data = base64.b64decode(base64_data)
+
+                img_filename = f"image_{str(uuid.uuid4())}.{file_ext}"
+
+                img_path = settings.MEDIA_ROOT / img_filename
+
+                with open(img_path, 'wb') as f:
+                    f.write(img_data)
+
+                    inline_img_tag = clean_html(f"{{% inline_image '{img_path}' %}}")
+
+                img.set('src', inline_img_tag)
+        self.content = unescape(html.tostring(tree, pretty_print=False, encoding='unicode'))
+        self.content = SafeString(self.content.replace('%20', ' '))
+
+        super().save(*args, **kwargs)
+
     class Meta:
         app_label = 'post_office'
         constraints = [
-            models.UniqueConstraint(fields=['emailmerge', 'placeholder_name', 'language', 'base_file'], name='unique_placeholder'),
+            models.UniqueConstraint(fields=['emailmerge', 'placeholder_name', 'language', 'base_file'],
+                                    name='unique_placeholder'),
         ]
 
+
+import tempfile
+
+
+def get_template_from_html(html_content):
+    file_name = f'{str(uuid.uuid4())}.html'
+    with open(settings.BASE_DIR / 'celery_project' / 'templates' / 'temp' / file_name, 'wb') as temp_file:
+        # Write the HTML content to the temporary file
+        temp_file.write(html_content.encode('utf-8'))
+        temp_file_path = temp_file.name
+
+        # Get the Django template engine
+
+    # Load the template from the temporary file
+    template = get_template(temp_file_path, using='post_office')
+
+    return template, temp_file_path

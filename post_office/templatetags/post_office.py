@@ -10,9 +10,16 @@ from django.core.files.images import ImageFile
 
 register = template.Library()
 
+from django.utils.html import SafeString
+
 
 @register.simple_tag(takes_context=True)
 def inline_image(context, file):
+    if context['dry_run']:
+        return SafeString(f"{{% inline_image '{file}' %}}")
+
+    if context.get('media'):
+        return
     assert hasattr(
         context.template, '_attached_images'
     ), "You must use template engine 'post_office' when rendering images using templatetag 'inline_image'."

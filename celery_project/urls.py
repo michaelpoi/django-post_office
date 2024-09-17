@@ -1,6 +1,8 @@
 from django.contrib import admin
 from django.urls import path, include
 from celery_project import views
+from django.conf import settings
+from django.conf.urls.static import static
 
 urlpatterns = [
     path('', views.home, name='home'),
@@ -11,5 +13,9 @@ urlpatterns = [
     path('send_attachment/', views.send_attachment, name="send_attachment"),
     path('templating/', views.test_new_system, name="test_new_system"),
     path('many/', views.send_many, name="send_many"),
-    path('inline/', views.test_render_image, name='inlines')
+    path('inline/', views.test_render_image, name='inlines'),
+    path('on_delivery/', views.render_on_delivery, name='on_delivery'),
 ]
+
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

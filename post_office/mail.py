@@ -11,7 +11,7 @@ from multiprocessing import Pool
 from .connections import connections
 from .dblock import db_lock, TimeoutException, LockedException
 from .logutils import setup_loghandlers
-from .models import EmailModel, EmailMergeModel, Log, PRIORITY, STATUS, Recipient
+from .models import EmailModel, EmailMergeModel, Log, PRIORITY, STATUS, Recipient, EmailAddress
 from .settings import (
     get_available_backends,
     get_batch_delivery_timeout,
@@ -29,8 +29,8 @@ from .utils import (
     get_email_template,
     parse_emails,
     parse_priority,
-    split_emails, get_recipients_objects, render_email_template, render_message, set_recipients,
-    get_or_create_recipient, get_main_template
+    split_emails, get_recipients_objects, set_recipients,
+    get_or_create_recipient, render_email_template, get_main_template
 )
 
 logger = setup_loghandlers('INFO')
@@ -75,72 +75,38 @@ def create(
     recipients_addresses = get_recipients_objects(recipients)
     cc_addresses = get_recipients_objects(cc)
     bcc_addresses = get_recipients_objects(bcc)
+
+    if not (recipient:=context.get('recipient', None)):  # If recipient is not set use the first one from the list
+        context['recipient'] = get_or_create_recipient(recipients[0]).id
+    else:
+        if isinstance(recipient, EmailAddress):
+            context['recipient'] = recipient.id
     # If email is to be rendered during delivery, save all necessary
     # information
-    if render_on_delivery:
 
-        email = EmailModel(
-            from_email=sender,
-            scheduled_time=scheduled_time,
-            expires_at=expires_at,
-            message_id=message_id,
-            headers=headers,
-            priority=priority,
-            status=status,
-            context=context,
-            template=template,
-            backend_alias=backend,
-        )
+    if template:
+        subject = template.subject
+        message = template.content
 
-        if commit:
-            email.save()
-            set_recipients(email, recipients_addresses, cc_addresses, bcc_addresses)
+    email = EmailModel(
+        subject=subject,
+        message=message,
+        html_message=html_message,
+        from_email=sender,
+        scheduled_time=scheduled_time,
+        expires_at=expires_at,
+        message_id=message_id,
+        headers=headers,
+        priority=priority,
+        status=status,
+        context=context,
+        template=template,
+        backend_alias=backend,
+    )
 
-
-    else:
-
-        if not context.get('recipient', None):
-            context['recipient'] = get_or_create_recipient(recipients[0])
-
-        print(context)
-        if template:
-            subject = template.subject
-            message = template.content
-            recipient_context = context.get('recipient', None)
-            html_message = render_email_template(template, recipient_context, language=language)
-
-        subject = render_message(subject, context)
-        message = render_message(message, context)
-        html_message = render_message(html_message, context)
-
-        email = EmailModel(
-            from_email=sender,
-            subject=subject,
-            message=message,
-            html_message=html_message,
-            scheduled_time=scheduled_time,
-            expires_at=expires_at,
-            message_id=message_id,
-            headers=headers,
-            priority=priority,
-            status=status,
-            backend_alias=backend,
-            template=template,
-        )
-
-        if template and inlines:
-            emailmerge = get_main_template(template)
-            template = get_template(emailmerge.base_file)
-            email_message = EmailMultiAlternatives(subject, message, from_email=sender, to=recipients)
-            email_message.attach_alternative(html_message, 'text/html')
-            template.render()
-            template.attach_related(email_message)
-            email_message.send()
-            return email
-
-        if commit:
-            email.save()
-            set_recipients(email, recipients_addresses, cc_addresses, bcc_addresses)
+    if commit:
+        email.save()
+        set_recipients(email, recipients_addresses, cc_addresses, bcc_addresses)
 
     return email
 
@@ -265,7 +231,7 @@ def send_many(**kwargs):
     recipients_objs = get_recipients_objects(recipients)
 
     context = kwargs.pop('context', {})
-    emails = [send(recipients=[recipient.email], context={**context, 'recipient': recipient}, commit=False, **kwargs)
+    emails = [send(recipients=[recipient.email], context={**context, 'recipient': recipient.id}, commit=False, **kwargs)
               for recipient in recipients_objs]
 
     if kwargs['inlines']:

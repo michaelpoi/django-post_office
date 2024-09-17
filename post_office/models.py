@@ -24,6 +24,7 @@ from .connections import connections
 from .logutils import setup_loghandlers
 from .sanitizer import clean_html
 from .settings import get_log_level, get_template_engine, get_override_recipients
+from .template.backends.post_office import Template
 from .validators import validate_email_with_name, validate_template_syntax
 from django.template import loader
 
@@ -80,6 +81,10 @@ class EmailAddress(models.Model):
 
 
 def render_message(html_str, context):
+    """
+    Replaces variables of format #var# with actual values from the context.
+    Fills recipient data into added placeholders.
+    """
     for placeholder, value in context.items():
         placeholder_notation = f"#{placeholder}#"
         html_str = html_str.replace(placeholder_notation, clean_html(str(value)))
@@ -191,28 +196,32 @@ class EmailModel(models.Model):
         """
         Returns Django EmailMessage object for sending.
         """
-        if self._cached_email_message:
-            return self._cached_email_message
+        # if self._cached_email_message:
+        #     return self._cached_email_message
 
         return self.prepare_email_message()
 
     def render_email_template(self, recipient_context=None):
         """
-        Function to render an email from the template html code and placeholders in database
+        Function to render an email template. Takes an EmailAddress object.
         """
         template_instance = self.template
         engine = get_template_engine()
         context = {'recipient': recipient_context, 'dry_run': True} if recipient_context else {'dry_run': True}
         html_content = template_instance.get_html_content()
+
+        # Replace all {% placeholder <name> %} to {{ name }}
         django_template_first_pass = engine.from_string(html_content)
         first_pass_content = django_template_first_pass.render(context)
 
+        # Placeholders are always assigned to main template
         main_template = template_instance.get_main_template()
 
         placeholders = PlaceholderContent.objects.filter(emailmerge=main_template, language=template_instance.language)
         context_data = {placeholder.placeholder_name: clean_html(placeholder.content) for placeholder in placeholders}
         context_data = {**context_data, 'dry_run': True}
 
+        # Replaces placeholders with actual values
         django_template_second_pass = engine.from_string("{% load post_office %}" + first_pass_content)
         final_content = django_template_second_pass.render(context_data)
 
@@ -228,10 +237,9 @@ class EmailModel(models.Model):
         # if get_override_recipients():
         #     self.to = get_override_recipients()
 
-        #print(self.__dir__())
+        # Replace recipient id with EmailAddress object
         context = {**self.context}
         context['recipient'] = EmailAddress.objects.get(id=self.context['recipient'])
-        # self.context['recipient'] = EmailAddress.objects.get(id=self.context['recipient'])
 
         if self.template is not None and self.context is not None:
             engine = get_template_engine()
@@ -239,7 +247,6 @@ class EmailModel(models.Model):
             plaintext_message = engine.from_string(self.template.content).render(self.context)
             html_message, multipart_template = self.render_email_template()
             html_message = render_message(html_message, context)
-            print(html_message)
 
 
         else:
@@ -265,22 +272,25 @@ class EmailModel(models.Model):
                                       connection=connection,
                                       multipart_template=multipart_template)
 
+        # engine = get_template_engine()
+        # template_html = engine.from_string(html_message)
+        # new_html = template_html.render({'dry_run': False})
+        # template = get_template_from_html(html_message)
+        # msg.body = new_html
+        # msg.html = new_html
+        # msg.attach_alternative(new_html, 'text/html')
+        # template.render({'dry_run': False})
+        # template.attach_related(msg)
+        print(type(msg))
         engine = get_template_engine()
-        template_html = engine.from_string(html_message)
-        new_html = template_html.render({'dry_run': False})
-        #template = get_template(self.template.get_main_template().base_file, using='post_office')
-        #template = get_template('temp/53fd1df9-e953-40fc-a413-27872d518858.html', using='post_office')
-
-        template, _ = get_template_from_html(html_message)
+        render_template = engine.from_string(html_message)
+        new_html = render_template.render({'dry_run': False})
         msg.body = new_html
-        print(new_html)
-        msg.html = new_html
         msg.attach_alternative(new_html, 'text/html')
-        template.render({'dry_run': False})
-        template.attach_related(msg)
-        msg.send()
+        render_template.attach_related(msg)
 
         for attachment in self.attachments.all():
+            attachment.file.open('rb')
             if attachment.headers:
                 mime_part = MIMENonMultipart(*attachment.mimetype.split('/'))
                 mime_part.set_payload(attachment.file.read())
@@ -559,18 +569,25 @@ class PlaceholderContent(models.Model):
 
 
 import tempfile
+from django.template import Template as DjangoTemplate
 
 
 def get_template_from_html(html_content):
-    file_name = f'{str(uuid.uuid4())}.html'
-    with open(settings.BASE_DIR / 'celery_project' / 'templates' / 'temp' / file_name, 'wb') as temp_file:
-        # Write the HTML content to the temporary file
-        temp_file.write(html_content.encode('utf-8'))
-        temp_file_path = temp_file.name
+    # file_name = f'{str(uuid.uuid4())}.html'
+    # with open(settings.BASE_DIR / 'celery_project' / 'templates' / 'temp' / file_name, 'wb') as temp_file:
+    #     # Write the HTML content to the temporary file
+    #     temp_file.write(html_content.encode('utf-8'))
+    #     temp_file_path = temp_file.name
+    #
+    #     # Get the Django template engine
+    #
+    # # Load the template from the temporary file
+    # template = get_template(temp_file_path, using='post_office')
 
-        # Get the Django template engine
+    engine = get_template_engine()
 
-    # Load the template from the temporary file
-    template = get_template(temp_file_path, using='post_office')
+    # template = DjangoTemplate(template_string=html_content)
+    # template = Template(template, backend='post_office')
+    template = engine.from_string(html_content)
 
-    return template, temp_file_path
+    return template

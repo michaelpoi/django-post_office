@@ -19,7 +19,10 @@ def inline_image(context, file):
         return SafeString(f"{{% inline_image '{file}' %}}")
 
     if context.get('media'):
-        return
+        file_name = file.split('/')[-1]
+        if host := context.get('host'):
+            return f"{host}media/{file_name}"
+
     assert hasattr(
         context.template, '_attached_images'
     ), "You must use template engine 'post_office' when rendering images using templatetag 'inline_image'."

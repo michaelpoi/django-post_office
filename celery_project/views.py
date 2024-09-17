@@ -73,7 +73,7 @@ def send_attachment(request):
             'poenko.mishany@gmail.com',
             'Mykhailo.Poienko@uibk.ac.at',
             html_message='<b>HI there</b>',
-            attachments={'test.txt': f},
+            attachments={'new_test.txt': f},
             render_on_delivery=True
         )
 
@@ -123,6 +123,7 @@ def render_on_delivery(request):
         context={'shirts': 100, 'all': 10, 'shoes': 75},
         inlines=True,
         render_on_delivery=True,
-        language='en'
+        language='en',
+        priority='low'
     )
     return redirect('home')

@@ -1,5 +1,5 @@
 import re
-
+from lxml import html
 from django import forms
 from django.conf import settings
 from django.contrib import admin, messages
@@ -19,7 +19,7 @@ from django.utils.safestring import mark_safe
 #from .fields import CommaSeparatedEmailField
 from .models import STATUS, Attachment, EmailModel, EmailMergeModel, Log, EmailAddress, PlaceholderContent
 from .sanitizer import clean_html
-from .settings import get_email_templates, get_languages_list, get_default_language
+from .settings import get_email_templates, get_languages_list, get_default_language, get_template_engine
 from .utils import get_html_content
 
 
@@ -28,6 +28,31 @@ def get_message_preview(instance):
 
 
 get_message_preview.short_description = 'Message'
+
+
+def render_placeholder_content(content, host):
+    engine = get_template_engine()
+    template = engine.from_string(f"{{% load post_office %}}{content}")
+    context = {'media': True, 'dry_run': False, 'host': host}
+    return template.render(context)
+
+def convert_media_urls_to_tags(content):
+    """Convert media URLs back to {% inlined_image <url> %} tags using lxml."""
+    tree = html.fromstring(content)
+
+    for img in tree.xpath('//img'):
+        src = img.get('src')
+        if src and '/media/' in src:
+            # Extract the media path after '/media/'
+            print(src)
+            media_path = src.split('/media/', 1)[1]
+            # Replace src with the inlined_image template tag
+
+            inline_img_tag = f"{{% inline_image '{settings.MEDIA_ROOT / media_path}' %}}"
+            img.set('src', inline_img_tag)
+
+    html_str = html.tostring(tree, encoding='unicode', method='html')
+    return mark_safe(html_str.replace('%20', ' '))
 
 
 class AttachmentInline(admin.StackedInline):
@@ -90,24 +115,44 @@ def requeue(modeladmin, request, queryset):
 
 requeue.short_description = 'Requeue selected emails'
 
-
+from django.http.request import HttpRequest
 class EmailContentInlineForm(forms.ModelForm):
     class Meta:
         model = PlaceholderContent
         fields = ['placeholder_name', 'content', 'language', 'base_file']
 
     def __init__(self, *args, **kwargs):
+        request: HttpRequest = kwargs.pop('request', None)
+        if request:
+            host = request.build_absolute_uri('/') # TODO: urllib
+        else:
+            host = 'http://127.0.0.1:8000'
         super().__init__(*args, **kwargs)
         self.fields['placeholder_name'].disabled = True
         self.fields['language'].disabled = True
 
         self.fields['base_file'].disabled = True
 
+        if 'content' in self.initial:
+            self.initial['content'] = render_placeholder_content(self.initial['content'], host)
+
+    def save(self, commit=True):
+
+        instance = super().save(commit=False)
+
+        instance.content = convert_media_urls_to_tags(self.cleaned_data['content'])
+        print(instance.content)
+
+        if commit:
+            instance.save()
+
+        return instance
 
 
 
 class EmailContentInlineFormset(forms.BaseInlineFormSet):
     def __init__(self, *args, **kwargs):
+        request = self.request
         super().__init__(*args, **kwargs)
         if self.instance and self.instance.pk:
             placeholders = get_html_content(self.instance).split("{% placeholder '")[1:]
@@ -119,11 +164,20 @@ class EmailContentInlineFormset(forms.BaseInlineFormSet):
             for placeholder_name in placeholder_names:
                 for lang in get_languages_list():
                     if (placeholder_name, lang) not in existing_placeholders:
-                        self.forms.append(self._construct_form(len(self.forms), initial={
-                            'placeholder_name': placeholder_name,
-                            'language': lang,
-                            'base_file': self.instance.base_file
-                        }))
+                        form_kwargs = {
+                            'initial': {
+                                'placeholder_name': placeholder_name,
+                                'language': lang,
+                                'base_file': self.instance.base_file
+                            },
+                            'request': request
+                        }
+                        self.forms.append(self._construct_form(len(self.forms), **form_kwargs))
+
+    def get_form_kwargs(self, index):
+        kwargs = super().get_form_kwargs(index)
+        kwargs['request'] = self.request
+        return kwargs
 
 
 class EmailContentInline(admin.TabularInline):
@@ -134,7 +188,9 @@ class EmailContentInline(admin.TabularInline):
 
     def get_formset(self, request, obj=None, **kwargs):
         self.parent_obj = obj
-        return super(EmailContentInline, self).get_formset(request, obj, **kwargs)
+        formset = super(EmailContentInline, self).get_formset(request, obj, **kwargs)
+        formset.request = request
+        return formset
 
     def get_queryset(self, request, obj=None):
         queryset = super().get_queryset(request)

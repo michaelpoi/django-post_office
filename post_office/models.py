@@ -5,7 +5,8 @@ from collections import namedtuple
 from typing import Union
 from uuid import uuid4
 from email.mime.nonmultipart import MIMENonMultipart
-
+from django.core.files.base import ContentFile
+from django.core.files.storage import default_storage
 from django.core.exceptions import ValidationError
 from django.core.mail import EmailMessage, EmailMultiAlternatives
 from django.db import models
@@ -180,12 +181,18 @@ class EmailModel(models.Model):
         }
 
         if html_message:
+
             msg = EmailMultiAlternatives(body=plaintext_message or html_message, **common_args)
+
+            if multipart_template:
+                html_message = multipart_template.render({'dry_run': False})
+                msg.body = plaintext_message or html_message
             if plaintext_message:
                 msg.attach_alternative(html_message, 'text/html')
             else:
                 msg.content_subtype = 'html'
-            if hasattr(multipart_template, 'attach_related'):
+
+            if multipart_template:
                 multipart_template.attach_related(msg)
         else:
             msg = EmailMessage(body=plaintext_message, **common_args)
@@ -196,8 +203,8 @@ class EmailModel(models.Model):
         """
         Returns Django EmailMessage object for sending.
         """
-        # if self._cached_email_message:
-        #     return self._cached_email_message
+        if self._cached_email_message:
+            return self._cached_email_message
 
         return self.prepare_email_message()
 
@@ -227,7 +234,7 @@ class EmailModel(models.Model):
 
         final_content = f"{{% load post_office %}}\n {final_content}"
 
-        return final_content, django_template_second_pass
+        return final_content
 
     def prepare_email_message(self):
         """
@@ -245,9 +252,11 @@ class EmailModel(models.Model):
             engine = get_template_engine()
             subject = engine.from_string(self.template.subject).render(self.context)
             plaintext_message = engine.from_string(self.template.content).render(self.context)
-            html_message, multipart_template = self.render_email_template()
+            html_message = self.render_email_template()
             html_message = render_message(html_message, context)
 
+            engine = get_template_engine()
+            multipart_template = engine.from_string(html_message)
 
         else:
             subject = smart_str(render_message(self.subject, context))
@@ -281,13 +290,14 @@ class EmailModel(models.Model):
         # msg.attach_alternative(new_html, 'text/html')
         # template.render({'dry_run': False})
         # template.attach_related(msg)
-        print(type(msg))
-        engine = get_template_engine()
-        render_template = engine.from_string(html_message)
-        new_html = render_template.render({'dry_run': False})
-        msg.body = new_html
-        msg.attach_alternative(new_html, 'text/html')
-        render_template.attach_related(msg)
+        # print(type(msg))
+        # engine = get_template_engine()
+        # render_template = engine.from_string(html_message)
+        # new_html = render_template.render({'dry_run': False})
+        # print(new_html)
+        # msg.body = new_html
+        # msg.attach_alternative(new_html, 'text/html')
+        # render_template.attach_related(msg)
 
         for attachment in self.attachments.all():
             attachment.file.open('rb')
@@ -545,6 +555,14 @@ class PlaceholderContent(models.Model):
                 file_ext = header.split('/')[1].split(';')[0]
                 img_data = base64.b64decode(base64_data)
 
+                #img_filename = f"image_{uuid.uuid4()}.{file_ext}"
+
+                # if default_storage.exists(img_filename):
+                #     img_path = default_storage.url(img_filename)
+                # else:
+                #     file = ContentFile(img_data)
+                #     img_path = default_storage.save(img_filename, file)
+
                 img_filename = f"image_{str(uuid.uuid4())}.{file_ext}"
 
                 img_path = settings.MEDIA_ROOT / img_filename
@@ -555,6 +573,12 @@ class PlaceholderContent(models.Model):
                     inline_img_tag = clean_html(f"{{% inline_image '{img_path}' %}}")
 
                 img.set('src', inline_img_tag)
+
+                print(img_path)
+
+                #inline_img_tag = clean_html(f"{{% inline_image '{settings.MEDIA_ROOT / img_path}' %}}")
+
+                #img.set('src', inline_img_tag)
         self.content = unescape(html.tostring(tree, pretty_print=False, encoding='unicode'))
         self.content = SafeString(self.content.replace('%20', ' '))
 

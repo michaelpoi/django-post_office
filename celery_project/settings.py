@@ -66,6 +66,8 @@ DATABASES = {
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 USE_TZ = False
+# POST_OFFICE_CACHE = False
+
 
 MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
@@ -85,11 +87,17 @@ STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 #CELERY_ENABLED = True
 EMAIL_BACKEND = 'post_office.EmailBackend'
+# EMAIL_HOST = 'smtp.mailgun.org'
+# EMAIL_PORT = 587
+# EMAIL_USE_TLS = True
+# EMAIL_HOST_USER = 'postmaster@sandboxf099cc52e4d94225bf3ad0e9f2bcabd2.mailgun.org'
+# EMAIL_HOST_PASSWORD = '722eddd8ef922dbcd381d68f6b28c4f0-7a3af442-a4d621a6'
+
 EMAIL_HOST = '127.0.0.1'
 EMAIL_PORT = 1025
 EMAIL_USE_TLS = False
-EMAIL_HOST_USER = 'test'
-EMAIL_HOST_PASSWORD = 'test'
+# EMAIL_HOST_USER = 'test'
+# EMAIL_HOST_PASSWORD = 'test'
 #print(EMAIL_HOST, EMAIL_PORT, EMAIL_HOST_USER, EMAIL_HOST_PASSWORD)
 
 TEMPLATES = [

@@ -1,3 +1,4 @@
+import uuid
 from email.mime.image import MIMEImage
 import hashlib
 import os
@@ -42,7 +43,8 @@ def inline_image(context, file):
         fileobj = File(open(absfilename, 'rb'), name=file)
     raw_data = fileobj.read()
     image = MIMEImage(raw_data)
-    md5sum = hashlib.md5(raw_data).hexdigest()
+    #md5sum = hashlib.md5(raw_data).hexdigest()
+    md5sum = uuid.uuid4().hex
     image.add_header('Content-Disposition', 'inline', filename=md5sum)
     image.add_header('Content-ID', f'<{md5sum}>')
     context.template._attached_images.append(image)

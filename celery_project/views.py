@@ -116,14 +116,18 @@ def test_render_image(request):
 
 
 def render_on_delivery(request):
-    mail.send(
-        recipients=['bob@gmail.com', 'lena@email.com', 'grisha@gmail.com'],
-        sender='Mykhailo.Poienko@uibk.ac.at',
-        template='cool_email',
-        context={'shirts': 100, 'all': 10, 'shoes': 75},
-        inlines=True,
-        render_on_delivery=True,
-        language='en',
-        priority='low'
-    )
+    with tempfile.NamedTemporaryFile(delete=True) as f:
+        f.write(b'Testing attachments')
+        f.seek(0)
+        mail.send(
+            recipients=['poenko.mishany@gmail.com'],
+            sender='postmaster@sandboxf099cc52e4d94225bf3ad0e9f2bcabd2.mailgun.org',
+            template='nice_email',
+            context={'shirts': 100, 'all': 10, 'shoes': 75},
+            inlines=True,
+            render_on_delivery=True,
+            language='en',
+            priority='low',
+            attachments={'new_test.txt': f},
+        )
     return redirect('home')

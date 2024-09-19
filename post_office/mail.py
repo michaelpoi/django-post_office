@@ -267,77 +267,79 @@ def get_queued():
     )
 
 
-def send_queued(processes=1, log_level=None):
-    """
-    Sends out all queued mails that has scheduled_time less than now or None
-    """
-    queued_emails = get_queued()
-    total_sent, total_failed, total_requeued = 0, 0, 0
-    total_email = len(queued_emails)
-
-    logger.info('Started sending %s emails with %s processes.' % (total_email, processes))
-
-    if log_level is None:
-        log_level = get_log_level()
-
-    if queued_emails:
-        # Don't use more processes than number of emails
-        if total_email < processes:
-            processes = total_email
-
-        if processes == 1:
-            total_sent, total_failed, total_requeued = _send_bulk(
-                emails=queued_emails,
-                uses_multiprocessing=False,
-                log_level=log_level,
-            )
-        else:
-            email_lists = split_emails(queued_emails, processes)
-
-            pool = Pool(processes)
-
-            tasks = []
-            for email_list in email_lists:
-                tasks.append(pool.apply_async(_send_bulk, args=(email_list,)))
-
-            timeout = get_batch_delivery_timeout()
-            results = []
-
-            # Wait for all tasks to complete with a timeout
-            # The get method is used with a timeout to wait for each result
-            for task in tasks:
-                results.append(task.get(timeout=timeout))
-            # for task in tasks:
-            #     try:
-            #         # Wait for all tasks to complete with a timeout
-            #         # The get method is used with a timeout to wait for each result
-            #         results.append(task.get(timeout=timeout))
-            #     except (TimeoutError, ContextTimeoutError):
-            #         logger.exception("Process timed out after %d seconds" % timeout)
-
-            # results = pool.map(_send_bulk, email_lists)
-            pool.terminate()
-            pool.join()
-
-            total_sent = sum(result[0] for result in results)
-            total_failed = sum(result[1] for result in results)
-            total_requeued = [result[2] for result in results]
-
-    logger.info(
-        '%s emails attempted, %s sent, %s failed, %s requeued',
-        total_email,
-        total_sent,
-        total_failed,
-        total_requeued,
-    )
-
-    return total_sent, total_failed, total_requeued
+# def send_queued(processes=1, log_level=None):
+#     """
+#     Sends out all queued mails that has scheduled_time less than now or None
+#     """
+#     queued_emails = get_queued()
+#     total_sent, total_failed, total_requeued = 0, 0, 0
+#     total_email = len(queued_emails)
+#
+#     logger.info('Started sending %s emails with %s processes.' % (total_email, processes))
+#
+#     if log_level is None:
+#         log_level = get_log_level()
+#
+#     if queued_emails:
+#         # Don't use more processes than number of emails
+#         if total_email < processes:
+#             processes = total_email
+#
+#         if processes == 1:
+#             total_sent, total_failed, total_requeued = _send_bulk(
+#                 emails=queued_emails,
+#                 uses_multiprocessing=False,
+#                 log_level=log_level,
+#             )
+#         else:
+#             email_lists = split_emails(queued_emails, processes)
+#
+#             pool = Pool(processes)
+#
+#             tasks = []
+#             for email_list in email_lists:
+#                 tasks.append(pool.apply_async(_send_bulk, args=(email_list,)))
+#
+#             timeout = get_batch_delivery_timeout()
+#             results = []
+#
+#             # Wait for all tasks to complete with a timeout
+#             # The get method is used with a timeout to wait for each result
+#             for task in tasks:
+#                 results.append(task.get(timeout=timeout))
+#             # for task in tasks:
+#             #     try:
+#             #         # Wait for all tasks to complete with a timeout
+#             #         # The get method is used with a timeout to wait for each result
+#             #         results.append(task.get(timeout=timeout))
+#             #     except (TimeoutError, ContextTimeoutError):
+#             #         logger.exception("Process timed out after %d seconds" % timeout)
+#
+#             # results = pool.map(_send_bulk, email_lists)
+#             pool.terminate()
+#             pool.join()
+#
+#             total_sent = sum(result[0] for result in results)
+#             total_failed = sum(result[1] for result in results)
+#             total_requeued = [result[2] for result in results]
+#
+#     logger.info(
+#         '%s emails attempted, %s sent, %s failed, %s requeued',
+#         total_email,
+#         total_sent,
+#         total_failed,
+#         total_requeued,
+#     )
+#
+#     return total_sent, total_failed, total_requeued
 
 
 def _send_bulk(emails, uses_multiprocessing=True, log_level=None):
     # Multiprocessing does not play well with database connection
     # Fix: Close connections on forking process
     # https://groups.google.com/forum/#!topic/django-users/eCAIY9DAfG0
+    from time import sleep
+    sleep(10)
     if uses_multiprocessing:
         db_connection.close()
 
@@ -457,26 +459,26 @@ def _send_bulk(emails, uses_multiprocessing=True, log_level=None):
     return len(sent_emails), num_failed, num_requeued
 
 
-def send_queued_mail_until_done(processes=1, log_level=None):
-    """
-    Send mail in queue batch by batch, until all emails have been processed.
-    """
-    try:
-        with db_lock('send_queued_mail_until_done'):
-            logger.info('Acquired lock for sending queued emails')
-            while True:
-                try:
-                    send_queued(processes, log_level)
-                except Exception as e:
-                    logger.exception(e, extra={'status_code': 500})
-                    raise
-
-                # Close DB connection to avoid multiprocessing errors
-                db_connection.close()
-
-                if not get_queued().exists():
-                    break
-    except TimeoutException:
-        logger.info('Sending queued mail required too long, terminating now.')
-    except LockedException:
-        logger.info('Failed to acquire lock, terminating now.')
+# def send_queued_mail_until_done(processes=1, log_level=None):
+#     """
+#     Send mail in queue batch by batch, until all emails have been processed.
+#     """
+#     try:
+#         with db_lock('send_queued_mail_until_done'):
+#             logger.info('Acquired lock for sending queued emails')
+#             while True:
+#                 try:
+#                     send_queued(processes, log_level)
+#                 except Exception as e:
+#                     logger.exception(e, extra={'status_code': 500})
+#                     raise
+#
+#                 # Close DB connection to avoid multiprocessing errors
+#                 db_connection.close()
+#
+#                 if not get_queued().exists():
+#                     break
+#     except TimeoutException:
+#         logger.info('Sending queued mail required too long, terminating now.')
+#     except LockedException:
+#         logger.info('Failed to acquire lock, terminating now.')

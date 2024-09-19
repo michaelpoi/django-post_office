@@ -136,6 +136,7 @@ TEMPLATES = [
 POST_OFFICE = {
     'TEMPLATE_ENGINE': 'post_office',
     'CELERY_ENABLED': True,
+    'MAX_RETRIES': 3,
 }
 WSGI_APPLICATION = "celery_project.wsgi.application"
 

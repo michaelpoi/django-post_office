@@ -7,11 +7,12 @@ from django.utils import timezone
 from post_office.dblock import db_lock, TimeoutException, LockedException
 from post_office.connections import connections
 from post_office.mail import get_queued, split_emails, _send_bulk
-
+from post_office.settings import get_batch_delivery_timeout
 
 
 class Command(BaseCommand):
     processes = 1
+
     def add_arguments(self, parser):
         parser.add_argument(
             '-p',
@@ -29,17 +30,17 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         self.processes = options['processes']
-        self.send_queued_mail_until_done(options['processes'], options.get('log_level'))
+        self.send_queued_mail_until_done()
 
-    def send_queued_mail_until_done(self, processes, log_level):
+    def send_queued_mail_until_done(self):
         try:
             with db_lock('send_queued_mail_until_done'):
-                self.stdout('Acquired lock for sending queued email')
+                self.stdout.write('Acquired lock for sending queued email')
                 while True:
                     try:
                         self.send_queued()
                     except Exception as e:
-                        self.stderr(e, extra={'status_code': 500})
+                        self.stderr.write(e, extra={'status_code': 500})
                         raise
 
                     db_connection.close()
@@ -47,17 +48,17 @@ class Command(BaseCommand):
                     if not get_queued().exists():
                         break
         except TimeoutException:
-            self.stderr('Sending queued mail requires too long, terminating now.')
+            self.stderr.write('Sending queued mail requires too long, terminating now.')
 
         except LockedException:
-            self.stderr('Failed to acquire lock, terminating now.')
+            self.stderr.write('Failed to acquire lock, terminating now.')
 
     def send_queued(self):
         queued_emails = get_queued()
-        total_send, total_failed, total_requeued = 0, 0, 0
+        total_sent, total_failed, total_requeued = 0, 0, 0
         total_email = len(queued_emails)
 
-        self.stdout(f"Starting sending {total_send} emails with {self.processes} processes.")
+        self.stdout.write(f"Starting sending {total_email} emails with {self.processes} processes.")
 
         if queued_emails:
 
@@ -65,12 +66,33 @@ class Command(BaseCommand):
                 self.processes = total_email
 
             if self.processes == 1:
-                total_send, total_failed, total_requeued = _send_bulk(queued_emails, uses_multiprocessing=False)
+                total_sent, total_failed, total_requeued = _send_bulk(queued_emails, uses_multiprocessing=False)
 
             else:
                 email_lists = split_emails(queued_emails, self.processes)
 
-                pool = Pool(processes=self.processes)
+                pool: Pool = Pool(processes=self.processes)
 
-                pool.map(_send_bulk, email_lists)
+                tasks = []
+                for email_list in email_lists:
+                    tasks.append(pool.apply_async(_send_bulk, args=(email_list,)))
 
+                timeout = get_batch_delivery_timeout()
+                results = []
+
+                for task in tasks:
+                    results.append(task.get(timeout=timeout))
+
+                pool.terminate()
+                pool.join()
+
+                total_sent = sum(result[0] for result in results)
+                total_failed = sum(result[1] for result in results)
+                total_requeued = [result[2] for result in results]
+
+        self.stdout.write(f"{total_email} emails attempted, "
+                          f"{total_sent} send, "
+                          f"{total_failed} failed,"
+                          f" {total_requeued} requeued.")
+
+        return total_sent, total_failed, total_requeued

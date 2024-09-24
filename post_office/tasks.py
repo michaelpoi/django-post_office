@@ -6,6 +6,8 @@ of auto-discovering tasks in "tasks" submodules.
 """
 
 import datetime
+import logging
+import time
 
 from django.utils.timezone import now
 
@@ -13,7 +15,7 @@ from post_office.mail import _send_bulk, get_queued
 from post_office.utils import cleanup_expired_mails
 from .dblock import db_lock, TimeoutException, LockedException
 from django.db import connection as db_connection
-
+from django.db import transaction
 
 from .settings import get_celery_enabled
 
@@ -36,29 +38,27 @@ else:
         """
         To be called by the Celery task manager.
         """
-        try:
-            with db_lock('send_queued_mail_until_done'):
-                while True:
-                    try:
-                        queued_emails = get_queued()
-                        _send_bulk(queued_emails, uses_multiprocessing=False)
-                    except Exception as e:
-                        raise
 
-                    db_connection.close()
+        while True:
+            queued_emails = get_queued().select_for_update(of=('self',), skip_locked=True)
+            with transaction.atomic():
+                try:
+                    _send_bulk(queued_emails, uses_multiprocessing=False)
+                except Exception as e:
+                    raise e
 
-                    if not get_queued().exists():
-                        break
-        except TimeoutException:
-            print('Timeout exception')
-        except LockedException:
-            print('Locked exception')
+                if not get_queued().select_for_update(of=('self',), skip_locked=True).exists():
+                    break
+            db_connection.close()
+
 
     def queued_mail_handler(sender, **kwargs):
         """
         Trigger an asynchronous mail delivery.
         """
+        print(sender)
         send_queued_mail.delay()
+
 
     @shared_task(ignore_result=True)
     def cleanup_mail(*args, **kwargs):

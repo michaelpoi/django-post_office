@@ -31,6 +31,7 @@ get_message_preview.short_description = 'Message'
 
 
 def render_placeholder_content(content, host):
+    """Render placeholders content to replace {% inline_image %} tags with actual images. """
     engine = get_template_engine()
     template = engine.from_string(f"{{% load post_office %}}{content}")
     context = {'media': True, 'dry_run': False, 'host': host}
@@ -44,7 +45,6 @@ def convert_media_urls_to_tags(content):
         src = img.get('src')
         if src and '/media/' in src:
             # Extract the media path after '/media/'
-            print(src)
             media_path = src.split('/media/', 1)[1]
             # Replace src with the inlined_image template tag
 
@@ -256,16 +256,7 @@ class EmailAdmin(admin.ModelAdmin):
         return False
 
     def shortened_subject(self, instance):
-        if instance.context:
-            template_cache_key = '_subject_template_' + str(instance.template_id)
-            template = getattr(self, template_cache_key, None)
-            if template is None:
-                # cache compiled template to speed up rendering of list view
-                template = Template(instance.template.subject)
-                setattr(self, template_cache_key, template)
-            subject = template.render(Context(instance.context))
-        else:
-            subject = instance.subject
+        subject = instance.subject
         return Truncator(subject).chars(100)
 
     shortened_subject.short_description = _('Subject')

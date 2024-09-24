@@ -1,8 +1,13 @@
+from typing import List
+
 import requests
 import uuid
 from post_office import mail
-from post_office.mail import send_queued_mail_until_done
 import pytest
+from post_office.mail import _send_bulk
+from django.conf import settings
+
+from post_office.models import EmailModel
 
 
 def cleanup_messages():
@@ -12,13 +17,15 @@ def cleanup_messages():
 @pytest.mark.django_db
 def test_message():
     cleanup_messages()
-    test_subject = str(uuid.uuid4())
-    mail.send(
+    emails: List[EmailModel] = []
+    emails.append(mail.send(
         'poenko.mishany@gmail.com',
         'Mykhailo.Poienko@uibk.ac.at',
-        subject=test_subject,
-    )
-    send_queued_mail_until_done()
+        subject='Letter #id#',
+        context={'id': 1},
+        html_message="Hi there",
+        priority='now'
+    ))
     data = requests.get('http://127.0.0.1:8025/api/v1/messages')
     data = data.json()
-    print(data)
+    raise Exception(data)

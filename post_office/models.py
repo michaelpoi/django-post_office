@@ -1,4 +1,5 @@
 import os
+import time
 import uuid
 
 from collections import namedtuple
@@ -14,18 +15,13 @@ from django.utils.encoding import smart_str
 from django.utils.translation import pgettext_lazy, gettext_lazy as _
 from django.utils import timezone
 from django.db.models.constraints import UniqueConstraint
-from django.template.loader import get_template
-
 from ckeditor.fields import RichTextField
-
 from post_office import cache
-#from post_office.fields import CommaSeparatedEmailField
 
 from .connections import connections
 from .logutils import setup_loghandlers
 from .sanitizer import clean_html
 from .settings import get_log_level, get_template_engine, get_override_recipients
-from .template.backends.post_office import Template
 from .validators import validate_email_with_name, validate_template_syntax
 from django.template import loader
 
@@ -36,6 +32,9 @@ STATUS = namedtuple('STATUS', 'sent failed queued requeued')._make(range(4))
 
 
 class Recipient(models.Model):
+    """
+    Map table for storing ManyToMany relationships between users and emails.
+    """
     SEND_TYPES = [
         ('to', _('To')),
         ('cc', _('Cc')),
@@ -53,6 +52,9 @@ class Recipient(models.Model):
 
 
 class EmailAddress(models.Model):
+    """
+    A model to hold Email recipient information.
+    """
     GENDERS = [
         ('male', _('Male')),
         ('female', _('Female')),
@@ -208,13 +210,13 @@ class EmailModel(models.Model):
 
         return self.prepare_email_message()
 
-    def render_email_template(self, recipient_context=None):
+    def render_email_template(self, recipient=None):
         """
         Function to render an email template. Takes an EmailAddress object.
         """
         template_instance = self.template
         engine = get_template_engine()
-        context = {'recipient': recipient_context, 'dry_run': True} if recipient_context else {'dry_run': True}
+        context = {'recipient': recipient, 'dry_run': True} if recipient else {'dry_run': True}
         html_content = template_instance.get_html_content()
 
         # Replace all {% placeholder <name> %} to {{ name }}
@@ -249,10 +251,9 @@ class EmailModel(models.Model):
         context['recipient'] = EmailAddress.objects.get(id=self.context['recipient'])
 
         if self.template is not None and self.context is not None:
-            engine = get_template_engine()
-            subject = engine.from_string(self.template.subject).render(self.context)
-            plaintext_message = engine.from_string(self.template.content).render(self.context)
-            html_message = self.render_email_template()
+            subject = render_message(self.template.subject, context)
+            plaintext_message = render_message(self.template.content, context)
+            html_message = self.render_email_template(recipient=context['recipient'])
             html_message = render_message(html_message, context)
 
             engine = get_template_engine()
@@ -280,24 +281,6 @@ class EmailModel(models.Model):
                                       subject=subject,
                                       connection=connection,
                                       multipart_template=multipart_template)
-
-        # engine = get_template_engine()
-        # template_html = engine.from_string(html_message)
-        # new_html = template_html.render({'dry_run': False})
-        # template = get_template_from_html(html_message)
-        # msg.body = new_html
-        # msg.html = new_html
-        # msg.attach_alternative(new_html, 'text/html')
-        # template.render({'dry_run': False})
-        # template.attach_related(msg)
-        # print(type(msg))
-        # engine = get_template_engine()
-        # render_template = engine.from_string(html_message)
-        # new_html = render_template.render({'dry_run': False})
-        # print(new_html)
-        # msg.body = new_html
-        # msg.attach_alternative(new_html, 'text/html')
-        # render_template.attach_related(msg)
 
         for attachment in self.attachments.all():
             attachment.file.open('rb')
@@ -330,7 +313,6 @@ class EmailModel(models.Model):
             status = STATUS.failed
             message = str(e)
             exception_type = type(e).__name__
-
             if commit:
                 logger.exception('Failed to send email')
             else:
@@ -546,6 +528,10 @@ class PlaceholderContent(models.Model):
     base_file = models.CharField(max_length=255, verbose_name=_('File name'))
 
     def save(self, *args, **kwargs):
+        """
+        Store base64 image representation from CKEditor fields in media/ folder
+        and replaces img tags with custom inline image with corresponding path.
+        """
         parser = html.HTMLParser()
         tree = html.fromstring(self.content, parser=parser)
         for img in tree.xpath('//img'):
@@ -574,8 +560,6 @@ class PlaceholderContent(models.Model):
 
                 img.set('src', inline_img_tag)
 
-                print(img_path)
-
                 #inline_img_tag = clean_html(f"{{% inline_image '{settings.MEDIA_ROOT / img_path}' %}}")
 
                 #img.set('src', inline_img_tag)
@@ -597,21 +581,7 @@ from django.template import Template as DjangoTemplate
 
 
 def get_template_from_html(html_content):
-    # file_name = f'{str(uuid.uuid4())}.html'
-    # with open(settings.BASE_DIR / 'celery_project' / 'templates' / 'temp' / file_name, 'wb') as temp_file:
-    #     # Write the HTML content to the temporary file
-    #     temp_file.write(html_content.encode('utf-8'))
-    #     temp_file_path = temp_file.name
-    #
-    #     # Get the Django template engine
-    #
-    # # Load the template from the temporary file
-    # template = get_template(temp_file_path, using='post_office')
-
     engine = get_template_engine()
-
-    # template = DjangoTemplate(template_string=html_content)
-    # template = Template(template, backend='post_office')
     template = engine.from_string(html_content)
 
     return template

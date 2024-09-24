@@ -1,3 +1,5 @@
+import time
+
 from django.template import loader
 
 from celery_project.tasks import sample
@@ -77,7 +79,6 @@ def send_attachment(request):
             render_on_delivery=True
         )
 
-
     return redirect('home')
 
 
@@ -92,9 +93,8 @@ def send_many(request):
     mail.send_many(
         recipients=['bob@gmail.com', 'lena@email.com', 'grisha@gmail.com'],
         sender='Mykhailo.Poienko@uibk.ac.at',
-        template='cool_email',
+        template='nice_email',
         context={'shirts': 100, 'all': 10, 'shoes': 75},
-        inlines=False,
         render_on_delivery=True
     )
     return redirect('home')
@@ -124,10 +124,43 @@ def render_on_delivery(request):
             sender='postmaster@sandboxf099cc52e4d94225bf3ad0e9f2bcabd2.mailgun.org',
             template='nice_email',
             context={'shirts': 100, 'all': 10, 'shoes': 75},
-            inlines=True,
             render_on_delivery=True,
             language='en',
             priority='low',
             attachments={'new_test.txt': f},
         )
+    return redirect('home')
+
+def stress(request):
+    for i in range(100):
+        with tempfile.NamedTemporaryFile(delete=True) as f:
+            f.write(b'Testing attachments')
+            f.seek(0)
+            mail.send(
+                recipients=['poenko.mishany@gmail.com'],
+                sender='postmaster@sandboxf099cc52e4d94225bf3ad0e9f2bcabd2.mailgun.org',
+                template='nice_email',
+                context={'shirts': 100, 'all': 10, 'shoes': 75, 'id': i},
+                render_on_delivery=True,
+                language='en',
+                priority='low',
+                attachments={'new_test.txt': f},
+            )
+
+
+    return redirect('home')
+
+
+def stress_many(request):
+    recipients = []
+    for i in range(100):
+        recipients.append(f"{i}@gmail.com")
+
+    mail.send_many(
+        recipients=recipients,
+        sender='Mykhailo.Poienko@uibk.ac.at',
+        template='nice_email',
+        context={'shirts': 100, 'all': 10, 'shoes': 75},
+        render_on_delivery=True
+    )
     return redirect('home')

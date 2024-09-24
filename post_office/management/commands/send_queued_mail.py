@@ -40,7 +40,7 @@ class Command(BaseCommand):
                     try:
                         self.send_queued()
                     except Exception as e:
-                        self.stderr.write(e, extra={'status_code': 500})
+                        #self.stderr.write(e)
                         raise
 
                     db_connection.close()

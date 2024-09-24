@@ -15,6 +15,8 @@ urlpatterns = [
     path('many/', views.send_many, name="send_many"),
     path('inline/', views.test_render_image, name='inlines'),
     path('on_delivery/', views.render_on_delivery, name='on_delivery'),
+    path('stress/', views.stress, name="stress"),
+    path('stress_many/', views.stress_many, name="stress_many"),
 ]
 
 if settings.DEBUG:

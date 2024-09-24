@@ -1,7 +1,4 @@
 import os
-import time
-import uuid
-
 from collections import namedtuple
 from typing import Union
 from uuid import uuid4
@@ -15,7 +12,7 @@ from django.utils.encoding import smart_str
 from django.utils.translation import pgettext_lazy, gettext_lazy as _
 from django.utils import timezone
 from django.db.models.constraints import UniqueConstraint
-from ckeditor.fields import RichTextField
+from ckeditor_uploader.fields import RichTextUploadingField
 from post_office import cache
 
 from .connections import connections
@@ -522,51 +519,9 @@ class PlaceholderContent(models.Model):
     )
     placeholder_name = models.CharField(_('Placeholder name'),
                                         max_length=63, )
-    content = RichTextField(_('Content'),
-                            config_name='default')
+    content = RichTextUploadingField(_('Content'), )
 
     base_file = models.CharField(max_length=255, verbose_name=_('File name'))
-
-    def save(self, *args, **kwargs):
-        """
-        Store base64 image representation from CKEditor fields in media/ folder
-        and replaces img tags with custom inline image with corresponding path.
-        """
-        parser = html.HTMLParser()
-        tree = html.fromstring(self.content, parser=parser)
-        for img in tree.xpath('//img'):
-            img_src = img.get('src')
-            if img_src and img_src.startswith('data:image'):
-                header, base64_data = img_src.split(',', 1)
-                file_ext = header.split('/')[1].split(';')[0]
-                img_data = base64.b64decode(base64_data)
-
-                #img_filename = f"image_{uuid.uuid4()}.{file_ext}"
-
-                # if default_storage.exists(img_filename):
-                #     img_path = default_storage.url(img_filename)
-                # else:
-                #     file = ContentFile(img_data)
-                #     img_path = default_storage.save(img_filename, file)
-
-                img_filename = f"image_{str(uuid.uuid4())}.{file_ext}"
-
-                img_path = settings.MEDIA_ROOT / img_filename
-
-                with open(img_path, 'wb') as f:
-                    f.write(img_data)
-
-                    inline_img_tag = clean_html(f"{{% inline_image '{img_path}' %}}")
-
-                img.set('src', inline_img_tag)
-
-                #inline_img_tag = clean_html(f"{{% inline_image '{settings.MEDIA_ROOT / img_path}' %}}")
-
-                #img.set('src', inline_img_tag)
-        self.content = unescape(html.tostring(tree, pretty_print=False, encoding='unicode'))
-        self.content = SafeString(self.content.replace('%20', ' '))
-
-        super().save(*args, **kwargs)
 
     class Meta:
         app_label = 'post_office'

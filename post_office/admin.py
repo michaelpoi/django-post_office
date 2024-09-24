@@ -37,6 +37,7 @@ def render_placeholder_content(content, host):
     context = {'media': True, 'dry_run': False, 'host': host}
     return template.render(context)
 
+
 def convert_media_urls_to_tags(content):
     """Convert media URLs back to {% inlined_image <url> %} tags using lxml."""
     tree = html.fromstring(content)
@@ -45,9 +46,8 @@ def convert_media_urls_to_tags(content):
         src = img.get('src')
         if src and '/media/' in src:
             # Extract the media path after '/media/'
-            media_path = src.split('/media/', 1)[1]
+            media_path = src.split(settings.MEDIA_URL, 1)[1]
             # Replace src with the inlined_image template tag
-
             inline_img_tag = f"{{% inline_image '{settings.MEDIA_ROOT / media_path}' %}}"
             img.set('src', inline_img_tag)
 
@@ -116,15 +116,22 @@ def requeue(modeladmin, request, queryset):
 requeue.short_description = 'Requeue selected emails'
 
 from django.http.request import HttpRequest
+
+
 class EmailContentInlineForm(forms.ModelForm):
+    language = forms.ChoiceField(
+        choices=settings.LANGUAGES,
+        required=False,
+        label=_('Language'),
+    )
     class Meta:
         model = PlaceholderContent
-        fields = ['placeholder_name', 'content', 'language', 'base_file']
+        fields = ['language','placeholder_name', 'content', 'base_file']
 
     def __init__(self, *args, **kwargs):
         request: HttpRequest = kwargs.pop('request', None)
         if request:
-            host = request.build_absolute_uri('/') # TODO: urllib
+            host = request.build_absolute_uri('/')  # TODO: urllib
         else:
             host = 'http://127.0.0.1:8000'
         super().__init__(*args, **kwargs)
@@ -147,7 +154,6 @@ class EmailContentInlineForm(forms.ModelForm):
             instance.save()
 
         return instance
-
 
 
 class EmailContentInlineFormset(forms.BaseInlineFormSet):
@@ -205,6 +211,10 @@ class EmailContentInline(admin.TabularInline):
     #
     # def has_delete_permission(self, request, obj=None):
     #     return False
+
+    # def get_max_num(self, request, obj=None, **kwargs):
+    #     print(len(settings.LANGUAGES) * self.get_queryset(request, obj).count())
+    #     return 9
 
 
 class EmailAdmin(admin.ModelAdmin):

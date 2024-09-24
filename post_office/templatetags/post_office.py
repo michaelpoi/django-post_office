@@ -20,9 +20,9 @@ def inline_image(context, file):
         return SafeString(f"{{% inline_image '{file}' %}}")
 
     if context.get('media'):
-        file_name = file.split('/')[-1]
+        file_name = file.split('media/')[-1]
         if host := context.get('host'):
-            return f"{host}media/{file_name}"
+            return f"{host[:-1]}{settings.MEDIA_URL}{file_name}"
 
     assert hasattr(
         context.template, '_attached_images'

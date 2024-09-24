@@ -95,7 +95,8 @@ def send_many(request):
         sender='Mykhailo.Poienko@uibk.ac.at',
         template='nice_email',
         context={'shirts': 100, 'all': 10, 'shoes': 75},
-        render_on_delivery=True
+        render_on_delivery=True,
+        language='de'
     )
     return redirect('home')
 

@@ -36,7 +36,7 @@ INSTALLED_APPS = [
     'post_office',
 ]
 
-CKEDITOR_UPLOAD_PATH = 'templates/images/ckeditor'
+CKEDITOR_UPLOAD_PATH = 'ckeditor_uploads'
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'workdir' / 'media'
@@ -174,3 +174,15 @@ CELERY_RESULT_BACKEND = CELERY_BROKER_URL
 CELERY_ACCEPT_CONTENT = ["json"]
 CELERY_TASK_SERIALIZER = "json"
 CELERY_TASK_TRACK_STARTED = True
+
+CKEDITOR_CONFIGS = {
+    'default': {
+        'toolbar': 'Custom',
+        'toolbar_Custom': [
+            ['Bold', 'Italic', 'Underline'],
+            ['NumberedList', 'BulletedList', '-', 'Outdent', 'Indent', '-', 'JustifyLeft', 'JustifyCenter', 'JustifyRight', 'JustifyBlock'],
+            ['Link', 'Unlink'],
+            ['Image']
+        ]
+    }
+}

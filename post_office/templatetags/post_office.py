@@ -1,6 +1,8 @@
+import uuid
 from email.mime.image import MIMEImage
 import hashlib
 import os
+
 from django import template
 from django.conf import settings
 from django.contrib.staticfiles import finders
@@ -9,11 +11,22 @@ from django.core.files.images import ImageFile
 
 register = template.Library()
 
+from django.utils.html import SafeString
+
 
 @register.simple_tag(takes_context=True)
 def inline_image(context, file):
-    assert hasattr(context.template, '_attached_images'), \
-        "You must use template engine 'post_office' when rendering images using templatetag 'inline_image'."
+    if context['dry_run']:
+        return SafeString(f"{{% inline_image '{file}' %}}")
+
+    if context.get('media'):
+        file_name = file.split('/')[-1]
+        if host := context.get('host'):
+            return f"{host}media/{file_name}"
+
+    assert hasattr(
+        context.template, '_attached_images'
+    ), "You must use template engine 'post_office' when rendering images using templatetag 'inline_image'."
     if isinstance(file, ImageFile):
         fileobj = file
     elif os.path.isabs(file) and os.path.exists(file):
@@ -22,7 +35,7 @@ def inline_image(context, file):
         try:
             absfilename = finders.find(file)
             if absfilename is None:
-                raise FileNotFoundError("No such file: {}".format(file))
+                raise FileNotFoundError(f'No such file: {file}')
         except Exception:
             if settings.DEBUG:
                 raise
@@ -30,8 +43,14 @@ def inline_image(context, file):
         fileobj = File(open(absfilename, 'rb'), name=file)
     raw_data = fileobj.read()
     image = MIMEImage(raw_data)
-    md5sum = hashlib.md5(raw_data).hexdigest()
+    #md5sum = hashlib.md5(raw_data).hexdigest()
+    md5sum = uuid.uuid4().hex
     image.add_header('Content-Disposition', 'inline', filename=md5sum)
-    image.add_header('Content-ID', '<{}>'.format(md5sum))
+    image.add_header('Content-ID', f'<{md5sum}>')
     context.template._attached_images.append(image)
-    return 'cid:{}'.format(md5sum)
+    return f'cid:{md5sum}'
+
+
+@register.simple_tag
+def placeholder(name: str) -> str:
+    return f"{{{{{name}}}}}"

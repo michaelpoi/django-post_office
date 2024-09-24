@@ -1,6 +1,82 @@
 Changelog
 =========
 
+Version 3.9.0 (2024-06-19)
+--------------------------
+* Added a new `LOCK_FILE_NAME` which lets you change post office's lock file name. Thanks @mogost!
+* Fixes a bug where `email_queued` signal is not sent in certain cases. Thanks @diesieben07!
+* Fixes an issue where attachment admin page would not render with large number of emails. Thanks @petrprikryl!
+* Fixes a crash when email instances are made with context, but without a template. Thanks @pacahon!
+* Other miscellaneous fixes and house keeping tasks by @mogost!
+
+Version 3.8.0 (2023-10-22)
+--------------------------
+* Added `BATCH_DELIVERY_TIMEOUT` that specifies the maximum time allowed for each batch to be delivered. Defaults to 180 seconds. Thanks @selwin!
+
+Version 3.7.1 (2023-08-08)
+--------------------------
+* Optimized a queryset in `get_queued()` that doesn't use indexes in Postgres. Thanks @marsha97!
+* Removed `date_hierarchy` option which causes admin to load slowly on DBs with a large number of emails. Thanks @selwin!
+* Optimized `cleanup_expired_mails()` so that deletes emails in smaller batches. Thanks @marsha97!
+
+Version 3.7.0 (2023-05-30)
+--------------------------
+* Changed JSON columns to use Django's `JSONField` and drop `jsonfield` dependency. Thanks @jrief!
+* Fixed saving HTML emails that have `quoted_printable`. Thanks @gabn88!
+* Fixes an issue where emails are rendered without context in Django's admin interface. Thanks @zagl!
+* This version no longer supports Django 3.1.
+
+Version 3.6.3 (2022-10-27)
+--------------------------
+* Fixed an issue where emails may not be rendered with context. Thanks @zagl!
+* Fixed a few packaging issues. Thanks @zagl and @adamchainz!
+* `send_messages()` now mimics Django's SMTP Backend return value. Thanks @JiriKr!
+
+Version 3.6.2 (2022-10-12)
+--------------------------
+* Improvement to attachment handling in admin interface. Thanks @petrprikryl!
+* Fixed a bug where HTML body is not displayed in admin interface. Thanks @robbieadi!
+* Explicitly specify `default_auto_field` to supress migration warnings. Thanks @CirXe0N!
+* Fixed a bug where `email.template` is not saved in certain cases. Thanks @franciscobmacedo!
+
+Version 3.6.1 (2022-07-04)
+--------------------------
+* Support for bleach >= 5.0. Thanks @franciscobmacedo!
+* Ensure that `Reply-To` headers are correctly set. Thanks @christophmeissner!
+* Add a `Resend` button in admin to easily resend an email. Thanks @domdinicola!
+
+
+Version 3.6.0 (2021-12-21)
+--------------------------
+* Support for Django 4.0. Thanks @domdinicola!
+* `cleanup_mail` now deletes emails in batches, which is much nicer to DB when deleting millions of emails. Thanks @stevemc4!
+* Failure to send an email are now logged as an exception. Thanks @SaturnFromTitan!
+* Added `es` locale. Thanks @ahmontero!
+* Fixed admin template discovery issue for case-sensitive filesystems. Thanks @fasih!
+* Fixes: `SMTPServerDisconnected` error. Thanks @weimens!
+* Various maintenance work by @jrief and @mogost.
+
+Version 3.5.3 (2020-12-04)
+--------------------------
+* Fixed an issue with Celery integration that could cause duplicate emails. Thanks @jrief!
+
+Version 3.5.2 (2020-11-05)
+--------------------------
+* Fixed an issue where Post Office's admin interface doesn't show. Thanks @christianciu!
+
+Version 3.5.1 (2020-11-03)
+--------------------------
+* Added missing migration file (some model fields now offer a help text).
+
+Version 3.5.0 (2020-10-31)
+--------------------------
+* Added the capability to configure retries via `MAX_RETRIES` and `RETRY_INTERVAL` configuration settings. Thanks @Houtmann and @jrief!
+* The admin interface has been improved to show previews of emails. If you want HTML emails to be rendered,
+  please install `bleach`. Thanks @jrief!
+* Add `Message-ID` to the Email model. This allows administrators to trace back emails. Thanks @jrief!
+* Added `CELERY_ENABLED` settings. Thanks @elineda!
+* Fixes an issue that prevents PDS attachments from being sent. Thanks @patroqueeet!
+
 Version 3.4.1 (2020-05-16)
 --------------------------
 * Allow `tasks.py` to be imported when Celery is not installed. This allows

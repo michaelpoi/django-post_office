@@ -19,6 +19,7 @@
             integrity="sha256-nLr6+psgWgm4BnA7O+W9T0gldFRHCI+H3cByx/TSabE=" crossorigin="anonymous"></script>
 
     <script>
+      (function($) {
         var options = {
             mode: 'django',
             theme: "mdn-like",
@@ -27,8 +28,26 @@
 
         CodeMirror.fromTextArea($('#id_subject')[0], options);
         CodeMirror.fromTextArea($('#id_content')[0], options);
-        CodeMirror.fromTextArea($('#id_html_content')[0], options);
 
         $('.CodeMirror').css('height', 'auto');
+      })(django.jQuery);
+
+        console.log("hi")
+
+      document.addEventListener("DOMContentLoaded", function (){
+          var selectField = document.getElementById("id_base_file")
+
+          if (selectField){
+              selectField.onchange = function (){
+                  var continueButton = document.querySelector('input[name="_continue"]');
+
+                  if (continueButton){
+                      continueButton.click();
+                  }
+
+              }
+          }
+      })
     </script>
 {% endblock %}
+

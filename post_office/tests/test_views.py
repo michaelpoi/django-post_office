@@ -4,7 +4,7 @@ from django.test import TestCase
 from django.urls import reverse
 
 from post_office import mail
-from post_office.models import Email
+from post_office.models import EmailModel
 
 
 admin_username = 'real_test_admin'
@@ -26,6 +26,6 @@ class AdminViewTest(TestCase):
     def test_admin_change_page(self):
         """Ensure that changing an email object in admin works."""
         mail.send(recipients=['test@example.com'], headers={'foo': 'bar'})
-        email = Email.objects.latest('id')
+        email = EmailModel.objects.latest('id')
         response = self.client.get(reverse('admin:post_office_email_change', args=[email.id]))
         self.assertEqual(response.status_code, 200)

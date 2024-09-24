@@ -1,36 +1,112 @@
+import os
+import html
+from typing import List, Optional, Union
+from django.template import loader
+
+from .logutils import setup_loghandlers
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.files import File
-from django.utils.encoding import force_text
-
+from django.utils.encoding import force_str
 from post_office import cache
-from .models import Email, PRIORITY, STATUS, EmailTemplate, Attachment
-from .settings import get_default_priority
+from .models import EmailModel, PRIORITY, STATUS, EmailMergeModel, Attachment, EmailAddress, PlaceholderContent, \
+    Recipient
+from .settings import get_default_priority, get_template_engine
+from .signals import email_queued
 from .validators import validate_email_with_name
+from .sanitizer import clean_html
+
+logger = setup_loghandlers('WARN')
 
 
-def send_mail(subject, message, from_email, recipient_list, html_message='',
-              scheduled_time=None, headers=None, priority=PRIORITY.medium):
+def send_mail(
+        subject,
+        message,
+        from_email,
+        recipient_list,
+        html_message='',
+        scheduled_time=None,
+        headers=None,
+        priority=PRIORITY.medium,
+):
     """
     Add a new message to the mail queue. This is a replacement for Django's
     ``send_mail`` core email method.
     """
 
-    subject = force_text(subject)
+    subject = force_str(subject)
     status = None if priority == PRIORITY.now else STATUS.queued
-    emails = []
-    for address in recipient_list:
-        emails.append(
-            Email.objects.create(
-                from_email=from_email, to=address, subject=subject,
-                message=message, html_message=html_message, status=status,
-                headers=headers, priority=priority, scheduled_time=scheduled_time
-            )
+    emails = [
+        EmailModel.objects.create(
+            from_email=from_email,
+            to=address,
+            subject=subject,
+            message=message,
+            html_message=html_message,
+            status=status,
+            headers=headers,
+            priority=priority,
+            scheduled_time=scheduled_time,
         )
+        for address in recipient_list
+    ]
     if priority == PRIORITY.now:
         for email in emails:
             email.dispatch()
+    else:
+        email_queued.send(sender=EmailModel, emails=emails)
     return emails
+
+
+def get_main_template(template_instance):
+    if template_instance.default_template:
+        return template_instance.default_template
+
+    return template_instance
+
+
+def get_html_content(template_instance: EmailMergeModel):
+    main_template = get_main_template(template_instance)
+    template = loader.get_template(main_template.base_file, using='post_office').template
+    html_content = template.source
+    return html_content
+
+
+def render_email_template(template_instance: EmailMergeModel, recipient_context=None, language=''):
+    """
+    Function to render an email from the template html code and placeholders in database
+    """
+    engine = get_template_engine()
+    context = {'recipient': recipient_context} if recipient_context else {}
+    html_content = get_html_content(template_instance)
+    django_template_first_pass = engine.from_string(html_content)
+    first_pass_content = django_template_first_pass.render(context)
+
+    main_template = get_main_template(template_instance)
+
+    placeholders = PlaceholderContent.objects.filter(emailmerge=main_template, language=language)
+    print(placeholders)
+    context_data = {placeholder.placeholder_name: clean_html(placeholder.content) for placeholder in placeholders}
+
+    django_template_second_pass = engine.from_string(first_pass_content)
+    final_content = django_template_second_pass.render(context_data)
+
+    return final_content
+
+
+# def render_message(html_str: str, context: dict) -> str:
+#     for placeholder, value in context.items():
+#         placeholder_notation = f"#{placeholder}#"
+#         html_str = html_str.replace(placeholder_notation, clean_html(str(value)))
+#
+#     if recipient := context.get('recipient', None):
+#         for field in recipient._meta.get_fields():
+#             if field.concrete:
+#                 placeholder_notation = f"#recipient.{field.name}#"
+#                 value = getattr(recipient, field.name, "")
+#                 html_str = html_str.replace(placeholder_notation, clean_html(str(value)))
+#
+#     return html_str
 
 
 def get_email_template(name, language=''):
@@ -41,17 +117,16 @@ def get_email_template(name, language=''):
     if use_cache:
         use_cache = getattr(settings, 'POST_OFFICE_TEMPLATE_CACHE', True)
     if not use_cache:
-        return EmailTemplate.objects.get(name=name, language=language)
+        return EmailMergeModel.objects.get(name=name, language=language)
     else:
         composite_name = '%s:%s' % (name, language)
         email_template = cache.get(composite_name)
-        if email_template is not None:
-            return email_template
-        else:
-            email_template = EmailTemplate.objects.get(name=name,
-                                                       language=language)
+
+        if email_template is None:
+            email_template = EmailMergeModel.objects.get(name=name, language=language)
             cache.set(composite_name, email_template)
-            return email_template
+
+        return email_template
 
 
 def split_emails(emails, split_count=1):
@@ -60,6 +135,8 @@ def split_emails(emails, split_count=1):
     # Strange bug, only return 100 email if we do not evaluate the list
     if list(emails):
         return [emails[i::split_count] for i in range(split_count)]
+
+    return []
 
 
 def create_attachments(attachment_files):
@@ -74,7 +151,6 @@ def create_attachments(attachment_files):
     """
     attachments = []
     for filename, filedata in attachment_files.items():
-
         if isinstance(filedata, dict):
             content = filedata.get('file', None)
             mimetype = filedata.get('mimetype', None)
@@ -95,6 +171,7 @@ def create_attachments(attachment_files):
         if mimetype:
             attachment.mimetype = mimetype
         attachment.headers = headers
+        attachment.name = filename
         attachment.file.save(filename, content=content, save=True)
 
         attachments.append(attachment)
@@ -113,8 +190,7 @@ def parse_priority(priority):
         priority = getattr(PRIORITY, priority, None)
 
         if priority is None:
-            raise ValueError('Invalid priority, must be one of: %s' %
-                             ', '.join(PRIORITY._fields))
+            raise ValueError('Invalid priority, must be one of: %s' % ', '.join(PRIORITY._fields))
     return priority
 
 
@@ -140,22 +216,77 @@ def parse_emails(emails):
     return emails
 
 
-def cleanup_expired_mails(cutoff_date, delete_attachments=True):
+def get_or_create_recipient(email: str) -> EmailAddress:
+    obj, _ = EmailAddress.objects.get_or_create(email=email)
+    return obj
+
+
+def get_recipients_objects(emails: List[str]) -> List[EmailAddress]:
+    recipient_objects = []
+    for email in emails:
+        obj = get_or_create_recipient(email)
+        if obj.is_blocked:
+            logger.warning(f"User {email} is blocked and hence will be excluded")
+        else:
+            recipient_objects.append(obj)
+    return recipient_objects
+
+
+def set_recipients(email: EmailModel,
+                   to_addresses: List[EmailAddress],
+                   cc_addresses: Optional[List[EmailAddress]] = None,
+                   bcc_addresses: Optional[List[EmailAddress]] = None, ):
+    to_recipients = [Recipient(email=email,
+                               address=addr,
+                               send_type='to')
+                     for addr in to_addresses]
+
+    if cc_addresses:
+        to_recipients.extend([Recipient(email=email,
+                                        address=addr,
+                                        send_type='cc')
+                              for addr in cc_addresses])
+
+    if bcc_addresses:
+        to_recipients.extend([Recipient(email=email,
+                                        address=addr,
+                                        send_type='bcc')
+                              for addr in bcc_addresses])
+
+    Recipient.objects.bulk_create(to_recipients)
+
+    return to_recipients
+
+
+def cleanup_expired_mails(cutoff_date, delete_attachments=True, batch_size=1000):
     """
     Delete all emails before the given cutoff date.
     Optionally also delete pending attachments.
     Return the number of deleted emails and attachments.
     """
-    expired_emails = Email.objects.only('id').filter(created__lt=cutoff_date)
-    emails_count, _ = expired_emails.delete()
+    total_deleted_emails = 0
 
+    while True:
+        email_ids = EmailModel.objects.filter(created__lt=cutoff_date).values_list('id', flat=True)[:batch_size]
+        if not email_ids:
+            break
+
+        _, deleted_data = EmailModel.objects.filter(id__in=email_ids).delete()
+        if deleted_data:
+            total_deleted_emails += deleted_data['post_office.Email']
+
+    attachments_count = 0
     if delete_attachments:
-        attachments = Attachment.objects.filter(emails=None)
-        for attachment in attachments:
-            # Delete the actual file
-            attachment.file.delete()
-        attachments_count, _ = attachments.delete()
-    else:
-        attachments_count = 0
+        while True:
+            attachments = Attachment.objects.filter(emails=None)[:batch_size]
+            if not attachments:
+                break
+            attachment_ids = set()
+            for attachment in attachments:
+                # Delete the actual file
+                attachment.file.delete()
+                attachment_ids.add(attachment.id)
+            deleted_count, _ = Attachment.objects.filter(id__in=attachment_ids).delete()
+            attachments_count += deleted_count
 
-    return emails_count, attachments_count
+    return total_deleted_emails, attachments_count

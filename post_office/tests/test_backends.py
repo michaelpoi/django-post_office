@@ -1,5 +1,7 @@
 import os
 from email.mime.image import MIMEImage
+from unittest import mock
+
 from django.conf import settings
 from django.core.files.images import File
 from django.core.mail import EmailMultiAlternatives, send_mail, EmailMessage
@@ -7,7 +9,7 @@ from django.core.mail.backends.base import BaseEmailBackend
 from django.test import TestCase
 from django.test.utils import override_settings
 
-from ..models import Email, STATUS, PRIORITY
+from ..models import EmailModel, STATUS, PRIORITY
 from ..settings import get_backend
 
 
@@ -22,22 +24,19 @@ class ErrorRaisingBackend(BaseEmailBackend):
 
 
 class BackendTest(TestCase):
-
     @override_settings(EMAIL_BACKEND='post_office.EmailBackend')
     def test_email_backend(self):
         """
         Ensure that email backend properly queue email messages.
         """
         send_mail('Test', 'Message', 'from@example.com', ['to@example.com'])
-        email = Email.objects.latest('id')
+        email = EmailModel.objects.latest('id')
         self.assertEqual(email.subject, 'Test')
         self.assertEqual(email.status, STATUS.queued)
         self.assertEqual(email.priority, PRIORITY.medium)
 
     def test_email_backend_setting(self):
-        """
-
-        """
+        """ """
         old_email_backend = getattr(settings, 'EMAIL_BACKEND', None)
         old_post_office_backend = getattr(settings, 'POST_OFFICE_BACKEND', None)
         if hasattr(settings, 'EMAIL_BACKEND'):
@@ -70,11 +69,10 @@ class BackendTest(TestCase):
         """
         "text/html" attachments to Email should be persisted into the database
         """
-        message = EmailMultiAlternatives('subject', 'body', 'from@example.com',
-                                         ['recipient@example.com'])
-        message.attach_alternative('html', "text/html")
+        message = EmailMultiAlternatives('subject', 'body', 'from@example.com', ['recipient@example.com'])
+        message.attach_alternative('html', 'text/html')
         message.send()
-        email = Email.objects.latest('id')
+        email = EmailModel.objects.latest('id')
         self.assertEqual(email.html_message, 'html')
 
     @override_settings(EMAIL_BACKEND='post_office.EmailBackend')
@@ -82,30 +80,67 @@ class BackendTest(TestCase):
         """
         Test that headers are correctly set on the outgoing emails.
         """
-        message = EmailMessage('subject', 'body', 'from@example.com',
-                               ['recipient@example.com'],
-                               headers={'Reply-To': 'reply@example.com'})
+        message = EmailMessage(
+            'subject', 'body', 'from@example.com', ['recipient@example.com'], headers={'Reply-To': 'reply@example.com'}
+        )
         message.send()
-        email = Email.objects.latest('id')
+        email = EmailModel.objects.latest('id')
         self.assertEqual(email.headers, {'Reply-To': 'reply@example.com'})
 
     @override_settings(EMAIL_BACKEND='post_office.EmailBackend')
+    def test_reply_to_added_as_header(self):
+        """
+        Test that 'Reply-To' headers are correctly set on the outgoing emails,
+        when EmailMessage property reply_to is set.
+        """
+        message = EmailMessage(
+            'subject',
+            'body',
+            'from@example.com',
+            ['recipient@example.com'],
+            reply_to=[
+                'replyto@example.com',
+            ],
+        )
+        message.send()
+        email = EmailModel.objects.latest('id')
+        self.assertEqual(email.headers, {'Reply-To': 'replyto@example.com'})
+
+    @override_settings(EMAIL_BACKEND='post_office.EmailBackend')
+    def test_reply_to_favors_explict_header(self):
+        """
+        Test that 'Reply-To' headers are correctly set, when reply_to property of
+        the message object is set and "Reply-To" is also set explictly as a header.
+        Then the explicit header value is favored over the message property reply_to,
+        adopting the behaviour of message() in django.core.mail.message.EmailMessage.
+        """
+        message = EmailMessage(
+            'subject',
+            'body',
+            'from@example.com',
+            ['recipient@example.com'],
+            reply_to=['replyto-from-property@example.com'],
+            headers={'Reply-To': 'replyto-from-header@example.com'},
+        )
+        message.send()
+        email = EmailModel.objects.latest('id')
+        self.assertEqual(email.headers, {'Reply-To': 'replyto-from-header@example.com'})
+
+    @override_settings(EMAIL_BACKEND='post_office.EmailBackend')
     def test_backend_attachments(self):
-        message = EmailMessage('subject', 'body', 'from@example.com',
-                               ['recipient@example.com'])
+        message = EmailMessage('subject', 'body', 'from@example.com', ['recipient@example.com'])
 
         message.attach('attachment.txt', b'attachment content')
         message.send()
 
-        email = Email.objects.latest('id')
+        email = EmailModel.objects.latest('id')
         self.assertEqual(email.attachments.count(), 1)
         self.assertEqual(email.attachments.all()[0].name, 'attachment.txt')
         self.assertEqual(email.attachments.all()[0].file.read(), b'attachment content')
 
     @override_settings(EMAIL_BACKEND='post_office.EmailBackend')
     def test_backend_image_attachments(self):
-        message = EmailMessage('subject', 'body', 'from@example.com',
-                               ['recipient@example.com'])
+        message = EmailMessage('subject', 'body', 'from@example.com', ['recipient@example.com'])
 
         filename = os.path.join(os.path.dirname(__file__), 'static/dummy.png')
         fileobj = File(open(filename, 'rb'), name='dummy.png')
@@ -115,7 +150,7 @@ class BackendTest(TestCase):
         message.attach(image)
         message.send()
 
-        email = Email.objects.latest('id')
+        email = EmailModel.objects.latest('id')
         self.assertEqual(email.attachments.count(), 1)
         self.assertEqual(email.attachments.all()[0].name, 'dummy.png')
         self.assertEqual(email.attachments.all()[0].file.read(), image.get_payload().encode())
@@ -126,11 +161,27 @@ class BackendTest(TestCase):
         EMAIL_BACKEND='post_office.EmailBackend',
         POST_OFFICE={
             'DEFAULT_PRIORITY': 'now',
-            'BACKENDS': {'default': 'django.core.mail.backends.dummy.EmailBackend'}
-        }
+            'BACKENDS': {'default': 'django.core.mail.backends.dummy.EmailBackend'},
+        },
     )
     def test_default_priority_now(self):
         # If DEFAULT_PRIORITY is "now", mails should be sent right away
-        send_mail('Test', 'Message', 'from1@example.com', ['to@example.com'])
-        email = Email.objects.latest('id')
+        num_sent = send_mail('Test', 'Message', 'from1@example.com', ['to@example.com'])
+        email = EmailModel.objects.latest('id')
         self.assertEqual(email.status, STATUS.sent)
+        self.assertEqual(num_sent, 1)
+
+    @override_settings(
+        EMAIL_BACKEND='post_office.EmailBackend',
+        POST_OFFICE={
+            'DEFAULT_PRIORITY': 'medium',
+            'BACKENDS': {'default': 'django.core.mail.backends.dummy.EmailBackend'},
+        },
+    )
+    @mock.patch('post_office.signals.email_queued.send')
+    def test_email_queued_signal(self, mock):
+        # If DEFAULT_PRIORITY is not "now", the email_queued signal should be sent
+        send_mail('Test', 'Message', 'from1@example.com', ['to@example.com'])
+        email = EmailModel.objects.latest('id')
+        self.assertEqual(email.status, STATUS.queued)
+        self.assertEqual(mock.call_count, 1)

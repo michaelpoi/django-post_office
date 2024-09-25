@@ -18,6 +18,7 @@ urlpatterns = [
     path('stress/', views.stress, name="stress"),
     path('stress_many/', views.stress_many, name="stress_many"),
     path('ckeditor/', include('ckeditor_uploader.urls')),
+    path('products/', views.product_list, name="product_list"),
 ]
 
 if settings.DEBUG:

@@ -1,0 +1,5 @@
+# .coveragerc
+[run]
+omit =
+    */post_office/migrations/*
+    */celery_project/*

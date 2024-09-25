@@ -119,11 +119,11 @@ from django.http.request import HttpRequest
 
 
 class EmailContentInlineForm(forms.ModelForm):
-    language = forms.ChoiceField(
-        choices=settings.LANGUAGES,
-        required=False,
-        label=_('Language'),
-    )
+    # language = forms.ChoiceField(
+    #     choices=settings.LANGUAGES,
+    #     required=False,
+    #     label=_('Language'),
+    # )
     class Meta:
         model = PlaceholderContent
         fields = ['language','placeholder_name', 'content', 'base_file']
@@ -135,10 +135,10 @@ class EmailContentInlineForm(forms.ModelForm):
         else:
             host = 'http://127.0.0.1:8000'
         super().__init__(*args, **kwargs)
-        self.fields['placeholder_name'].disabled = True
-        self.fields['language'].disabled = True
-
-        self.fields['base_file'].disabled = True
+        # self.fields['placeholder_name'].disabled = True
+        # self.fields['language'].disabled = True
+        #
+        # self.fields['base_file'].disabled = True
 
         if 'content' in self.initial:
             self.initial['content'] = render_placeholder_content(self.initial['content'], host)
@@ -191,6 +191,11 @@ class EmailContentInline(admin.TabularInline):
     formset = EmailContentInlineFormset
     form = EmailContentInlineForm
     extra = 0
+    readonly_fields = ('language', 'placeholder_name', 'base_file')
+    fields = ['content', 'language', 'placeholder_name', 'base_file']
+
+    # def get_language_display(self, obj):
+    #     return obj.get_language_display()
 
     def get_formset(self, request, obj=None, **kwargs):
         self.parent_obj = obj

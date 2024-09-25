@@ -207,13 +207,19 @@ class EmailModel(models.Model):
 
         return self.prepare_email_message()
 
-    def render_email_template(self, recipient=None):
+    def render_email_template(self, recipient=None, context_dict=None):
         """
         Function to render an email template. Takes an EmailAddress object.
         """
+
+        if not context_dict:
+            context_dict = {}
+
         template_instance = self.template
         engine = get_template_engine()
-        context = {'recipient': recipient, 'dry_run': True} if recipient else {'dry_run': True}
+        context = {'recipient': recipient, 'dry_run': True, **context_dict} \
+            if recipient else {'dry_run': True, **context_dict}
+
         html_content = template_instance.get_html_content()
 
         # Replace all {% placeholder <name> %} to {{ name }}
@@ -250,7 +256,7 @@ class EmailModel(models.Model):
         if self.template is not None and self.context is not None:
             subject = render_message(self.template.subject, context)
             plaintext_message = render_message(self.template.content, context)
-            html_message = self.render_email_template(recipient=context['recipient'])
+            html_message = self.render_email_template(recipient=context['recipient'], context_dict=context)
             html_message = render_message(html_message, context)
 
             engine = get_template_engine()

@@ -1,4 +1,5 @@
 import time
+from dataclasses import dataclass
 
 from django.template import loader
 
@@ -26,7 +27,6 @@ def index(request):
         html_message='This is a sample html to <p><strong>Hi</strong> #recipient.first_name#</p>. The idea is to '
                      'demonstrate <p>How are you<strong> doing?</strong></p> Number of placeholders in <p>10</p> This '
                      'will be writen by <p>Misha</p>',
-        render_on_delivery=True
     )
     return redirect('home')
 
@@ -76,7 +76,6 @@ def send_attachment(request):
             'Mykhailo.Poienko@uibk.ac.at',
             html_message='<b>HI there</b>',
             attachments={'new_test.txt': f},
-            render_on_delivery=True
         )
 
     return redirect('home')
@@ -90,14 +89,17 @@ def test_new_system(request):
 
 
 def send_many(request):
-    mail.send_many(
-        recipients=['bob@gmail.com', 'lena@email.com', 'grisha@gmail.com'],
-        sender='Mykhailo.Poienko@uibk.ac.at',
-        template='nice_email',
-        context={'shirts': 100, 'all': 10, 'shoes': 75},
-        render_on_delivery=True,
-        language='de'
-    )
+    with tempfile.NamedTemporaryFile(delete=True) as f:
+        f.write(b'Testing attachments')
+        f.seek(0)
+        mail.send_many(
+            recipients=['bob@gmail.com', 'lena@email.com', 'grisha@gmail.com'],
+            sender='Mykhailo.Poienko@uibk.ac.at',
+            template='nice_email',
+            context={'shirts': 100, 'all': 10, 'shoes': 75},
+            language='en',
+            attachments={'new_test.txt': f},
+        )
     return redirect('home')
 
 
@@ -124,13 +126,13 @@ def render_on_delivery(request):
             recipients=['poenko.mishany@gmail.com'],
             sender='postmaster@sandboxf099cc52e4d94225bf3ad0e9f2bcabd2.mailgun.org',
             template='nice_email',
-            context={'shirts': 100, 'all': 10, 'shoes': 75},
-            render_on_delivery=True,
+            context={'shirts': 100, 'all': 10, 'shoes': 75, 'range': list(range(10))},
             language='en',
             priority='low',
             attachments={'new_test.txt': f},
         )
     return redirect('home')
+
 
 def stress(request):
     for i in range(100):
@@ -142,12 +144,10 @@ def stress(request):
                 sender='postmaster@sandboxf099cc52e4d94225bf3ad0e9f2bcabd2.mailgun.org',
                 template='nice_email',
                 context={'shirts': 100, 'all': 10, 'shoes': 75, 'id': i},
-                render_on_delivery=True,
                 language='en',
                 priority='low',
                 attachments={'new_test.txt': f},
             )
-
 
     return redirect('home')
 
@@ -162,6 +162,58 @@ def stress_many(request):
         sender='Mykhailo.Poienko@uibk.ac.at',
         template='nice_email',
         context={'shirts': 100, 'all': 10, 'shoes': 75},
-        render_on_delivery=True
     )
+    return redirect('home')
+
+
+def serialize_product(product: "Product") -> dict:
+    return {'name': product.name,
+            'desc': product.desc,
+            "price": product.price,
+            "url": product.url,
+            "image": product.image}
+
+
+@dataclass
+class Product:
+    name: str
+    desc: str
+    price: float
+    url: str
+    image: str
+
+
+from faker import Faker
+from django.conf import settings
+
+
+def url_generator(i):
+    return str(settings.MEDIA_ROOT / 'prods' / f"{i}.jpg")
+
+
+def product_list(request):
+    products = []
+    faker = Faker()
+    for i in range(10):
+        products.append(serialize_product(Product(
+            faker.word(),
+            faker.text(max_nb_chars=100),
+            faker.random_number(),
+            faker.url(),
+            image=url_generator(1) if i < 5 else url_generator(2),
+        )))
+    print(products)
+    with tempfile.NamedTemporaryFile(delete=True) as f:
+        text = f'Your invoice {products}'
+        f.write(text.encode())
+        f.seek(0)
+        mail.send(
+            recipients=['poenko.mishany@gmail.com'],
+            sender='info@shop.com',
+            template='products',
+            language='en',
+            priority='low',
+            context={'products': products},
+            attachments={'new_test.txt': f},
+        )
     return redirect('home')

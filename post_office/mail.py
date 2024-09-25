@@ -53,10 +53,8 @@ def create(
         headers=None,
         template=None,
         priority=None,
-        render_on_delivery=False,
         commit=True,
         backend='',
-        language='',
 ):
     """
     Creates an email from supplied keyword arguments. If template is
@@ -78,7 +76,7 @@ def create(
     cc_addresses = get_recipients_objects(cc)
     bcc_addresses = get_recipients_objects(bcc)
 
-    if not (recipient:=context.get('recipient', None)):  # If recipient is not set use the first one from the list
+    if not (recipient := context.get('recipient', None)):  # If recipient is not set use the first one from the list
         context['recipient'] = get_or_create_recipient(recipients[0]).id
     else:
         if isinstance(recipient, EmailAddress):
@@ -127,7 +125,6 @@ def send(
         headers=None,
         priority=None,
         attachments=None,
-        render_on_delivery=False,
         log_level=None,
         commit=True,
         cc=None,
@@ -166,8 +163,8 @@ def send(
     if not commit:
         if priority == PRIORITY.now:
             raise ValueError("send_many() can't be used with priority = 'now'")
-        if attachments:
-            raise ValueError("Can't add attachments with send_many()")
+        # if attachments:
+        #     raise ValueError("Can't add attachments with send_many()")
 
     if template:
         if subject:
@@ -203,13 +200,11 @@ def send(
         headers,
         template,
         priority,
-        render_on_delivery,
         commit=commit,
         backend=backend,
-        language=language,
     )
 
-    if attachments:
+    if attachments and commit:
         attachments = create_attachments(attachments)
         email.attachments.add(*attachments)
 
@@ -235,7 +230,6 @@ def send_many(**kwargs):
     emails = [send(recipients=[recipient.email], context={**context, 'recipient': recipient.id}, commit=False, **kwargs)
               for recipient in recipients_objs]
 
-
     if emails:
 
         emails = EmailModel.objects.bulk_create(emails)
@@ -245,13 +239,22 @@ def send_many(**kwargs):
             email_recipients.append(Recipient(email=email, address=recipient, send_type='to'))
         Recipient.objects.bulk_create(email_recipients)
 
+        if attachments := kwargs.get('attachments', None):
+            through_objs = []
+            attach_objs = create_attachments(attachments)
+            for email in emails:
+                for attach in attach_objs:
+                    through_objs.append(email.attachments.through(emailmodel_id=email.id, attachment_id=attach.id))
+
+            emails[0].attachments.through.objects.bulk_create(through_objs)
+
         for batch in split_into_batches(emails):
             email_queued.send(sender=EmailModel, emails=batch)
+
 
 def split_into_batches(emails):
     n = get_batch_size()
     return [emails[i:i + n] for i in range(0, len(emails), n)]
-
 
 
 def get_queued():
@@ -269,8 +272,6 @@ def get_queued():
         .order_by(*get_sending_order())
         .prefetch_related('attachments')[: get_batch_size()]
     )
-
-
 
 
 def _send_bulk(emails, uses_multiprocessing=True, log_level=None):
@@ -392,7 +393,6 @@ def _send_bulk(emails, uses_multiprocessing=True, log_level=None):
     )
 
     return len(sent_emails), num_failed, num_requeued
-
 
 # def send_queued_mail_until_done(processes=1, log_level=None):
 #     """

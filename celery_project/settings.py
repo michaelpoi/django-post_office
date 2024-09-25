@@ -93,6 +93,7 @@ EMAIL_BACKEND = 'post_office.EmailBackend'
 EMAIL_HOST = '127.0.0.1'
 EMAIL_PORT = 1025
 EMAIL_USE_TLS = False
+DEFAULT_FROM_EMAIL = 'default@email.com'
 # EMAIL_HOST_USER = 'test'
 # EMAIL_HOST_PASSWORD = 'test'
 #print(EMAIL_HOST, EMAIL_PORT, EMAIL_HOST_USER, EMAIL_HOST_PASSWORD)
@@ -183,6 +184,7 @@ CKEDITOR_CONFIGS = {
             ['NumberedList', 'BulletedList', '-', 'Outdent', 'Indent', '-', 'JustifyLeft', 'JustifyCenter', 'JustifyRight', 'JustifyBlock'],
             ['Link', 'Unlink'],
             ['Image']
-        ]
+        ],
+        'width': 1000
     }
 }

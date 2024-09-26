@@ -46,6 +46,7 @@ jobs:
         pip install psycopg2-binary
         pip install pytest
         pip install pytest-django
+        pip install celery
         pip install pytest django
         pip install "Django==${{ matrix.django-version }}.*"
 

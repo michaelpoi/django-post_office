@@ -29,6 +29,21 @@ jobs:
           - python-version: "3.9"
             django-version: "5.0"
 
+    services:
+      postgres:
+        image: postgres:13
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        options: >-
+          --health-cmd="pg_isready -U postgres"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+        ports:
+          - 5432:5432
+
     steps:
     - uses: actions/checkout@v4
 
@@ -47,9 +62,16 @@ jobs:
         pip install pytest
         pip install pytest-django
         pip install celery
+        pip install lxml
         pip install pytest django
         pip install "Django==${{ matrix.django-version }}.*"
 
+    - name: Set up PostgreSQL DB User with CREATEDB Privilege
+      run: |
+        psql -U postgres -h localhost -c "CREATE USER post_office WITH PASSWORD 'post_office' CREATEDB;"
+
     - name: Run Test
+      env:
+        DJANGO_SETTINGS_MODULE: celery_project.settings
       run: |
         pytest celery_project

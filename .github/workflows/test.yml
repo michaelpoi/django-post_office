@@ -71,6 +71,7 @@ jobs:
         pip install celery
         pip install lxml
         pip install pytest-django
+        pip install pytest-mock
         pip install pytest-cov
         pip install redis
         pip install "Django==${{ matrix.django-version }}.*"

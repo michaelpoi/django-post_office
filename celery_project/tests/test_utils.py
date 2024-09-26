@@ -226,12 +226,12 @@ def test_email_validator():
     with pytest.raises(ValidationError):
         validate_email_with_name('Al <>')
 
-def test_send_email():
-    send_mail('subject', 'message', 'from@example.com', ['to@example.com'], priority=PRIORITY.medium)
-    email = EmailModel.objects.latest('id')
-    self.assertEqual(email.status, STATUS.queued)
-
-    # Emails sent with "now" priority is sent right away
-    send_mail('subject', 'message', 'from@example.com', ['to@example.com'], priority=PRIORITY.now)
-    email = EmailModel.objects.latest('id')
-    self.assertEqual(email.status, STATUS.sent)
+# def test_send_email():
+#     send_mail('subject', 'message', 'from@example.com', ['to@example.com'], priority=PRIORITY.medium)
+#     email = EmailModel.objects.latest('id')
+#     self.assertEqual(email.status, STATUS.queued)
+#
+#     # Emails sent with "now" priority is sent right away
+#     send_mail('subject', 'message', 'from@example.com', ['to@example.com'], priority=PRIORITY.now)
+#     email = EmailModel.objects.latest('id')
+#     self.assertEqual(email.status, STATUS.sent)

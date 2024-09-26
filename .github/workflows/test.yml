@@ -63,7 +63,8 @@ jobs:
         pip install pytest-django
         pip install celery
         pip install lxml
-        pip install pytest django
+        pip install pytest-django
+        pip install pytest-cov
         pip install "Django==${{ matrix.django-version }}.*"
 
     - name: Set up PostgreSQL DB User with CREATEDB Privilege

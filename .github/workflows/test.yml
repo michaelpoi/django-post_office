@@ -67,6 +67,8 @@ jobs:
         pip install "Django==${{ matrix.django-version }}.*"
 
     - name: Set up PostgreSQL DB User with CREATEDB Privilege
+      env:
+        PGPASSWORD: postgres
       run: |
         psql -U postgres -h localhost -c "CREATE USER post_office WITH PASSWORD 'post_office' CREATEDB;"
 

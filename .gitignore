@@ -43,3 +43,5 @@ ghostdriver.log
 celerybeat-schedule
 staticfiles/
 static/
+.coverage
+.coveragerc

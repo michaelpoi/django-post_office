@@ -136,6 +136,7 @@ POST_OFFICE = {
     'CELERY_ENABLED': True,
     'MAX_RETRIES': 3,
     'BATCH_SIZE': 20,
+    'MESSAGE_ID_ENABLED': True,
 }
 WSGI_APPLICATION = "celery_project.wsgi.application"
 

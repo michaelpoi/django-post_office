@@ -20,7 +20,6 @@ from django.utils.safestring import mark_safe
 from .models import STATUS, Attachment, EmailModel, EmailMergeModel, Log, EmailAddress, PlaceholderContent
 from .sanitizer import clean_html
 from .settings import get_email_templates, get_languages_list, get_default_language, get_template_engine
-from .utils import get_html_content
 
 
 def get_message_preview(instance):
@@ -161,7 +160,7 @@ class EmailContentInlineFormset(forms.BaseInlineFormSet):
         request = self.request
         super().__init__(*args, **kwargs)
         if self.instance and self.instance.pk:
-            placeholders = get_html_content(self.instance).split("{% placeholder '")[1:]
+            placeholders = self.instance.get_html_content().split("{% placeholder '")[1:]
             placeholder_names = [ph.split("' %}")[0] for ph in placeholders]
             existing_placeholders = set(
                 self.instance.contents.filter(base_file=self.instance.base_file).values_list('placeholder_name',

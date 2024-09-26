@@ -31,8 +31,8 @@ from .utils import (
     get_email_template,
     parse_emails,
     parse_priority,
-    split_emails, get_recipients_objects, set_recipients,
-    get_or_create_recipient, render_email_template, get_main_template
+    get_recipients_objects, set_recipients,
+    get_or_create_recipient,
 )
 from django.db import transaction
 
@@ -221,7 +221,7 @@ def send_many(**kwargs):
     This function allows to send multiple emails separately. Using it is beneficial if you need a user data as a
     context and you want to serve every recipient separately.
     """
-    if not (recipients := parse_emails(kwargs.pop('recipients'))):
+    if not (recipients := parse_emails(kwargs.pop('recipients', None))):
         raise ValueError('You must specify recipients')
 
     recipients_objs = get_recipients_objects(recipients)
@@ -250,6 +250,8 @@ def send_many(**kwargs):
 
         for batch in split_into_batches(emails):
             email_queued.send(sender=EmailModel, emails=batch)
+
+        return emails
 
 
 def split_into_batches(emails):

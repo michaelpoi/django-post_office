@@ -9,7 +9,6 @@ from post_office import mail
 from post_office.models import EmailMergeModel, EmailAddress
 from django.template.loader import get_template
 from django.core.mail import EmailMultiAlternatives
-from post_office.utils import render_email_template, get_email_template
 from django.shortcuts import render, redirect
 
 
@@ -81,11 +80,11 @@ def send_attachment(request):
     return redirect('home')
 
 
-def test_new_system(request):
-    temp = loader.get_template('email/placeholders.html')
-    template = EmailMergeModel.objects.get(name='test_1')
-    html_content = render_email_template(template)
-    return HttpResponse(html_content)
+# def test_new_system(request):
+#     temp = loader.get_template('email/placeholders.html')
+#     template = EmailMergeModel.objects.get(name='test_1')
+#     html_content = render_email_template(template)
+#     return HttpResponse(html_content)
 
 
 def send_many(request):
@@ -103,19 +102,19 @@ def send_many(request):
     return redirect('home')
 
 
-def test_render_image(request):
-    template = get_template('email/default.html', using='post_office')
-    emailmerge = EmailMergeModel.objects.get(name='cool_email', language='en')
-    subject, body = 'Testing inlines', 'Inline test'
-    from_email, to_email = 'tester@email.com', ['alisa@email.com', 'bob@email.com']
-    email_message = EmailMultiAlternatives(subject, body, from_email, to_email)
-    html_content = render_email_template(emailmerge, language='en')
-    email_message.attach_alternative(html_content, 'text/html')
-    template.render()
-    template.attach_related(email_message)
-    email_message.send()
-
-    return HttpResponse('Sucess')
+# def test_render_image(request):
+#     template = get_template('email/default.html', using='post_office')
+#     emailmerge = EmailMergeModel.objects.get(name='cool_email', language='en')
+#     subject, body = 'Testing inlines', 'Inline test'
+#     from_email, to_email = 'tester@email.com', ['alisa@email.com', 'bob@email.com']
+#     email_message = EmailMultiAlternatives(subject, body, from_email, to_email)
+#     html_content = render_email_template(emailmerge, language='en')
+#     email_message.attach_alternative(html_content, 'text/html')
+#     template.render()
+#     template.attach_related(email_message)
+#     email_message.send()
+#
+#     return HttpResponse('Sucess')
 
 
 def render_on_delivery(request):

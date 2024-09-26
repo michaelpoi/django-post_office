@@ -1,6 +1,6 @@
 import os
 import html
-from typing import List, Optional, Union
+from typing import List, Optional, Union, Tuple
 from django.template import loader
 
 from .logutils import setup_loghandlers
@@ -9,12 +9,10 @@ from django.core.exceptions import ValidationError
 from django.core.files import File
 from django.utils.encoding import force_str
 from post_office import cache
-from .models import EmailModel, PRIORITY, STATUS, EmailMergeModel, Attachment, EmailAddress, PlaceholderContent, \
-    Recipient
-from .settings import get_default_priority, get_template_engine
+from .models import EmailModel, PRIORITY, STATUS, EmailMergeModel, Attachment, EmailAddress, Recipient
+from .settings import get_default_priority
 from .signals import email_queued
 from .validators import validate_email_with_name
-from .sanitizer import clean_html
 
 logger = setup_loghandlers('WARN')
 
@@ -56,56 +54,6 @@ def send_mail(
     else:
         email_queued.send(sender=EmailModel, emails=emails)
     return emails
-
-
-def get_main_template(template_instance):
-    if template_instance.default_template:
-        return template_instance.default_template
-
-    return template_instance
-
-
-def get_html_content(template_instance: EmailMergeModel):
-    main_template = get_main_template(template_instance)
-    template = loader.get_template(main_template.base_file, using='post_office').template
-    html_content = template.source
-    return html_content
-
-
-def render_email_template(template_instance: EmailMergeModel, recipient_context=None, language=''):
-    """
-    Function to render an email from the template html code and placeholders in database
-    """
-    engine = get_template_engine()
-    context = {'recipient': recipient_context} if recipient_context else {}
-    html_content = get_html_content(template_instance)
-    django_template_first_pass = engine.from_string(html_content)
-    first_pass_content = django_template_first_pass.render(context)
-
-    main_template = get_main_template(template_instance)
-
-    placeholders = PlaceholderContent.objects.filter(emailmerge=main_template, language=language)
-    context_data = {placeholder.placeholder_name: clean_html(placeholder.content) for placeholder in placeholders}
-
-    django_template_second_pass = engine.from_string(first_pass_content)
-    final_content = django_template_second_pass.render(context_data)
-
-    return final_content
-
-
-# def render_message(html_str: str, context: dict) -> str:
-#     for placeholder, value in context.items():
-#         placeholder_notation = f"#{placeholder}#"
-#         html_str = html_str.replace(placeholder_notation, clean_html(str(value)))
-#
-#     if recipient := context.get('recipient', None):
-#         for field in recipient._meta.get_fields():
-#             if field.concrete:
-#                 placeholder_notation = f"#recipient.{field.name}#"
-#                 value = getattr(recipient, field.name, "")
-#                 html_str = html_str.replace(placeholder_notation, clean_html(str(value)))
-#
-#     return html_str
 
 
 def get_email_template(name, language=''):
@@ -221,13 +169,34 @@ def get_or_create_recipient(email: str) -> EmailAddress:
 
 
 def get_recipients_objects(emails: List[str]) -> List[EmailAddress]:
-    recipient_objects = []
+    unique_emails = []
+    seen = set()
+
     for email in emails:
-        obj = get_or_create_recipient(email)
-        if obj.is_blocked:
-            logger.warning(f"User {email} is blocked and hence will be excluded")
+        if email not in seen:
+            unique_emails.append(email)
+            seen.add(email)
+
+    existing_recipients = EmailAddress.objects.filter(email__in=emails)
+    existing_emails = {recipient.email: recipient for recipient in existing_recipients}
+
+    recipient_objects = []
+    to_create_objects = []
+
+    for email in unique_emails:
+        if email in existing_emails:
+            obj = existing_emails[email]
+            if obj.is_blocked:
+                logger.warning(f"User {email} is blocked and hence will be excluded")
+            else:
+                recipient_objects.append(obj)
         else:
-            recipient_objects.append(obj)
+            to_create_objects.append(EmailAddress(email=email))
+
+    if to_create_objects:
+        created_objects = EmailAddress.objects.bulk_create(to_create_objects)
+        recipient_objects.extend(created_objects)
+
     return recipient_objects
 
 

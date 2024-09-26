@@ -250,8 +250,11 @@ class EmailModel(models.Model):
         #     self.to = get_override_recipients()
 
         # Replace recipient id with EmailAddress object
-        context = {**self.context}
-        context['recipient'] = EmailAddress.objects.get(id=self.context['recipient'])
+        if self.context:
+            context = {**self.context}
+            context['recipient'] = EmailAddress.objects.get(id=self.context['recipient'])
+        else:
+            context = {}
 
         if self.template is not None and self.context is not None:
             subject = render_message(self.template.subject, context)

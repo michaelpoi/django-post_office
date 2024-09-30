@@ -18,7 +18,7 @@ from post_office import cache
 from .connections import connections
 from .logutils import setup_loghandlers
 from .sanitizer import clean_html
-from .settings import get_log_level, get_template_engine, get_override_recipients
+from .settings import get_log_level, get_template_engine, get_override_recipients, get_languages_list
 from .validators import validate_email_with_name, validate_template_syntax
 from django.template import loader
 
@@ -207,39 +207,6 @@ class EmailModel(models.Model):
 
         return self.prepare_email_message()
 
-    def render_email_template(self, recipient=None, context_dict=None):
-        """
-        Function to render an email template. Takes an EmailAddress object.
-        """
-
-        if not context_dict:
-            context_dict = {}
-
-        template_instance = self.template
-        engine = get_template_engine()
-        context = {'recipient': recipient, 'dry_run': True, **context_dict} \
-            if recipient else {'dry_run': True, **context_dict}
-
-        html_content = template_instance.get_html_content()
-
-        # Replace all {% placeholder <name> %} to {{ name }}
-        django_template_first_pass = engine.from_string(html_content)
-        first_pass_content = django_template_first_pass.render(context)
-
-        # Placeholders are always assigned to main template
-        main_template = template_instance.get_main_template()
-
-        placeholders = PlaceholderContent.objects.filter(emailmerge=main_template, language=template_instance.language)
-        context_data = {placeholder.placeholder_name: clean_html(placeholder.content) for placeholder in placeholders}
-        context_data = {**context_data, 'dry_run': True}
-
-        # Replaces placeholders with actual values
-        django_template_second_pass = engine.from_string("{% load post_office %}" + first_pass_content)
-        final_content = django_template_second_pass.render(context_data)
-
-        final_content = f"{{% load post_office %}}\n {final_content}"
-
-        return final_content
 
     def prepare_email_message(self):
         """
@@ -259,7 +226,7 @@ class EmailModel(models.Model):
         if self.template is not None and self.context is not None:
             subject = render_message(self.template.subject, context)
             plaintext_message = render_message(self.template.content, context)
-            html_message = self.render_email_template(recipient=context['recipient'], context_dict=context)
+            html_message = self.template.render_email_template(recipient=context['recipient'], context_dict=context)
             html_message = render_message(html_message, context)
 
             engine = get_template_engine()
@@ -449,13 +416,80 @@ class EmailMergeModel(models.Model):
         html_content = template.source
         return html_content
 
+    def render_email_template(self, recipient=None, context_dict=None):
+        """
+        Function to render an email template. Takes an EmailAddress object.
+        """
+        if not context_dict:
+            context_dict = {}
+
+        engine = get_template_engine()
+        context = {'recipient': recipient, 'dry_run': True, **context_dict} \
+            if recipient else {'dry_run': True, **context_dict}
+
+        html_content = self.get_html_content()
+
+        # Replace all {% placeholder <name> %} to {{ name }}
+        django_template_first_pass = engine.from_string(html_content)
+        first_pass_content = django_template_first_pass.render(context)
+
+        # Placeholders are always assigned to main template
+        main_template = self.get_main_template()
+
+        placeholders = PlaceholderContent.objects.filter(emailmerge=main_template,
+                                                         language=self.language,
+                                                         base_file=main_template.base_file)
+        context_data = {placeholder.placeholder_name: clean_html(placeholder.content) for placeholder in placeholders}
+        context_data = {**context_data, 'dry_run': True}
+
+        # Replaces placeholders with actual values
+        django_template_second_pass = engine.from_string("{% load post_office %}" + first_pass_content)
+        final_content = django_template_second_pass.render(context_data)
+
+        final_content = f"{{% load post_office %}}\n {final_content}"
+
+        return final_content
+
     def save(self, *args, **kwargs):
         # If template is a translation, use default template's name
         if self.default_template and not self.name:
             self.name = self.default_template.name
 
-        template = super().save(*args, **kwargs)
-        cache.delete(self.name)
+        if not self.default_template:
+            template = super().save(*args, **kwargs)
+            cache.delete(self.name)
+            existing_languages = set(self.translated_templates.values_list('language', flat=True))
+            existing_languages.add(self.language)
+            for lang in set(get_languages_list()) - existing_languages:
+                EmailMergeModel.objects.create(subject=f'Subject, language: {lang}',
+                                               content=f'Content, language: {lang}',
+                                               default_template=self,
+                                               language=lang
+                                               )
+
+            placeholders = self.get_html_content().split("{% placeholder '")[1:]
+            placeholder_names = [ph.split("' %}")[0] for ph in placeholders]
+
+            existing_placeholders = set(
+                self.contents.filter(base_file=self.base_file).values_list('placeholder_name',
+                                                                           'language'))
+            placeholder_objs = []
+            for placeholder_name in placeholder_names:
+                for lang in get_languages_list():
+                    if (placeholder_name, lang) not in existing_placeholders:
+                        placeholder_objs.append(PlaceholderContent(placeholder_name=placeholder_name,
+                                                                   language=lang,
+                                                                   base_file=self.base_file,
+                                                                   emailmerge=self.get_main_template(),
+                                                                   content=f"Placeholder: {placeholder_name}, "
+                                                                           f"Language: {lang}", ), )
+
+            PlaceholderContent.objects.bulk_create(placeholder_objs)
+
+        else:
+            template = super().save(*args, **kwargs)
+            cache.delete(self.name)
+
         return template
 
 
@@ -528,7 +562,7 @@ class PlaceholderContent(models.Model):
     )
     placeholder_name = models.CharField(_('Placeholder name'),
                                         max_length=63, )
-    content = RichTextUploadingField(_('Content'), )
+    content = RichTextUploadingField(_('Content'), default='')
 
     base_file = models.CharField(max_length=255, verbose_name=_('File name'))
 
@@ -544,8 +578,8 @@ import tempfile
 from django.template import Template as DjangoTemplate
 
 
-def get_template_from_html(html_content):
-    engine = get_template_engine()
-    template = engine.from_string(html_content)
-
-    return template
+# def get_template_from_html(html_content):
+#     engine = get_template_engine()
+#     template = engine.from_string(html_content)
+#
+#     return template

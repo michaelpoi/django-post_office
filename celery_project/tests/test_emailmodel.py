@@ -6,7 +6,7 @@ from post_office.models import STATUS, PRIORITY, EmailAddress, render_message
 from post_office.utils import set_recipients
 from django.core.mail import EmailMessage, EmailMultiAlternatives
 from post_office.settings import get_template_engine
-from django.conf import settings
+#from django.conf import settings
 
 
 @pytest.fixture
@@ -41,7 +41,7 @@ def test_no_cache(simple_email):
 
 
 @pytest.mark.django_db
-def test_get_message(simple_email):
+def test_get_message(settings, simple_email):
     email = simple_email.get_message_object(simple_email.html_message,
                                             simple_email.message,
                                             headers=None,
@@ -151,3 +151,10 @@ def test_render_message():
 
     assert render_message(test_message, context={'recipient': test_recipient, 'recipient.first_name': 'Alisa'}) == (
         '<p>Test message Alisa Doe</p>')
+
+
+@pytest.mark.django_db
+def test__str(simple_email, recipients):
+    assert str(simple_email) == str([str(rec) for rec in recipients])
+
+

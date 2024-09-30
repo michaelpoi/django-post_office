@@ -1,0 +1,143 @@
+from typing import List
+
+import requests
+from post_office.mail import send, send_many, _send_bulk
+import pytest
+from post_office.models import EmailAddress
+import tempfile
+
+
+@pytest.fixture
+def recipient():
+    return EmailAddress.objects.create(email='john@gmail.com',
+                                       first_name='John',
+                                       last_name='Doe',
+                                       gender='male',
+                                       preferred_language='en')
+
+
+@pytest.fixture
+def cleanup_messages():
+    res = requests.delete('http://127.0.0.1:8025/api/v1/messages')
+
+
+def get_all_messages():
+    data = requests.get('http://127.0.0.1:8025/api/v1/messages').json()
+
+    return data['messages'], data['messages_count']
+
+
+def get_message(message_id):
+    return requests.get(f'http://127.0.0.1:8025/api/v1/message/{message_id}').json()
+
+
+def get_attachment(message_id, partid):
+    return requests.get(f'http://127.0.0.1:8025/api/v1/message/{message_id}/part/{partid}').content
+
+
+def get_recipients(message_id, type='To'):
+    message = get_message(message_id)
+    return [rec['Address'] for rec in message[type]]
+
+
+@pytest.mark.django_db
+def test_index(settings, cleanup_messages, recipient):
+    settings.EMAIL_BACKEND = 'post_office.EmailBackend'
+
+    with tempfile.NamedTemporaryFile(delete=False) as tmp:
+        tmp.write(b'This is a sample message.')
+        tmp.seek(0)
+        email = send(
+            ['john@gmail.com', 'next@email.com'],
+            cc=['cc1@email.com', 'cc2@email.com'],
+            bcc=['bcc1@email.com', 'bcc2@email.com'],
+            subject='Letter #id#',
+            context={'id': 1},
+            html_message="Hi there #recipient.first_name#",
+            priority='now',
+            backend='default',
+            attachments={'test.txt': tmp},
+        )
+    messages, count = get_all_messages()
+    assert count == 1
+    assert messages
+    message = messages[0]
+    id = message['ID']
+    message_info = get_message(id)
+    assert message_info['MessageID'] == email.message_id.strip('<').strip('>')
+
+    to = message_info['To']
+    assert len(to) == 2
+    assert to[0]['Address'] == 'john@gmail.com'
+    assert to[1]['Address'] == 'next@email.com'
+
+    cc = message_info['Cc']
+    assert len(cc) == 2
+    assert cc[0]['Address'] == 'cc1@email.com'
+    assert cc[1]['Address'] == 'cc2@email.com'
+
+    bcc = message_info['Bcc']
+    assert len(bcc) == 2
+    assert bcc[0]['Address'] == 'bcc1@email.com'
+    assert bcc[1]['Address'] == 'bcc2@email.com'
+
+    from_ = message_info['From']
+    assert from_['Address'] == settings.DEFAULT_FROM_EMAIL
+
+    assert message_info['Subject'] == 'Letter 1'
+    assert message_info['Text'] == 'Hi there John'
+
+    assert len(message_info['Attachments']) == 1
+
+    attachment = message_info['Attachments'][0]
+
+    part_id = attachment['PartID']
+    assert attachment['FileName'] == 'test.txt'
+    assert attachment['ContentType'] == 'text/plain'
+
+    attachment_content = get_attachment(id, part_id)
+
+    assert attachment_content == b'This is a sample message.'
+
+
+@pytest.mark.django_db
+def test_send_many(settings, cleanup_messages):
+    settings.EMAIL_BACKEND = 'post_office.EmailBackend'
+    john = EmailAddress.objects.create(email='john@gmail.com',
+                                       first_name='John',
+                                       last_name='Doe',
+                                       gender='male',
+                                       preferred_language='en')
+
+    marry = EmailAddress.objects.create(email='marry@gmail.com',
+                                        first_name='Marry',
+                                        last_name='Jane',
+                                        gender='female',
+                                        preferred_language='de')
+
+    ben = EmailAddress.objects.create(email='ben@gmail.com',
+                                      first_name='Ben',
+                                      last_name='White',
+                                      gender='other',
+                                      is_blocked=True)
+
+    emails = send_many(recipients=['john@email.com', 'marry@email.com', 'ben@email.com'])
+
+    _send_bulk(emails, uses_multiprocessing=False)
+
+    messages, count = get_all_messages()
+
+    assert count == 3
+
+    message_infos = []
+    recipients = []
+
+    for message in messages:
+        message_infos.append(get_message(message['ID']))
+        recipients.append(get_recipients(message['ID']))
+
+    assert all([len(rec) == 1 for rec in recipients])
+
+    recipients = [rec[0] for rec in recipients]
+
+    assert sorted(recipients) == sorted(['john@email.com', 'marry@email.com', 'ben@email.com'])

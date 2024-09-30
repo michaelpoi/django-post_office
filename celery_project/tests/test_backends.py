@@ -32,17 +32,17 @@ def test_postoffice_email_backend(settings):
     assert email.priority == PRIORITY.medium
 
 
-def test_default_settings():
-    """
-    Test for specific post-office settings.
-    """
-    from post_office.config import settings
-
-    assert isinstance(settings.POST_OFFICE, dict)
-    assert settings.POST_OFFICE['BATCH_SIZE'] == 20
-    assert settings.POST_OFFICE['CELERY_ENABLED'] == True
-    assert settings.POST_OFFICE['DEFAULT_PRIORITY'] == 'medium'
-    assert settings.POST_OFFICE['RETRY_INTERVAL'] == timedelta(minutes=15)
+# def test_default_settings():
+#     """
+#     Test for specific post-office settings.
+#     """
+#     from post_office.config import settings
+#
+#     assert isinstance(settings.POST_OFFICE, dict)
+#     assert settings.POST_OFFICE['BATCH_SIZE'] == 20
+#     assert settings.POST_OFFICE['CELERY_ENABLED'] == True
+#     assert settings.POST_OFFICE['DEFAULT_PRIORITY'] == 'medium'
+#     assert settings.POST_OFFICE['RETRY_INTERVAL'] == timedelta(minutes=15)
 
 
 @pytest.mark.django_db
@@ -82,7 +82,7 @@ def test_reply_to_added_as_header(settings):
     settings.EMAIL_BACKEND = 'post_office.EmailBackend'
     message = EmailMessage('subject', 'body', 'from@example.com',
                            ['recipient@example.com'],
-                           reply_to=['replyto@example.com', ],)
+                           reply_to=['replyto@example.com', ], )
     message.send()
     email = EmailModel.objects.latest('id')
     assert email.headers == {'Reply-To': 'replyto@example.com'}

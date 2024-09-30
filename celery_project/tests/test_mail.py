@@ -9,13 +9,13 @@ import tempfile
 from django.test.utils import CaptureQueriesContext
 from django.db import connection
 from django.utils import timezone
-from django.conf import settings
+#from django.conf import settings
 
 
 @pytest.fixture
 def template():
     common = {
-        'base_file': 'email/default.html',
+        'base_file': 'test/test.html',
         'name': 'test_template',
         'description': 'test_description'
     }
@@ -26,15 +26,15 @@ def template():
         language='en',
         default_template=None,
     )
-    trans_temp = EmailMergeModel.objects.create(
-        **common,
+    kwargs = dict(
         subject='de_template_subject',
         content='de_template_content',
         language='de',
         default_template=temp
     )
+    trans_temp = EmailMergeModel.objects.filter(name='test_template', language='de').update(**kwargs)
     common = {'emailmerge': temp,
-              'base_file': 'email/test.html'}
+              'base_file': 'test/test.html'}
 
     kwargs_en = [
         {'placeholder_name': 'test1',
@@ -49,11 +49,11 @@ def template():
         {'placeholder_name': 'test2',
          'content': 'de_test_content2', },
     ]
-
-    placeholders_en = [PlaceholderContent.objects.create(**{**kwarg, "language": 'en', **common}) for kwarg in
-                       kwargs_en]
-    placeholders_de = [PlaceholderContent.objects.create(**{**kwarg, "language": 'de', **common}) for kwarg in
-                       kwargs_de]
+    #assert PlaceholderContent.objects.first().placeholder_name == 'test1'
+    # placeholders_en = [PlaceholderContent.objects.create(**{**kwarg, "language": 'en', **common}) for kwarg in
+    #                    kwargs_en]
+    # placeholders_de = [PlaceholderContent.objects.create(**{**kwarg, "language": 'de', **common}) for kwarg in
+    #                    kwargs_de]
 
     return temp
 

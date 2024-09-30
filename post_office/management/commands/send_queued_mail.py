@@ -6,7 +6,8 @@ from django.core.management.base import BaseCommand
 from django.utils import timezone
 from post_office.dblock import db_lock, TimeoutException, LockedException
 from post_office.connections import connections
-from post_office.mail import get_queued, split_emails, _send_bulk
+from post_office.mail import get_queued, _send_bulk
+from post_office.utils import split_emails
 from post_office.settings import get_batch_delivery_timeout
 
 

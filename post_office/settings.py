@@ -8,7 +8,6 @@ from django.core.cache.backends.base import InvalidCacheBackendError
 from django.core.mail.utils import DNS_NAME
 from django.template import engines as template_engines
 
-from django.utils.module_loading import import_string
 
 import datetime
 

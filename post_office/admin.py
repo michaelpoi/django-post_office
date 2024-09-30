@@ -128,19 +128,19 @@ class EmailContentInlineForm(forms.ModelForm):
         fields = ['language','placeholder_name', 'content', 'base_file']
 
     def __init__(self, *args, **kwargs):
-        request: HttpRequest = kwargs.pop('request', None)
+        request = kwargs.pop('request', None)
+        print(type(request))
         if request:
             host = request.build_absolute_uri('/')  # TODO: urllib
         else:
+            print('Undefined Host')
             host = 'http://127.0.0.1:8000'
         super().__init__(*args, **kwargs)
-        # self.fields['placeholder_name'].disabled = True
-        # self.fields['language'].disabled = True
-        #
-        # self.fields['base_file'].disabled = True
-
+        print(self.initial)
         if 'content' in self.initial:
             self.initial['content'] = render_placeholder_content(self.initial['content'], host)
+        else:
+            self.initial['content'] = f"NOT FILLED"
 
     def save(self, commit=True):
 
@@ -159,25 +159,25 @@ class EmailContentInlineFormset(forms.BaseInlineFormSet):
     def __init__(self, *args, **kwargs):
         request = self.request
         super().__init__(*args, **kwargs)
-        if self.instance and self.instance.pk:
-            placeholders = self.instance.get_html_content().split("{% placeholder '")[1:]
-            placeholder_names = [ph.split("' %}")[0] for ph in placeholders]
-            existing_placeholders = set(
-                self.instance.contents.filter(base_file=self.instance.base_file).values_list('placeholder_name',
-                                                                                             'language'))
-
-            for placeholder_name in placeholder_names:
-                for lang in get_languages_list():
-                    if (placeholder_name, lang) not in existing_placeholders:
-                        form_kwargs = {
-                            'initial': {
-                                'placeholder_name': placeholder_name,
-                                'language': lang,
-                                'base_file': self.instance.base_file
-                            },
-                            'request': request
-                        }
-                        self.forms.append(self._construct_form(len(self.forms), **form_kwargs))
+        # if self.instance and self.instance.pk:
+        #     placeholders = self.instance.get_html_content().split("{% placeholder '")[1:]
+        #     placeholder_names = [ph.split("' %}")[0] for ph in placeholders]
+        #     existing_placeholders = set(
+        #         self.instance.contents.filter(base_file=self.instance.base_file).values_list('placeholder_name',
+        #                                                                                      'language'))
+        #
+        #     for placeholder_name in placeholder_names:
+        #         for lang in get_languages_list():
+        #             if (placeholder_name, lang) not in existing_placeholders:
+        #                 form_kwargs = {
+        #                     'initial': {
+        #                         'placeholder_name': placeholder_name,
+        #                         'language': lang,
+        #                         'base_file': self.instance.base_file
+        #                     },
+        #                     'request': request
+        #                 }
+        #                 self.forms.append(self._construct_form(len(self.forms), **form_kwargs))
 
     def get_form_kwargs(self, index):
         kwargs = super().get_form_kwargs(index)
@@ -210,11 +210,11 @@ class EmailContentInline(admin.TabularInline):
 
         return queryset
 
-    # def has_add_permission(self, request, obj=None):
-    #     return False
-    #
-    # def has_delete_permission(self, request, obj=None):
-    #     return False
+    def has_add_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
 
     # def get_max_num(self, request, obj=None, **kwargs):
     #     print(len(settings.LANGUAGES) * self.get_queryset(request, obj).count())
@@ -358,13 +358,13 @@ class EmailTemplateAdminFormSet(BaseInlineFormSet):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        if self.instance and self.instance.pk:
-            existing_languages = set(self.instance.translated_templates.values_list('language', flat=True))
-            existing_languages.add(get_default_language())
-            for lang in set(get_languages_list()) - existing_languages:
-                self.forms.append(self._construct_form(len(self.forms), initial={
-                    'language': lang,
-                }))
+        # if self.instance and self.instance.pk:
+        #     existing_languages = set(self.instance.translated_templates.values_list('language', flat=True))
+        #     existing_languages.add(get_default_language())
+        #     for lang in set(get_languages_list()) - existing_languages:
+        #         self.forms.append(self._construct_form(len(self.forms), initial={
+        #             'language': lang,
+        #         }))
 
     # def clean(self):
     #     """
@@ -414,8 +414,14 @@ class EmailTemplateInline(admin.StackedInline):
     fields = ('language', 'subject', 'content')
     formfield_overrides = {models.CharField: {'widget': SubjectField}}
 
-    def get_max_num(self, request, obj=None, **kwargs):
-        return len(settings.LANGUAGES)
+    def has_add_permission(self, request, obj):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+    # def get_max_num(self, request, obj=None, **kwargs):
+    #     return len(settings.LANGUAGES)
 
 
 class EmailTemplateAdmin(admin.ModelAdmin):

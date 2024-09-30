@@ -95,7 +95,7 @@ def send_many(request):
             recipients=['bob@gmail.com', 'lena@email.com', 'grisha@gmail.com'],
             sender='Mykhailo.Poienko@uibk.ac.at',
             template='nice_email',
-            context={'shirts': 100, 'all': 10, 'shoes': 75},
+            context={'id': 228, 'shirts': 100, 'all': 10, 'shoes': 75},
             language='en',
             attachments={'new_test.txt': f},
         )
@@ -124,9 +124,9 @@ def render_on_delivery(request):
         mail.send(
             recipients=['poenko.mishany@gmail.com'],
             sender='postmaster@sandboxf099cc52e4d94225bf3ad0e9f2bcabd2.mailgun.org',
-            template='nice_email',
+            template='trial',
             context={'shirts': 100, 'all': 10, 'shoes': 75, 'range': list(range(10))},
-            language='en',
+            language='de',
             priority='low',
             attachments={'new_test.txt': f},
         )
@@ -143,7 +143,7 @@ def stress(request):
                 sender='postmaster@sandboxf099cc52e4d94225bf3ad0e9f2bcabd2.mailgun.org',
                 template='nice_email',
                 context={'shirts': 100, 'all': 10, 'shoes': 75, 'id': i},
-                language='en',
+                language='de',
                 priority='low',
                 attachments={'new_test.txt': f},
             )
@@ -160,7 +160,7 @@ def stress_many(request):
         recipients=recipients,
         sender='Mykhailo.Poienko@uibk.ac.at',
         template='nice_email',
-        context={'shirts': 100, 'all': 10, 'shoes': 75},
+        context={'id': 228, 'shirts': 100, 'all': 10, 'shoes': 75},
     )
     return redirect('home')
 

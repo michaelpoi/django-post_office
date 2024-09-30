@@ -43,10 +43,14 @@ jobs:
 
       mailpit:
         image: axllent/mailpit:latest
-        options: --health-cmd "curl -f http://localhost:8025/api/v1/health" --health-interval 10s --health-timeout 5s --health-retries 5
         ports:
           - 1025:1025  # SMTP port
           - 8025:8025  # Mailpit web interface
+        options: >-
+          --health-cmd="curl -f http://localhost:8025 || exit 1"  # Check the web interface
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
 
 
     steps:

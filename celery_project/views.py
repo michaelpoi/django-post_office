@@ -1,3 +1,4 @@
+import pathlib
 import time
 from dataclasses import dataclass
 
@@ -92,7 +93,7 @@ def send_many(request):
         f.write(b'Testing attachments')
         f.seek(0)
         mail.send_many(
-            recipients=['bob@gmail.com', 'lena@email.com', 'grisha@gmail.com'],
+            recipients=[EmailAddress.objects.get(email='bob@gmail.com'), 'lena@email.com', 'grisha@gmail.com'],
             sender='Mykhailo.Poienko@uibk.ac.at',
             template='nice_email',
             context={'id': 228, 'shirts': 100, 'all': 10, 'shoes': 75},
@@ -123,9 +124,9 @@ def render_on_delivery(request):
         f.seek(0)
         mail.send(
             recipients=['poenko.mishany@gmail.com'],
-            sender='postmaster@sandboxf099cc52e4d94225bf3ad0e9f2bcabd2.mailgun.org',
-            template='trial',
-            context={'shirts': 100, 'all': 10, 'shoes': 75, 'range': list(range(10))},
+            sender='sender@email.com',
+            template='nc_2',
+            context={'new1': 'Bread is cheaper', 'new2': 'New Iphone is out', 'bad1': 'You can not afford that'},
             language='de',
             priority='low',
             attachments={'new_test.txt': f},
@@ -187,7 +188,7 @@ from django.conf import settings
 
 
 def url_generator(i):
-    return str(settings.MEDIA_ROOT / 'prods' / f"{i}.jpg")
+    return str(pathlib.Path('prods') / f"{i}.jpg")
 
 
 def product_list(request):

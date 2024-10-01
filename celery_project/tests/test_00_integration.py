@@ -3,7 +3,7 @@ from typing import List
 import requests
 from post_office.mail import send, send_many, _send_bulk
 import pytest
-from post_office.models import EmailAddress
+from post_office.models import EmailAddress, EmailMergeModel, PlaceholderContent
 import tempfile
 
 
@@ -21,6 +21,26 @@ def cleanup_messages():
     res = requests.delete('http://127.0.0.1:8025/api/v1/messages')
 
 
+@pytest.fixture
+def template():
+    template_context = EmailMergeModel.objects.create(
+        base_file='test/context_test.html',
+        name='test_name',
+        description='test_description',
+        subject='test_subject',
+        content='test_content',
+        language='en',
+    )
+
+    translated_template = template_context.translated_templates.get(name='test_name')
+    translated_template.subject = 'DE test_subject'
+    translated_template.content = 'DE test_content'
+
+    translated_template.save()
+
+    return template_context
+
+
 def get_all_messages():
     data = requests.get('http://127.0.0.1:8025/api/v1/messages').json()
 
@@ -33,6 +53,15 @@ def get_message(message_id):
 
 def get_attachment(message_id, partid):
     return requests.get(f'http://127.0.0.1:8025/api/v1/message/{message_id}/part/{partid}').content
+
+
+def get_html_message_for_recipient(recipient_email, messages):
+    for message in messages:
+        mid = message['ID']
+        recipient = get_recipients(mid)[0]
+        if recipient == recipient_email:
+            return get_message(mid)['HTML'].replace('\n', '').replace('\t', '').replace('\r', '').strip()
+    return 
 
 
 def get_recipients(message_id, type='To'):
@@ -101,7 +130,7 @@ def test_index(settings, cleanup_messages, recipient):
 
 
 @pytest.mark.django_db
-def test_send_many(settings, cleanup_messages):
+def test_send_many(settings, cleanup_messages, template):
     settings.EMAIL_BACKEND = 'post_office.EmailBackend'
     john = EmailAddress.objects.create(email='john@gmail.com',
                                        first_name='John',
@@ -121,13 +150,13 @@ def test_send_many(settings, cleanup_messages):
                                       gender='other',
                                       is_blocked=True)
 
-    emails = send_many(recipients=['john@email.com', 'marry@email.com', 'ben@email.com'])
+    emails = send_many(recipients=[john, marry, ben], template=template, context={'test_var': 'test_value'})
 
     _send_bulk(emails, uses_multiprocessing=False)
 
     messages, count = get_all_messages()
 
-    assert count == 3
+    assert count == 2
 
     message_infos = []
     recipients = []
@@ -140,4 +169,37 @@ def test_send_many(settings, cleanup_messages):
 
     recipients = [rec[0] for rec in recipients]
 
-    assert sorted(recipients) == sorted(['john@email.com', 'marry@email.com', 'ben@email.com'])
+    assert sorted(recipients) == sorted([john.email, marry.email])
+
+    assert all([info['Subject'] == 'test_subject' for info in message_infos])
+    assert all([info['Text'] == 'test_content' for info in message_infos])
+
+    assert (john_msg := get_html_message_for_recipient('john@gmail.com', messages)).count('John') > 0
+    assert john_msg.count('Doe') > 0
+
+    assert not john_msg.count('Marry')
+    assert not john_msg.count('Ben')
+
+    assert john_msg.count('test_val') == 1
+
+    placeholder = PlaceholderContent.objects.get(placeholder_name='test1', language='en')
+
+    placeholder.content = '#test_var#'
+
+    placeholder.save()
+
+    emails = send_many(recipients=[john, marry, ben], template=template, context={'test_var': 'test_value'})
+
+    _send_bulk(emails, uses_multiprocessing=False)
+
+    messages, count = get_all_messages()
+    assert count == 4
+    message_id = messages[0]['ID']
+
+    message_info = get_message(message_id)
+
+    assert message_info['HTML'].count('test_value') == 2
+
+    assert message_info['HTML'].count('#test_var#') == 0
+
+

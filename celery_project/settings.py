@@ -137,6 +137,7 @@ POST_OFFICE = {
     'MAX_RETRIES': 3,
     'BATCH_SIZE': 20,
     'MESSAGE_ID_ENABLED': True,
+    'DEFAULT_PRIORITY': 'medium',
 }
 WSGI_APPLICATION = "celery_project.wsgi.application"
 
@@ -182,10 +183,13 @@ CKEDITOR_CONFIGS = {
         'toolbar': 'Custom',
         'toolbar_Custom': [
             ['Bold', 'Italic', 'Underline'],
-            ['NumberedList', 'BulletedList', '-', 'Outdent', 'Indent', '-', 'JustifyLeft', 'JustifyCenter', 'JustifyRight', 'JustifyBlock'],
+            ['NumberedList', 'BulletedList', '-', 'Outdent', 'Indent', '-', 'JustifyLeft', 'JustifyCenter',
+             'JustifyRight', 'JustifyBlock'],
             ['Link', 'Unlink'],
-            ['Image']
+            ['Image'],
+            ['Format']  # Adding headers (e.g., Heading 1, Heading 2, etc.)
         ],
+        'format_tags': 'p;h1;h2;h3;pre',  # Define the available formats (headers and others)
         'width': 1000
     }
 }

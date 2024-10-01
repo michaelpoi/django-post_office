@@ -16,13 +16,15 @@ from django.utils.html import SafeString
 
 @register.simple_tag(takes_context=True)
 def inline_image(context, file):
-    if context['dry_run']:
+    if context.get('dry_run'):
         return SafeString(f"{{% inline_image '{file}' %}}")
 
     if context.get('media'):
-        file_name = file.split('media/')[-1]
+        file_name = file.split(settings.MEDIA_URL[1:])[-1]
         if host := context.get('host'):
             return f"{host[:-1]}{settings.MEDIA_URL}{file_name}"
+        else:
+            raise ValueError('Unknown host')
 
     assert hasattr(
         context.template, '_attached_images'
@@ -32,15 +34,19 @@ def inline_image(context, file):
     elif os.path.isabs(file) and os.path.exists(file):
         fileobj = File(open(file, 'rb'), name=file)
     else:
-        try:
-            absfilename = finders.find(file)
-            if absfilename is None:
-                raise FileNotFoundError(f'No such file: {file}')
-        except Exception:
-            if settings.DEBUG:
-                raise
-            return ''
-        fileobj = File(open(absfilename, 'rb'), name=file)
+        media_path = os.path.join(settings.MEDIA_ROOT, file)
+        if os.path.exists(media_path):
+            fileobj = File(open(media_path, 'rb'), name=file)
+        else:
+            try:
+                absfilename = finders.find(file)
+                if absfilename is None:
+                    raise FileNotFoundError(f'No such file: {file}')
+            except Exception as e:
+                if settings.DEBUG:
+                    raise
+                return ''
+            fileobj = File(open(absfilename, 'rb'), name=file)
     raw_data = fileobj.read()
     image = MIMEImage(raw_data)
     #md5sum = hashlib.md5(raw_data).hexdigest()

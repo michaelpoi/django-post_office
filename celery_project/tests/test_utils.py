@@ -1,57 +1,18 @@
 import logging
+import tempfile
+from datetime import datetime
+from django.core.files import File
+from django.template.exceptions import TemplateSyntaxError
 from django.core.files.base import ContentFile
 import pytest
-# from post_office.utils import render_message, set_recipients, get_recipients_objects, parse_emails, parse_priority, \
-#     split_emails, create_attachments
 from post_office.utils import set_recipients, get_recipients_objects, parse_emails, parse_priority, split_emails, \
-    create_attachments, send_mail
-from post_office.models import EmailAddress, EmailModel, PRIORITY, Attachment, STATUS
+    create_attachments, send_mail, get_email_template, cleanup_expired_mails
+from post_office.models import EmailAddress, EmailModel, PRIORITY, Attachment, STATUS, EmailMergeModel
 from django.core.exceptions import ValidationError
 
-from post_office.validators import validate_email_with_name
+from post_office.validators import validate_email_with_name, validate_comma_separated_emails, validate_template_syntax
 
 
-#
-#
-# def test_render_message():
-#     test_message = 'Test message'
-#     assert render_message(test_message, {}) == 'Test message'
-#
-#     assert render_message('Test message#c#', {}) == 'Test message#c#'
-#
-#     test_context = {
-#         'a': 10,
-#         'b': 20,
-#         'c': 'Hello',
-#         'disallowed_script': '<script>alert("Hello")</script>'
-#     }
-#
-#     test_message_with_context = render_message('#c# I am #b#', test_context)
-#
-#     assert test_message_with_context == 'Hello I am 20'
-#
-#     assert render_message('#disallowed_script#', test_context) == ''
-#
-#     assert render_message('##c##', test_context) == '#Hello#'
-#
-#     test_recipient = EmailAddress(
-#         first_name='John',
-#         last_name='Doe',
-#         email='test@email.com',
-#         preferred_language='en',
-#         gender='male',
-#         is_blocked=False
-#     )
-#
-#     test_message = '<p>Test message #recipient.first_name# #recipient.last_name#</p>'
-#
-#     assert render_message(test_message, {'recipient': test_recipient}) == ('<p>Test message John '
-#                                                                            'Doe</p>')
-#
-#     assert render_message(test_message, context={'recipient': test_recipient, 'recipient.first_name': 'Alisa'}) == (
-#         '<p>Test message Alisa Doe</p>')
-#
-#
 @pytest.mark.django_db
 def test_set_recipients():
     # Create test email
@@ -98,6 +59,8 @@ def test_get_recipients(caplog):
                                                  is_blocked=False)
     assert (recipient_list := get_recipients_objects(['test1@email.com'])) == [test_recipient]
 
+    assert get_recipients_objects([test_recipient]) == [test_recipient]
+
     assert recipient_list[0].first_name, recipient_list[0].last_name == ('John', 'Doe')
 
     with caplog.at_level(logging.WARNING):
@@ -105,6 +68,15 @@ def test_get_recipients(caplog):
         assert "is blocked" not in caplog.text
 
     created_recipient = EmailAddress.objects.get(email='test2@email.com')
+
+    unsaved_recipient = EmailAddress(first_name='Alice', last_name='Green', email='alisa@green')
+    assert get_recipients_objects([test_recipient, unsaved_recipient]) == [test_recipient, unsaved_recipient]
+    EmailAddress.objects.get(email='alisa@green')
+    unsaved_recipient.is_blocked = True
+    unsaved_recipient.save()
+    with caplog.at_level(logging.WARNING):
+        get_recipients_objects([test_recipient, unsaved_recipient])
+        assert "User alisa@green is blocked and hence will be excluded" in caplog.text
 
     assert not created_recipient.is_blocked
 
@@ -136,7 +108,8 @@ def test_parse_emails():
         parse_emails(['invalida_email', 'test@exmaple.com'])
 
 
-def test_parse_priority():
+def test_parse_priority(settings):
+    settings.POST_OFFICE['DEFAULT_PRIORITY'] = 'low'
     assert parse_priority('now') == PRIORITY.now
     assert parse_priority('high') == PRIORITY.high
     assert parse_priority('medium') == PRIORITY.medium
@@ -144,6 +117,8 @@ def test_parse_priority():
 
     with pytest.raises(ValueError):
         assert parse_priority('not_valid')
+
+    assert parse_priority(None) == PRIORITY.low
 
 
 @pytest.mark.django_db
@@ -155,6 +130,26 @@ def test_split_emails():
     assert expected_size == [len(emails) for emails in email_list]
 
     assert split_emails([]) == []
+
+
+@pytest.fixture
+def test_template():
+    template = EmailMergeModel.objects.create(
+        base_file='test/test.html',
+        name='test_name',
+        description='test_description',
+        subject='test_subject',
+        content='test_content',
+        language='en',
+    )
+    return template
+
+
+@pytest.mark.django_db
+def test_get_template(settings, test_template):
+    assert get_email_template('test_name', 'en') == test_template
+    settings.POST_OFFICE_TEMPLATE_CACHE = False
+    assert get_email_template('test_name', 'en') == test_template
 
 
 @pytest.mark.django_db
@@ -226,12 +221,68 @@ def test_email_validator():
     with pytest.raises(ValidationError):
         validate_email_with_name('Al <>')
 
-# def test_send_email():
-#     send_mail('subject', 'message', 'from@example.com', ['to@example.com'], priority=PRIORITY.medium)
-#     email = EmailModel.objects.latest('id')
-#     self.assertEqual(email.status, STATUS.queued)
-#
-#     # Emails sent with "now" priority is sent right away
-#     send_mail('subject', 'message', 'from@example.com', ['to@example.com'], priority=PRIORITY.now)
-#     email = EmailModel.objects.latest('id')
-#     self.assertEqual(email.status, STATUS.sent)
+
+@pytest.mark.django_db
+def test_send_email():
+    send_mail('subject', 'message', 'from@example.com', ['to@example.com'], priority=PRIORITY.medium)
+    email = EmailModel.objects.latest('id')
+    assert email.status == STATUS.queued
+
+    # Emails sent with "now" priority is sent right away
+    send_mail('subject', 'message', 'from@example.com', ['to@example.com'], priority=PRIORITY.now)
+    email = EmailModel.objects.latest('id')
+    assert email.status == STATUS.sent
+
+
+@pytest.mark.django_db
+def test_cleanup_expired():
+    assert cleanup_expired_mails(datetime.now()) == (0, 0)
+    email = EmailModel.objects.create(from_email='test@email.com')
+    with tempfile.NamedTemporaryFile(delete=False) as tmp:
+        tmp.write(b'Test attachment')
+        tmp.seek(0)
+        file = File(tmp)
+        attachment = Attachment.objects.create(file=file,
+                                               name='attach')
+        email.attachments.set([attachment])
+    assert cleanup_expired_mails(datetime.now(), delete_attachments=False) == (1, 0)
+
+    assert EmailModel.objects.count() == 0
+
+    assert Attachment.objects.count() == 1
+
+    assert cleanup_expired_mails(datetime.now(), delete_attachments=True) == (0, 1)
+
+    assert Attachment.objects.count() == 0
+
+
+def test_comma_separated():
+    validate_comma_separated_emails(['email@example.com'])
+    validate_comma_separated_emails(['email@example.com', 'email2@example.com', 'email3@example.com'])
+    validate_comma_separated_emails(['Alice Bob <email@example.com>'])
+
+    # Should also support international domains
+    validate_comma_separated_emails(['email@example.co.id'])
+
+    with pytest.raises(ValidationError):
+        validate_comma_separated_emails(['email@example.com', 'invalid_mail', 'email@example.com'])
+
+    with pytest.raises(ValidationError):
+        validate_comma_separated_emails('valida@email.com')
+
+
+def test_template_syntax():
+    validate_template_syntax("<h1>{{ test.value }}"
+                             "{% for template in test.values %}"
+                             "{{ template }}"
+                             "{% endfor %}"
+                             "</h1>")
+
+    with pytest.raises(ValidationError):
+        validate_template_syntax("{% invalid %}")
+
+    with pytest.raises(ValidationError):
+        validate_template_syntax("<h1>{{ test.value }}"
+                                 "{% for template in test.values %}"
+                                 "{{ template }}"
+                                 "</h1>")

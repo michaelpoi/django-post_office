@@ -9,6 +9,11 @@ import tempfile
 from django.test.utils import CaptureQueriesContext
 from django.db import connection
 from django.utils import timezone
+from django.db.utils import InterfaceError
+
+from post_office.settings import get_available_backends
+
+
 #from django.conf import settings
 
 
@@ -469,5 +474,45 @@ def test_send_bulk(template):
     _send_bulk([email], uses_multiprocessing=False)
     assert EmailModel.objects.get(id=email.id).status == STATUS.sent
 
+
+@pytest.mark.django_db
+def test_errors(settings, template):
+    settings.POST_OFFICE.update({'BACKENDS':{'error': 'celery_project.tests.conftest.ErrorRaisingBackend'}})
+    email_model = send(
+        recipients=['test@gmail.com'],
+        template=template,
+        priority='now',
+        commit=True,
+        backend='error', )
+    assert email_model.status == STATUS.failed
+
+    recipients = ['mrec1@gmail.com', 'mrec2@gmail.com']
+    sender = 'from@gmail.com'
+    context = {'test': 'val'}
+    email = send(
+        sender=sender,
+        recipients=recipients,
+        template=template,
+        priority='medium',
+        commit=True,
+        context=context,
+        language='de',
+        backend='error',
+    )
+    settings.POST_OFFICE['MAX_RETRIES'] = 1
+    assert not email.number_of_retries
+
+    _send_bulk([email], uses_multiprocessing=False)
+
+    assert email.status == STATUS.requeued
+    assert email.number_of_retries == 1
+
+    _send_bulk([email], uses_multiprocessing=False)
+
+    assert email.status == STATUS.failed
+
+    with pytest.raises(InterfaceError):
+        # Connection already closed
+        _send_bulk([email], uses_multiprocessing=True)
 
 

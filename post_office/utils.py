@@ -34,10 +34,10 @@ def send_mail(
 
     subject = force_str(subject)
     status = None if priority == PRIORITY.now else STATUS.queued
-    emails = [
-        EmailModel.objects.create(
+    emails = []
+    for address in recipient_list:
+        email = EmailModel.objects.create(
             from_email=from_email,
-            to=address,
             subject=subject,
             message=message,
             html_message=html_message,
@@ -46,8 +46,10 @@ def send_mail(
             priority=priority,
             scheduled_time=scheduled_time,
         )
-        for address in recipient_list
-    ]
+        set_recipients(email, [get_or_create_recipient(address)])
+
+        emails.append(email)
+
     if priority == PRIORITY.now:
         for email in emails:
             email.dispatch()
@@ -168,31 +170,45 @@ def get_or_create_recipient(email: str) -> EmailAddress:
     return obj
 
 
-def get_recipients_objects(emails: List[str]) -> List[EmailAddress]:
+def get_recipients_objects(emails: List[Union[str, EmailAddress]]) -> List[EmailAddress]:
     unique_emails = []
     seen = set()
 
+    # Separate strings from EmailAddress instances and deduplicate
     for email in emails:
-        if email not in seen:
+        email_str = email.email if isinstance(email, EmailAddress) else email
+        if email_str not in seen:
             unique_emails.append(email)
-            seen.add(email)
+            seen.add(email_str)
 
-    existing_recipients = EmailAddress.objects.filter(email__in=emails)
+    # Filter only string emails to check existing recipients in the database
+    email_strings = [email for email in unique_emails if isinstance(email, str)]
+    existing_recipients = EmailAddress.objects.filter(email__in=email_strings)
     existing_emails = {recipient.email: recipient for recipient in existing_recipients}
 
     recipient_objects = []
     to_create_objects = []
 
     for email in unique_emails:
-        if email in existing_emails:
-            obj = existing_emails[email]
-            if obj.is_blocked:
-                logger.warning(f"User {email} is blocked and hence will be excluded")
+        if isinstance(email, EmailAddress):
+            if email.pk:
+                if not email.is_blocked:
+                    recipient_objects.append(email)
+                else:
+                    logger.warning(f"User {email.email} is blocked and hence will be excluded")
             else:
-                recipient_objects.append(obj)
+                to_create_objects.append(email)
         else:
-            to_create_objects.append(EmailAddress(email=email))
+            if email in existing_emails:
+                obj = existing_emails[email]
+                if obj.is_blocked:
+                    logger.warning(f"User {email} is blocked and hence will be excluded")
+                else:
+                    recipient_objects.append(obj)
+            else:
+                to_create_objects.append(EmailAddress(email=email))
 
+    # Bulk create new recipients
     if to_create_objects:
         created_objects = EmailAddress.objects.bulk_create(to_create_objects)
         recipient_objects.extend(created_objects)
@@ -241,7 +257,7 @@ def cleanup_expired_mails(cutoff_date, delete_attachments=True, batch_size=1000)
 
         _, deleted_data = EmailModel.objects.filter(id__in=email_ids).delete()
         if deleted_data:
-            total_deleted_emails += deleted_data['post_office.Email']
+            total_deleted_emails += deleted_data['post_office.EmailModel']
 
     attachments_count = 0
     if delete_attachments:

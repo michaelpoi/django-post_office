@@ -43,7 +43,7 @@ def convert_media_urls_to_tags(content):
 
     for img in tree.xpath('//img'):
         src = img.get('src')
-        if src and '/media/' in src:
+        if src and settings.MEDIA_URL in src:
             # Extract the media path after '/media/'
             media_path = src.split(settings.MEDIA_URL, 1)[1]
             # Replace src with the inlined_image template tag
@@ -93,18 +93,18 @@ class LogInline(admin.TabularInline):
         return False
 
 
-class CommaSeparatedEmailWidget(TextInput):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.attrs.update({'class': 'vTextField'})
-
-    def format_value(self, value):
-        # If the value is a string wrap it in a list so it does not get sliced.
-        if not value:
-            return ''
-        if isinstance(value, str):
-            value = [value]
-        return ','.join([item for item in value])
+# class CommaSeparatedEmailWidget(TextInput):
+#     def __init__(self, *args, **kwargs):
+#         super().__init__(*args, **kwargs)
+#         self.attrs.update({'class': 'vTextField'})
+#
+#     def format_value(self, value):
+#         # If the value is a string wrap it in a list so it does not get sliced.
+#         if not value:
+#             return ''
+#         if isinstance(value, str):
+#             value = [value]
+#         return ','.join([item for item in value])
 
 
 def requeue(modeladmin, request, queryset):
@@ -125,7 +125,7 @@ class EmailContentInlineForm(forms.ModelForm):
     # )
     class Meta:
         model = PlaceholderContent
-        fields = ['language','placeholder_name', 'content', 'base_file']
+        fields = ['language', 'placeholder_name', 'content', 'base_file']
 
     def __init__(self, *args, **kwargs):
         request = kwargs.pop('request', None)

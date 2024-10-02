@@ -276,11 +276,12 @@ def get_queued():
     )
 
 
-def _send_bulk(emails, uses_multiprocessing=True, log_level=None):
+def _send_bulk(emails, uses_multiprocessing=True, log_level=None, close_db=True):
     # Multiprocessing does not play well with database connection
     # Fix: Close connections on forking process
     # https://groups.google.com/forum/#!topic/django-users/eCAIY9DAfG0
-    if uses_multiprocessing:
+    if uses_multiprocessing and close_db:
+        print('Closing db')
         db_connection.close()
 
     if log_level is None:

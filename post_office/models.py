@@ -178,7 +178,6 @@ class EmailModel(models.Model):
             'headers': headers,
             'connection': connection,
         }
-
         if html_message:
 
             msg = EmailMultiAlternatives(body=plaintext_message or html_message, **common_args)

@@ -1,4 +1,6 @@
 from datetime import timedelta
+from unittest.mock import patch
+from zoneinfo import ZoneInfo
 
 import pytest
 from post_office.mail import create, send, send_many, split_into_batches, get_queued, _send_bulk
@@ -477,7 +479,6 @@ def test_send_bulk(template):
 
 @pytest.mark.django_db
 def test_errors(settings, template):
-    settings.POST_OFFICE.update({'BACKENDS':{'error': 'celery_project.tests.conftest.ErrorRaisingBackend'}})
     email_model = send(
         recipients=['test@gmail.com'],
         template=template,
@@ -514,5 +515,7 @@ def test_errors(settings, template):
     with pytest.raises(InterfaceError):
         # Connection already closed
         _send_bulk([email], uses_multiprocessing=True)
+
+
 
 

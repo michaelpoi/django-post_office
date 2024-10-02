@@ -1,10 +1,10 @@
 from typing import List
-
 import requests
 from post_office.mail import send, send_many, _send_bulk
 import pytest
 from post_office.models import EmailAddress, EmailMergeModel, PlaceholderContent
 import tempfile
+from django.core.management import call_command
 
 
 @pytest.fixture
@@ -71,8 +71,6 @@ def get_recipients(message_id, type='To'):
 
 @pytest.mark.django_db
 def test_index(settings, cleanup_messages, recipient):
-    settings.EMAIL_BACKEND = 'post_office.EmailBackend'
-
     with tempfile.NamedTemporaryFile(delete=False) as tmp:
         tmp.write(b'This is a sample message.')
         tmp.seek(0)
@@ -84,7 +82,7 @@ def test_index(settings, cleanup_messages, recipient):
             context={'id': 1},
             html_message="Hi there #recipient.first_name#",
             priority='now',
-            backend='default',
+            backend='smtp',
             attachments={'test.txt': tmp},
         )
     messages, count = get_all_messages()
@@ -131,7 +129,6 @@ def test_index(settings, cleanup_messages, recipient):
 
 @pytest.mark.django_db
 def test_send_many(settings, cleanup_messages, template):
-    settings.EMAIL_BACKEND = 'post_office.EmailBackend'
     john = EmailAddress.objects.create(email='john@gmail.com',
                                        first_name='John',
                                        last_name='Doe',
@@ -150,7 +147,7 @@ def test_send_many(settings, cleanup_messages, template):
                                       gender='other',
                                       is_blocked=True)
 
-    emails = send_many(recipients=[john, marry, ben], template=template, context={'test_var': 'test_value'})
+    emails = send_many(recipients=[john, marry, ben], template=template, context={'test_var': 'test_value'}, backend='smtp')
 
     _send_bulk(emails, uses_multiprocessing=False)
 
@@ -188,7 +185,7 @@ def test_send_many(settings, cleanup_messages, template):
 
     placeholder.save()
 
-    emails = send_many(recipients=[john, marry, ben], template=template, context={'test_var': 'test_value'})
+    emails = send_many(recipients=[john, marry, ben], template=template, context={'test_var': 'test_value'}, backend='smtp')
 
     _send_bulk(emails, uses_multiprocessing=False)
 

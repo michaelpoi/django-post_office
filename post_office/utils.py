@@ -1,8 +1,4 @@
-import os
-import html
-from typing import List, Optional, Union, Tuple
-from django.template import loader
-
+from typing import List, Optional, Union
 from .logutils import setup_loghandlers
 from django.conf import settings
 from django.core.exceptions import ValidationError

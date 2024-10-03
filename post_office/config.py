@@ -22,5 +22,4 @@ class Settings:
         return config
 
 
-
 settings = Settings()

@@ -22,18 +22,6 @@ def validate_email_with_name(value):
     validate_email(recipient)
 
 
-def validate_comma_separated_emails(value):
-    """
-    Validate every email address in a comma separated list of emails.
-    """
-    if not isinstance(value, (tuple, list)):
-        raise ValidationError('Email list must be a list/tuple.')
-
-    for email in value:
-        try:
-            validate_email_with_name(email)
-        except ValidationError:
-            raise ValidationError('Invalid email: %s' % email, code='invalid')
 
 
 def validate_template_syntax(source):

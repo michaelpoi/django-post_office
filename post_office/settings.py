@@ -29,8 +29,8 @@ def get_email_templates():
     return template_choices
 
 
-def get_template(template_name):
-    return loader.get_template(template_name)
+# def get_template(template_name):
+#     return loader.get_template(template_name)
 
 
 def get_backend(alias='default'):

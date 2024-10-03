@@ -3,23 +3,20 @@ from lxml import html
 from django import forms
 from django.conf import settings
 from django.contrib import admin, messages
-from django.core.exceptions import ValidationError
 from django.core.mail.message import SafeMIMEText
 from django.db import models
 from django.forms import BaseInlineFormSet
 from django.forms.widgets import TextInput
 from django.http.response import HttpResponse, HttpResponseNotFound, HttpResponseRedirect
-from django.template import Context, Template
 from django.urls import re_path, reverse
 from django.utils.html import format_html
 from django.utils.text import Truncator
 from django.utils.translation import gettext_lazy as _
 from django.utils.safestring import mark_safe
 
-#from .fields import CommaSeparatedEmailField
 from .models import STATUS, Attachment, EmailModel, EmailMergeModel, Log, EmailAddress, PlaceholderContent
 from .sanitizer import clean_html
-from .settings import get_email_templates, get_languages_list, get_default_language, get_template_engine
+from .settings import get_email_templates, get_default_language, get_template_engine
 
 
 def get_message_preview(instance):
@@ -93,20 +90,6 @@ class LogInline(admin.TabularInline):
         return False
 
 
-# class CommaSeparatedEmailWidget(TextInput):
-#     def __init__(self, *args, **kwargs):
-#         super().__init__(*args, **kwargs)
-#         self.attrs.update({'class': 'vTextField'})
-#
-#     def format_value(self, value):
-#         # If the value is a string wrap it in a list so it does not get sliced.
-#         if not value:
-#             return ''
-#         if isinstance(value, str):
-#             value = [value]
-#         return ','.join([item for item in value])
-
-
 def requeue(modeladmin, request, queryset):
     """An admin action to requeue emails."""
     queryset.update(status=STATUS.queued)
@@ -114,29 +97,21 @@ def requeue(modeladmin, request, queryset):
 
 requeue.short_description = 'Requeue selected emails'
 
-from django.http.request import HttpRequest
-
 
 class EmailContentInlineForm(forms.ModelForm):
-    # language = forms.ChoiceField(
-    #     choices=settings.LANGUAGES,
-    #     required=False,
-    #     label=_('Language'),
-    # )
     class Meta:
         model = PlaceholderContent
         fields = ['language', 'placeholder_name', 'content', 'base_file']
 
     def __init__(self, *args, **kwargs):
         request = kwargs.pop('request', None)
-        print(type(request))
         if request:
             host = request.build_absolute_uri('/')  # TODO: urllib
         else:
-            print('Undefined Host')
             host = 'http://127.0.0.1:8000'
+
         super().__init__(*args, **kwargs)
-        print(self.initial)
+
         if 'content' in self.initial:
             self.initial['content'] = render_placeholder_content(self.initial['content'], host)
         else:
@@ -147,7 +122,6 @@ class EmailContentInlineForm(forms.ModelForm):
         instance = super().save(commit=False)
 
         instance.content = convert_media_urls_to_tags(self.cleaned_data['content'])
-        print(instance.content)
 
         if commit:
             instance.save()
@@ -159,25 +133,6 @@ class EmailContentInlineFormset(forms.BaseInlineFormSet):
     def __init__(self, *args, **kwargs):
         request = self.request
         super().__init__(*args, **kwargs)
-        # if self.instance and self.instance.pk:
-        #     placeholders = self.instance.get_html_content().split("{% placeholder '")[1:]
-        #     placeholder_names = [ph.split("' %}")[0] for ph in placeholders]
-        #     existing_placeholders = set(
-        #         self.instance.contents.filter(base_file=self.instance.base_file).values_list('placeholder_name',
-        #                                                                                      'language'))
-        #
-        #     for placeholder_name in placeholder_names:
-        #         for lang in get_languages_list():
-        #             if (placeholder_name, lang) not in existing_placeholders:
-        #                 form_kwargs = {
-        #                     'initial': {
-        #                         'placeholder_name': placeholder_name,
-        #                         'language': lang,
-        #                         'base_file': self.instance.base_file
-        #                     },
-        #                     'request': request
-        #                 }
-        #                 self.forms.append(self._construct_form(len(self.forms), **form_kwargs))
 
     def get_form_kwargs(self, index):
         kwargs = super().get_form_kwargs(index)
@@ -215,10 +170,6 @@ class EmailContentInline(admin.TabularInline):
 
     def has_delete_permission(self, request, obj=None):
         return False
-
-    # def get_max_num(self, request, obj=None, **kwargs):
-    #     print(len(settings.LANGUAGES) * self.get_queryset(request, obj).count())
-    #     return 9
 
 
 class EmailAdmin(admin.ModelAdmin):
@@ -358,28 +309,6 @@ class EmailTemplateAdminFormSet(BaseInlineFormSet):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # if self.instance and self.instance.pk:
-        #     existing_languages = set(self.instance.translated_templates.values_list('language', flat=True))
-        #     existing_languages.add(get_default_language())
-        #     for lang in set(get_languages_list()) - existing_languages:
-        #         self.forms.append(self._construct_form(len(self.forms), initial={
-        #             'language': lang,
-        #         }))
-
-    # def clean(self):
-    #     """
-    #     Check that no two Email templates have the same default_template and language.
-    #     """
-    #     super().clean()
-    #     data = set()
-    #     for form in self.forms:
-    #         default_template = form.cleaned_data['default_template']
-    #         language = form.cleaned_data['language']
-    #         if (default_template.id, language) in data:
-    #             msg = _("Duplicate template for language '{language}'.")
-    #             language = dict(form.fields['language'].choices)[language]
-    #             raise ValidationError(msg.format(language=language))
-    #         data.add((default_template.id, language))
 
 
 class EmailTemplateAdminForm(forms.ModelForm):
@@ -420,8 +349,6 @@ class EmailTemplateInline(admin.StackedInline):
     def has_delete_permission(self, request, obj=None):
         return False
 
-    # def get_max_num(self, request, obj=None, **kwargs):
-    #     return len(settings.LANGUAGES)
 
 
 class EmailTemplateAdmin(admin.ModelAdmin):

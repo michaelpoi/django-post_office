@@ -1,0 +1,19 @@
+{% load post_office %}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+{% if True %}
+{% placeholder 'basic1' %}
+{% placeholder 'basic2' %}
+    {% else %}
+    {% placeholder 'basic3' %}
+{% endif %}
+{% include 'email/in.html' %}
+
+</body>
+</html>

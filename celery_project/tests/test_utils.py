@@ -2,7 +2,6 @@ import logging
 import tempfile
 from datetime import datetime
 from django.core.files import File
-from django.template.exceptions import TemplateSyntaxError
 from django.core.files.base import ContentFile
 import pytest
 from post_office.utils import set_recipients, get_recipients_objects, parse_emails, parse_priority, split_emails, \
@@ -10,7 +9,7 @@ from post_office.utils import set_recipients, get_recipients_objects, parse_emai
 from post_office.models import EmailAddress, EmailModel, PRIORITY, Attachment, STATUS, EmailMergeModel
 from django.core.exceptions import ValidationError
 
-from post_office.validators import validate_email_with_name, validate_comma_separated_emails, validate_template_syntax
+from post_office.validators import validate_email_with_name, validate_template_syntax
 
 
 @pytest.mark.django_db
@@ -256,19 +255,6 @@ def test_cleanup_expired():
     assert Attachment.objects.count() == 0
 
 
-def test_comma_separated():
-    validate_comma_separated_emails(['email@example.com'])
-    validate_comma_separated_emails(['email@example.com', 'email2@example.com', 'email3@example.com'])
-    validate_comma_separated_emails(['Alice Bob <email@example.com>'])
-
-    # Should also support international domains
-    validate_comma_separated_emails(['email@example.co.id'])
-
-    with pytest.raises(ValidationError):
-        validate_comma_separated_emails(['email@example.com', 'invalid_mail', 'email@example.com'])
-
-    with pytest.raises(ValidationError):
-        validate_comma_separated_emails('valida@email.com')
 
 
 def test_template_syntax():

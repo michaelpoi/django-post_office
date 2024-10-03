@@ -17,6 +17,7 @@ from post_office import cache
 
 from .connections import connections
 from .logutils import setup_loghandlers
+from .parser import process_template
 from .sanitizer import clean_html
 from .settings import get_log_level, get_template_engine, get_override_recipients, get_languages_list
 from .validators import validate_email_with_name, validate_template_syntax
@@ -206,7 +207,6 @@ class EmailModel(models.Model):
 
         return self.prepare_email_message()
 
-
     def prepare_email_message(self):
         """
         Returns a django ``EmailMessage`` or ``EmailMultiAlternatives`` object,
@@ -364,7 +364,6 @@ class EmailMergeModel(models.Model):
         max_length=255, blank=True, verbose_name=_('Subject'), validators=[validate_template_syntax]
     )
     content = models.TextField(blank=True, verbose_name=_('Content'), validators=[validate_template_syntax])
-    #html_content = models.TextField(blank=True, verbose_name=_('HTML content'), validators=[validate_template_syntax])
     language = models.CharField(
         max_length=12,
         verbose_name=_('Language'),
@@ -389,7 +388,6 @@ class EmailMergeModel(models.Model):
 
     class Meta:
         app_label = 'post_office'
-        #unique_together = ('name', 'language', 'default_template')
         constraints = [
             UniqueConstraint(fields=['name', 'language', 'default_template'], name='unique_emailmerge'),
         ]
@@ -409,11 +407,11 @@ class EmailMergeModel(models.Model):
 
         return self
 
-    def get_html_content(self):
-        main_template = self.get_main_template()
-        template = loader.get_template(main_template.base_file, using='post_office').template
-        html_content = template.source
-        return html_content
+    # def get_html_content(self):
+    #     main_template = self.get_main_template()
+    #     template = loader.get_template(main_template.base_file, using='post_office').template
+    #     html_content = template.source
+    #     return html_content
 
     def render_email_template(self, recipient=None, context_dict=None):
         """
@@ -426,10 +424,10 @@ class EmailMergeModel(models.Model):
         context = {'recipient': recipient, 'dry_run': True, **context_dict} \
             if recipient else {'dry_run': True, **context_dict}
 
-        html_content = self.get_html_content()
+        main_template = self.get_main_template()
+        django_template_first_pass = loader.get_template(main_template.base_file, using='post_office')
 
         # Replace all {% placeholder <name> %} to {{ name }}
-        django_template_first_pass = engine.from_string(html_content)
         first_pass_content = django_template_first_pass.render(context)
 
         # Placeholders are always assigned to main template
@@ -466,8 +464,9 @@ class EmailMergeModel(models.Model):
                                                language=lang
                                                )
 
-            placeholders = self.get_html_content().split("{% placeholder '")[1:]
-            placeholder_names = [ph.split("' %}")[0] for ph in placeholders]
+            placeholder_names = process_template(self.base_file)
+
+            print(placeholder_names)
 
             existing_placeholders = set(
                 self.contents.filter(base_file=self.base_file).values_list('placeholder_name',
@@ -542,14 +541,6 @@ class DBMutex(models.Model):
         return f"<DBMutex(pk={self.pk}, lock_id={self.lock_id}>"
 
 
-import base64
-from io import BytesIO
-from lxml import etree, html
-from django.conf import settings
-from html import unescape
-from django.utils.html import SafeString
-
-
 class PlaceholderContent(models.Model):
     emailmerge = models.ForeignKey(EmailMergeModel,
                                    on_delete=models.CASCADE,
@@ -571,14 +562,3 @@ class PlaceholderContent(models.Model):
             models.UniqueConstraint(fields=['emailmerge', 'placeholder_name', 'language', 'base_file'],
                                     name='unique_placeholder'),
         ]
-
-
-import tempfile
-from django.template import Template as DjangoTemplate
-
-
-# def get_template_from_html(html_content):
-#     engine = get_template_engine()
-#     template = engine.from_string(html_content)
-#
-#     return template

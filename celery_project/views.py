@@ -125,7 +125,7 @@ def render_on_delivery(request):
         mail.send(
             recipients=['poenko.mishany@gmail.com'],
             sender='sender@email.com',
-            template='nc_2',
+            template='test_if',
             context={'new1': 'Bread is cheaper', 'new2': 'New Iphone is out', 'bad1': 'You can not afford that'},
             language='de',
             priority='low',

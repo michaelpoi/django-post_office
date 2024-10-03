@@ -1,17 +1,11 @@
-import time
-
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import connection as db_connection
 from django.db.models import Q
-from django.template import Context, Template
-from django.core.mail import EmailMultiAlternatives
 from django.utils import timezone
 from email.utils import make_msgid
-from multiprocessing import Pool
 
 from .connections import connections
-from .dblock import db_lock, TimeoutException, LockedException
 from .logutils import setup_loghandlers
 from .models import EmailModel, EmailMergeModel, Log, PRIORITY, STATUS, Recipient, EmailAddress
 from .settings import (
@@ -23,7 +17,7 @@ from .settings import (
     get_message_id_enabled,
     get_message_id_fqdn,
     get_retry_timedelta,
-    get_sending_order, get_default_language, get_languages_list, get_template,
+    get_sending_order, get_default_language, get_languages_list,
 )
 from .signals import email_queued
 from .utils import (
@@ -81,8 +75,6 @@ def create(
     else:
         if isinstance(recipient, EmailAddress):
             context['recipient'] = recipient.id
-    # If email is to be rendered during delivery, save all necessary
-    # information
 
     if template:
         subject = template.subject
@@ -163,8 +155,6 @@ def send(
     if not commit:
         if priority == PRIORITY.now:
             raise ValueError("send_many() can't be used with priority = 'now'")
-        # if attachments:
-        #     raise ValueError("Can't add attachments with send_many()")
 
     if template:
         if subject:
@@ -174,7 +164,7 @@ def send(
         if html_message:
             raise ValueError('You can\'t specify both "template" and "html_message" arguments')
 
-        # template can be an EmailTemplate instance or name
+        # template can be an EmailMerge instance or name
         if isinstance(template, EmailMergeModel):
             template = template
             # If language is specified, ensure template uses the right language
@@ -281,7 +271,6 @@ def _send_bulk(emails, uses_multiprocessing=True, log_level=None, close_db=True)
     # Fix: Close connections on forking process
     # https://groups.google.com/forum/#!topic/django-users/eCAIY9DAfG0
     if uses_multiprocessing and close_db:
-        print('Closing db')
         db_connection.close()
 
     if log_level is None:
@@ -313,28 +302,8 @@ def _send_bulk(emails, uses_multiprocessing=True, log_level=None, close_db=True)
             logger.exception('Failed to prepare email #%d' % email.id)
             failed_emails.append((email, e))
 
-    # number_of_threads = min(get_threads_per_process(), email_count)
-    # pool = ThreadPool(number_of_threads)
-
     for email in emails:
         send(email)
-
-    # timeout = get_batch_delivery_timeout()
-
-    # Wait for all tasks to complete with a timeout
-    # The get method is used with a timeout to wait for each result
-    # for result in results:
-    #     result.get(timeout=timeout)
-    # for result in results:
-    #     try:
-    #         # Wait for all tasks to complete with a timeout
-    #         # The get method is used with a timeout to wait for each result
-    #         result.get(timeout=timeout)
-    #     except TimeoutError:
-    #         logger.exception("Process timed out after %d seconds" % timeout)
-
-    # pool.close()
-    # pool.join()
 
     connections.close()
 
@@ -396,27 +365,3 @@ def _send_bulk(emails, uses_multiprocessing=True, log_level=None, close_db=True)
     )
 
     return len(sent_emails), num_failed, num_requeued
-
-# def send_queued_mail_until_done(processes=1, log_level=None):
-#     """
-#     Send mail in queue batch by batch, until all emails have been processed.
-#     """
-#     try:
-#         with db_lock('send_queued_mail_until_done'):
-#             logger.info('Acquired lock for sending queued emails')
-#             while True:
-#                 try:
-#                     send_queued(processes, log_level)
-#                 except Exception as e:
-#                     logger.exception(e, extra={'status_code': 500})
-#                     raise
-#
-#                 # Close DB connection to avoid multiprocessing errors
-#                 db_connection.close()
-#
-#                 if not get_queued().exists():
-#                     break
-#     except TimeoutException:
-#         logger.info('Sending queued mail required too long, terminating now.')
-#     except LockedException:
-#         logger.info('Failed to acquire lock, terminating now.')

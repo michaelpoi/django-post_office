@@ -213,6 +213,8 @@ def send_many(**kwargs):
     """
     if not (recipients := parse_emails(kwargs.pop('recipients', None))):
         raise ValueError('You must specify recipients')
+    if kwargs.get('cc') or kwargs.get('bcc'):
+        raise ValueError('send_many() can not be used with cc, bcc')
 
     recipients_objs = get_recipients_objects(recipients)
 

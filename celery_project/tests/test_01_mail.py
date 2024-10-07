@@ -372,6 +372,15 @@ def test_send_many(template):
         # 3. Create EmailModels in bulk_create
         assert len(insert_queries) == 3
 
+    with pytest.raises(ValueError):
+        emails = send_many(
+            sender=sender,
+            template=template,
+            recipients=recipients,
+            context={'test': 'val'},
+            cc=['test@gmail.com']
+        )
+
     assert len(emails) == 2
     assert EmailModel.objects.count() == 2
 

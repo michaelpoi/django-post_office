@@ -102,7 +102,7 @@ TEMPLATES = [
     {
         'BACKEND': 'post_office.template.backends.post_office.PostOfficeTemplates',
         'APP_DIRS': True,
-        'DIRS': [os.path.join(BASE_DIR, 'celery_project/templates')],
+        'DIRS': [os.path.join(BASE_DIR / 'celery_project' / 'templates')],
         'OPTIONS': {
             'context_processors': [
                 'django.contrib.auth.context_processors.auth',

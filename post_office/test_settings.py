@@ -121,7 +121,7 @@ TEMPLATES = [
     },
 
 ]
-
+POST_OFFICE_PLACEHOLDERS_CACHE = False
 POST_OFFICE = {
     'BACKENDS': {
         'default': 'django.core.mail.backends.dummy.EmailBackend',

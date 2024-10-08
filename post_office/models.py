@@ -14,6 +14,7 @@ from django.utils import timezone
 from django.db.models.constraints import UniqueConstraint
 from ckeditor_uploader.fields import RichTextUploadingField
 from post_office import cache
+from .cache_utils import get_placeholders
 
 from .connections import connections
 from .logutils import setup_loghandlers
@@ -433,9 +434,7 @@ class EmailMergeModel(models.Model):
         # Placeholders are always assigned to main template
         main_template = self.get_main_template()
 
-        placeholders = PlaceholderContent.objects.filter(emailmerge=main_template,
-                                                         language=self.language,
-                                                         base_file=main_template.base_file)
+        placeholders = get_placeholders(main_template, language=self.language)
         context_data = {placeholder.placeholder_name: clean_html(placeholder.content) for placeholder in placeholders}
         context_data = {**context_data, 'dry_run': True}
 
@@ -562,3 +561,7 @@ class PlaceholderContent(models.Model):
             models.UniqueConstraint(fields=['emailmerge', 'placeholder_name', 'language', 'base_file'],
                                     name='unique_placeholder'),
         ]
+
+    def save(self, *args, **kwargs):
+        cache.delete('placeholders %s:%s:%s' % (self.emailmerge.name, self.language, self.base_file))
+        return super().save(*args, **kwargs)

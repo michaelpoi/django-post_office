@@ -61,7 +61,7 @@ def get_html_message_for_recipient(recipient_email, messages):
         recipient = get_recipients(mid)[0]
         if recipient == recipient_email:
             return get_message(mid)['HTML'].replace('\n', '').replace('\t', '').replace('\r', '').strip()
-    return 
+    return
 
 
 def get_recipients(message_id, type='To'):
@@ -147,7 +147,8 @@ def test_send_many(settings, cleanup_messages, template):
                                       gender='other',
                                       is_blocked=True)
 
-    emails = send_many(recipients=[john, marry, ben], template=template, context={'test_var': 'test_value'}, backend='smtp')
+    emails = send_many(recipients=[john, marry, ben], template=template, context={'test_var': 'test_value'},
+                       backend='smtp')
 
     _send_bulk(emails, uses_multiprocessing=False)
 
@@ -168,8 +169,8 @@ def test_send_many(settings, cleanup_messages, template):
 
     assert sorted(recipients) == sorted([john.email, marry.email])
 
-    assert all([info['Subject'] == 'test_subject' for info in message_infos])
-    assert all([info['Text'] == 'test_content' for info in message_infos])
+    assert sorted([info['Subject'] for info in message_infos]) == sorted(['test_subject', 'DE test_subject'])
+    assert sorted([info['Text'] for info in message_infos]) == sorted(['test_content', 'DE test_content'])
 
     assert (john_msg := get_html_message_for_recipient('john@gmail.com', messages)).count('John') > 0
     assert john_msg.count('Doe') > 0
@@ -185,18 +186,16 @@ def test_send_many(settings, cleanup_messages, template):
 
     placeholder.save()
 
-    emails = send_many(recipients=[john, marry, ben], template=template, context={'test_var': 'test_value'}, backend='smtp')
+    emails = send_many(recipients=[john, marry, ben], template=template, context={'test_var': 'test_value'},
+                       backend='smtp')
 
     _send_bulk(emails, uses_multiprocessing=False)
 
     messages, count = get_all_messages()
     assert count == 4
-    message_id = messages[0]['ID']
 
-    message_info = get_message(message_id)
+    assert get_html_message_for_recipient('john@gmail.com', messages).count('test_value') == 2
+    assert get_html_message_for_recipient('marry@gmail.com', messages).count('test_value') == 1
 
-    assert message_info['HTML'].count('test_value') == 2
-
-    assert message_info['HTML'].count('#test_var#') == 0
-
-
+    assert get_html_message_for_recipient('john@gmail.com', messages).count('#test_var#') == 0
+    assert get_html_message_for_recipient('marry@gmail.com', messages).count('#test_var#') == 0

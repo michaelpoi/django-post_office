@@ -132,7 +132,7 @@ def get_sending_order():
 
 
 def get_template_engine():
-    using = get_config().get('TEMPLATE_ENGINE', 'django')
+    using = get_config().get('TEMPLATE_ENGINE', 'post_office')
     return template_engines[using]
 
 

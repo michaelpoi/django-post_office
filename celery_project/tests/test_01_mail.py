@@ -1,3 +1,4 @@
+import logging
 from datetime import timedelta
 from unittest.mock import patch
 from zoneinfo import ZoneInfo
@@ -170,14 +171,15 @@ def test_send_email(template, recipient):
                        bcc=bcc)
     assert email_model.template.language == 'en'
 
-    with pytest.raises(ValidationError):
-        send(sender=sender,
-             recipients=recipients,
-             template=template,
-             priority='medium',
-             commit=True,
-             context=context,
-             language='es')
+    email = send(sender=sender,
+                 recipients=recipients,
+                 template=template,
+                 priority='medium',
+                 commit=True,
+                 context=context,
+                 language='es')
+
+    assert email.template.language == 'en'
 
     with pytest.raises(ValidationError):
         nv_recipients = [*recipients, 'not_valid']
@@ -432,6 +434,57 @@ def test_send_many(template):
     assert list(emails[0].attachments.values_list('name', flat=True)) == ['test.txt', 'new.txt']
 
 
+@pytest.mark.django_db
+def test_internalization(caplog, template):
+    en_recipient = EmailAddress.objects.create(
+        email='en@gmail.com',
+        first_name='EN',
+        preferred_language='en'
+    )
+
+    de_recipient = EmailAddress.objects.create(
+        email='de@gmail.com',
+        first_name='DE',
+        preferred_language='de'
+    )
+
+    ua_recipient = EmailAddress.objects.create(
+        email='ua@gmail.com',
+        first_name='UA',
+        preferred_language='ua'
+    )
+
+    nullable_recipient = EmailAddress.objects.create(
+        email='nullable@gmail.com',
+        first_name='NL',
+    )
+
+    with caplog.at_level(logging.WARNING):
+        emails = send_many(
+            recipients=[en_recipient, de_recipient, ua_recipient, nullable_recipient],
+            template=template)
+
+        assert 'Language "ua" is not found in LANGUAGES configuration.' in caplog.text
+
+    assert len(emails) == 4
+    assert emails[0].template.language == 'en'
+    assert emails[1].template.language == 'de'
+    assert emails[2].template.language == 'en'
+    assert emails[3].template.language == 'en'
+
+    caplog.clear()
+
+    with caplog.at_level(logging.WARNING):
+        emails = send_many(
+            recipients=[en_recipient, de_recipient, ua_recipient, nullable_recipient],
+            template=template,
+            language='en')
+
+        assert 'Language "ua" is not found in LANGUAGES configuration.' not in caplog.text
+
+    assert all([email.template.language == 'en' for email in emails])
+
+
 def test_split_batches(settings):
     settings.POST_OFFICE['BATCH_SIZE'] = 2
     assert split_into_batches([1, 2, 3, 4, 5, 6, 7]) == [[1, 2], [3, 4], [5, 6], [7]]
@@ -524,7 +577,3 @@ def test_errors(settings, template):
     with pytest.raises(InterfaceError):
         # Connection already closed
         _send_bulk([email], uses_multiprocessing=True)
-
-
-
-

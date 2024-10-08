@@ -4,7 +4,6 @@ from dataclasses import dataclass
 
 from django.template import loader
 
-from celery_project.tasks import sample
 from django.http import HttpResponse
 from post_office import mail
 from post_office.models import EmailMergeModel, EmailAddress
@@ -97,7 +96,6 @@ def send_many(request):
             sender='Mykhailo.Poienko@uibk.ac.at',
             template='nice_email',
             context={'id': 228, 'shirts': 100, 'all': 10, 'shoes': 75},
-            language='en',
             attachments={'new_test.txt': f},
         )
     return redirect('home')

@@ -14,7 +14,6 @@ from post_office.settings import get_batch_delivery_timeout
 class Command(BaseCommand):
     processes = 1
     log_level = 2
-    db_close = True
 
     def add_arguments(self, parser):
         parser.add_argument(
@@ -26,20 +25,13 @@ class Command(BaseCommand):
         )
         parser.add_argument(
             '-l', '--log-level',
-            '--log-level',
             type=int,
             help='"0" to log nothing, "1" to only log errors',
-        )
-        parser.add_argument(
-            '--prevent-db-close',
-            action='store_true',
-            help='If specified, prevents closing the database connection.',
         )
 
     def handle(self, *args, **options):
         self.processes = options['processes']
         self.log_level = options.get('log_level')
-        self.db_close = not options['prevent_db_close']
         self.send_queued_mail_until_done()
 
     def send_queued_mail_until_done(self):
@@ -53,8 +45,8 @@ class Command(BaseCommand):
                         #self.stderr.write(e)
                         raise
 
-                    if self.db_close:
-                        db_connection.close()
+
+                    db_connection.close()
 
                     if not get_queued().exists():
                         break
@@ -89,7 +81,7 @@ class Command(BaseCommand):
 
                 tasks = []
                 for email_list in email_lists:
-                    tasks.append(pool.apply_async(_send_bulk, args=(email_list, True, self.log_level, self.db_close)))
+                    tasks.append(pool.apply_async(_send_bulk, args=(email_list, True, self.log_level)))
 
                 timeout = get_batch_delivery_timeout()
                 results = []

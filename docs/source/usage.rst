@@ -4,7 +4,7 @@ Usage
 mail.send()
 -----------
 
-mail.send is one of the most important function in this library.
+``mail.send()`` is one of the most important function in this library.
 It is used to send **one** email to a list of recipients. It takes these arguments:
 
 .. list-table:: mail.send() arguments
@@ -42,7 +42,7 @@ It is used to send **one** email to a list of recipients. It takes these argumen
     * - language
       - str
       - No
-      - Language (code) in which you want to send email. Defaults to ``settings.LANGUAGE_CODE``
+      - Language (code) in which you want to send email. Defaults to ``settings.LANGUAGE_CODE``.
     * - cc
       - List[str | EmailAddress]
       - No
@@ -166,26 +166,26 @@ EmailAddress model has the following attributes:
       - No
       - #recipient.preferred_language#
       - {{ recipient.preferred_language }}
-      - Recipient preferred_language. If using send_many() email to a certain user will be translated.
+      - Recipient preferred_language. If using :ref:`mail.send_many()` without language argument email to a certain user will be translated.
         If specified here language is not in ``settings.LANGUAGES`` default will be used.
     * - is_blocked
       - bool
       - No
       - No sense
       - No sense
-      - Defaults to False. If set to True recipient wont get any emails, no matter with ``send()`` or ``send_many()``
+      - Defaults to False. If set to True recipient wont get any emails, no matter with :ref:`mail.send()` or :ref:`mail.send_many()`
 
-Every time you use ``mail.send()`` or ``mail.send_many()`` list of recipients and cc or bcc (only for ``send()``) are transformed to a list
+Every time you use :ref:`mail.send()` or :ref:`mail.send_many()` list of recipients and cc or bcc (only for :ref:`mail.send()` ) are transformed to a list
 of EmailAddress instances. If recipient is in database it just selects it by email, otherwise creates a new instance with ``None`` for
 all non-required fields.
 
 Recipient context is always passed to extend email context, however:
 
-- If you use ``mail.send()`` only 1 email is generated, so the context for the first recipient in a list is used to render email.
-- If you use ``mail.send_many()`` recipient context is passed to all emails generated.
+- If you use :ref:`mail.send()` only 1 email is generated, so the context for the first recipient in a list is used to render email.
+- If you use :ref:`mail.send_many()` recipient context is passed to all emails generated.
 
-Recipient context can be used in all phases of template creation.
-For example you can to html template something like this:
+Recipient context can be used in all phases of template creation (see more :ref:`Templating`).
+For example you can add to html template something like this:
 
 .. code-block:: django
 
@@ -200,7 +200,7 @@ For example you can to html template something like this:
         {% endwith %}
     {{ recipient.first_name }} {{ recipient.last_name }}
 
-This way you can achieve personalized greeting for each recipient when using ``mail.send_many()``.
+This way you can achieve personalized greeting for each recipient when using :ref:`mail.send_many()`.
 
 You can use this context when filling subject, content or placeholders values in CKEditor fields as well. For example:
 
@@ -223,13 +223,13 @@ You can use this context when filling subject, content or placeholders values in
 mail.send_many()
 -----------------
 
-``send_many()`` is one of the most important function in the library. It is used to generate n (number of recipients)
+``mail.send_many()`` is one of the most important function in the library. It is used to generate n (number of recipients)
 emails (one for each recipient in ``recipients``).
-``send_many()`` is much more efficient alternative for ``send()``, because it utilizes much less database queries.
-Using ``send_many()`` you can maximize personalization like discussed in section above.
-``send_many()`` takes the same set of parameters like ``send()``, except:
+``mail.send_many()`` is much more efficient alternative for :ref:`mail.send()` , because it utilizes much less database queries.
+Using ``mail.send_many()`` you can maximize personalization like discussed in section above.
+``mail.send_many()`` takes the same set of parameters like :ref:`mail.send()` , except:
 
-- ``cc`` and ``bcc`` can not be used in send_many()
+- ``cc`` and ``bcc`` can not be used in ``mail.send_many()``
 - ``priority`` can not be ``now``
 
 Other parameters are shared among generated emails.
@@ -266,15 +266,15 @@ Templating
 
 post_office introduces a two-phase approach for creating email templates. This process ensures a flexible and powerful way to handle email templates, leveraging both HTML expertise and user-friendly editing tools.
 
-1. HTML Base File Creation
+1. :ref:`HTML Base File Creation`
     In the first phase, experienced email HTML developers create base files while adhering to the specific limitations of rendering emails in various clients. During this phase, developers can:
 
-    - Embed images using the {% inline_image %} template tag.
+    - Embed images using the {% inline_image %}(see more :ref:`Inlines`) template tag.
     - Insert placeholders using the {% placeholder %} template tag, which will be filled in the second phase.
 
 These base files act as a foundation for further customization.
 
-2. CKEditor Placeholders Editor
+2. :ref:`CKEDITOR Placeholders editor`
     Once the base file is ready, users can move on to the second phase. Using the admin interface, they select the base file and fill in the placeholders defined in the previous phase. In this phase, users can:
 
     - Create rich content such as lists, tables, headers, and more features allowed by the configuration in ``settings.CKEDITOR_CONFIGS``.
@@ -310,12 +310,12 @@ In your templates you can specify variables to be filled with the context:
     </body>
     </html>
 
-username variable is expected then to be filled with ``send()`` or ``send_many()`` context. If it wont be passed user
+username variable is expected then to be filled with :ref:`mail.send()` or :ref:`mail.send_many()` context. If it wont be passed user
 wont see any errors. You can still handle this using django build-in filters, for example:
 
 ``Hello, {{ username|default:'user'}}``
 
-In your templates you may want to use placeholders inside conditions, loops or includes. With post_office it is still possible.
+In your templates you may want to use placeholders inside conditions, loops or includes. With post_office it is possible.
 
 main.html
 
@@ -379,34 +379,158 @@ If no file found ``FileNotFoundError`` exception will be raised
 CKEDITOR Placeholders editor
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-For comfortable user editing you may want to adjust CKEDITOR default config. You can do that by editting ``settings.py``
-
-.. code-block:: python
-
-    CKEDITOR_CONFIGS = {
-    'default': {
-        'toolbar': 'Custom',
-        'toolbar_Custom': [
-            ['Bold', 'Italic', 'Underline'],
-            ['NumberedList', 'BulletedList', '-', 'Outdent', 'Indent', '-', 'JustifyLeft', 'JustifyCenter',
-             'JustifyRight', 'JustifyBlock'],
-            ['Link', 'Unlink'],
-            ['Image'],
-            ['Format']  # Adding headers (e.g., Heading 1, Heading 2, etc.)
-        ],
-        'format_tags': 'p;h1;h2;h3;pre',  # Define the available formats (headers and others)
-        'width': 1000
-        }
-    }
-
-Adjust this to meet your needs.
-
 When needed base file was created, users can create 2-phase templates using it. For it you should simply:
 
 1. Open admin interface and click create new Email Template.
-2. Enter a name which will be used as an alias for sending.
+2. Enter a name which will be used as an template alias for sending.
 3. Click "Save and continue editing" (This event is also triggered when a base file is changing)
-4. Forms for placeholders editing will appear.
+4. Forms for placeholders editing will appear with defaults, such as:
+
+    Placeholder: <name>, Language: <lang_code>
+
+5. Fill these placeholders with your rich content (you can include variables like #var#, #price#, etc. or recipients context
+(see more :ref:`EmailAddress and recipient context`))
+
+Multilingual Templates
+------------------------------
+
+In post_office you can create and send templates in multiple languages. For this simply edit your ``settings.py``:
+
+Default templates language can be changed in ``settings.LANGUAGE_CODE``
+
+.. code-block:: python
+
+    LANGUAGE_CODE = 'en'
+
+List of all translation languages should be specified in ``settings.LANGUAGES``
+
+.. code-block:: python
+
+    LANGUAGES = [
+    ('en', 'English'),
+    ('de', 'German'),
+    ]
+
+Adjust this as needed.
+
+The default language will be used when:
+
+1. Language for :ref:`mail.send()` is not provided or is not valid (not in ``LANGUAGES``)
+2. if :ref:`mail.send_many()` language is not set and recipient preferred language is ``None`` or not valid
+
+If :ref:`mail.send_many()` is called with defined language then all the emails will be forced to that language.
+
+.. code-block:: python
+
+    from post_office.mail import send_many
+    from post_office.models import EmailAddress
+
+    en_recipient = EmailAddress.objects.create(email='en@gmail.com', first_name='John', preferred_language='en')
+    de_recipient = EmailAddress.objects.create(email='de@gmail.com', first_name='Ali', preferred_language='de')
+
+    send_many(recipients=[en_recipient, de_recipient], template='your-template', language='en')
+
+In this case de_recipient also gets English copy of an email. To use preferred language you can do something like this:
+
+.. code-block:: python
+
+    from post_office.mail import send_many
+    from post_office.models import EmailAddress
+
+    en_recipient = EmailAddress.objects.create(email='en@gmail.com', first_name='John', preferred_language='en')
+    de_recipient = EmailAddress.objects.create(email='de@gmail.com', first_name='Ali', preferred_language='de')
+
+    send_many(recipients=[en_recipient, de_recipient], template='your-template')
+
+Now de_recipient gets German letter and en_recipient English copy.
+
+Custom Email Backends
+---------------------------
+
+By default post_office uses ``django.core.mail.backends.smtp.EmailBackend``.
+If you want to use other email backends, you can change it by configuring ``settings.POST_OFFICE['BACKENDS']``
+
+For example to use `django-ses <https://github.com/django-ses/django-ses>`_ you can do:
+
+.. code-block:: python
+
+    POST_OFFICE = {
+    # other settings
+    'BACKENDS': {
+        'default': 'django.core.mail.backends.smtp.EmailBackend',
+        'ses': 'django_ses.SESBackend',
+        }
+    }
+
+Now when you use :ref:`mail.send()` or :ref:`mail.send_many()` you can which backend will be used for sending by specifying
+``backend`` argument. If ``backend`` is not specified ``default`` will be used.
+
+**Note** For :ref:`mail.send_many()` all generated emails will inherit ``backend`` argument.
+
+.. code-block:: python
+
+    from post_office import mail
+
+    mail.send(
+    ['recipient@example.com'],
+    'from@example.com',
+    subject='Hello',
+    )
+
+Resulting email will be sent using ``default`` backend.
+
+.. code-block:: python
+
+    from post_office import mail
+
+    mail.send_many(
+    recipients=['recipient@example.com', 'next@gmail.com'],
+    sender='from@example.com',
+    subject='Hello',
+    backend='ses'
+    )
+
+Resulting 2 emails will be sent using ``django-ses`` backend.
+
+Management commands
+------------------------
+
+- send_queued_mail - send queued emails, those are not successfully sent are marked as failed or requeued depending on settings. <link>
+
+.. list-table:: send_queued_mail arguments
+   :widths: 50 100
+   :header-rows: 1
+
+   * - Argument
+     - Description
+   * - --processes or -p
+     - Number of concurrent processes to send queued emails. Defaults to ``1``.
+   * - --log-level or -l
+     - Log level ``0`` to log nothing, ``1`` to log only errors. Defaults to ``2`` - log everything.
+
+
+- cleanup_mail - delete all emails created before an X number of days (defaults to 90).
+
+.. list-table:: cleanup_mail arguments
+   :widths: 50 100
+   :header-rows: 1
+
+   * - Argument
+     - Description
+   * - --days or -d
+     - Email older than this argument will be deleted. Defaults to ``90``.
+   * - --delete-attachments or -da
+     - Flag to delete orphaned attachment records and files on disk. If not specified attachments wont be deleted.
+   * - --batch-size or -b
+     - Limits number of emails being deleted in a batch. Defaults to ``1000``.
+
+
+
+
+
+
+
+
 
 
 

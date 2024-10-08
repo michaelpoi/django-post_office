@@ -136,8 +136,13 @@ POST_OFFICE = {
     'CELERY_ENABLED': True,
     'MAX_RETRIES': 3,
     'BATCH_SIZE': 20,
+    'BATCH_DELIVERY_TIMEOUT': 30,
     'MESSAGE_ID_ENABLED': True,
     'DEFAULT_PRIORITY': 'medium',
+    'BACKENDS': {
+        'default': 'django.core.mail.backends.smtp.EmailBackend',
+        'ses': 'django_ses.SESBackend'
+    }
 }
 WSGI_APPLICATION = "celery_project.wsgi.application"
 
@@ -191,5 +196,15 @@ CKEDITOR_CONFIGS = {
         ],
         'format_tags': 'p;h1;h2;h3;pre',  # Define the available formats (headers and others)
         'width': 1000
+    }
+}
+
+CACHES = {
+    'default': {
+        'BACKEND': 'django_redis.cache.RedisCache',
+        'LOCATION': 'redis://127.0.0.1:6379/1',  # Use the appropriate Redis server URL
+        'OPTIONS': {
+            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+        }
     }
 }

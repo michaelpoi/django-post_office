@@ -10,7 +10,6 @@ from .logutils import setup_loghandlers
 from .models import EmailModel, EmailMergeModel, Log, PRIORITY, STATUS, Recipient, EmailAddress
 from .settings import (
     get_available_backends,
-    get_batch_delivery_timeout,
     get_batch_size,
     get_log_level,
     get_max_retries,
@@ -128,7 +127,8 @@ def send(
         language = get_default_language()
     else:
         if language not in get_languages_list():
-            raise ValidationError(f'Language "{language}" is not found in LANGUAGES configuration.')
+            logger.warning(f'Language "{language}" is not found in LANGUAGES configuration.')
+            language = get_default_language()
     try:
         recipients = parse_emails(recipients)
     except ValidationError as e:
@@ -219,8 +219,21 @@ def send_many(**kwargs):
     recipients_objs = get_recipients_objects(recipients)
 
     context = kwargs.pop('context', {})
-    emails = [send(recipients=[recipient.email], context={**context, 'recipient': recipient.id}, commit=False, **kwargs)
-              for recipient in recipients_objs]
+    if kwargs.get('language'):
+        emails = [
+            send(recipients=[recipient.email],
+                 context={**context, 'recipient': recipient.id},
+                 commit=False,
+                 **kwargs)
+            for recipient in recipients_objs]
+    else:
+        emails = [
+            send(recipients=[recipient.email],
+                 context={**context, 'recipient': recipient.id},
+                 commit=False,
+                 language=recipient.preferred_language,
+                 **kwargs)
+            for recipient in recipients_objs]
 
     if emails:
 
@@ -268,11 +281,11 @@ def get_queued():
     )
 
 
-def _send_bulk(emails, uses_multiprocessing=True, log_level=None, close_db=True):
+def _send_bulk(emails, uses_multiprocessing=True, log_level=None):
     # Multiprocessing does not play well with database connection
     # Fix: Close connections on forking process
     # https://groups.google.com/forum/#!topic/django-users/eCAIY9DAfG0
-    if uses_multiprocessing and close_db:
+    if uses_multiprocessing:
         db_connection.close()
 
     if log_level is None:

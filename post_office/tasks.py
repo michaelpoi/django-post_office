@@ -56,7 +56,6 @@ else:
         """
         Trigger an asynchronous mail delivery.
         """
-        print(sender)
         send_queued_mail.delay()
 
 

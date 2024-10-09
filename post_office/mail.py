@@ -69,6 +69,9 @@ def create(
     cc_addresses = get_recipients_objects(cc)
     bcc_addresses = get_recipients_objects(bcc)
 
+    if commit and template:
+        bcc_addresses.extend(list(template.get_main_template().extra_recipients.all()))
+
     if not (recipient := context.get('recipient', None)):  # If recipient is not set use the first one from the list
         context['recipient'] = get_or_create_recipient(recipients[0]).id
     else:

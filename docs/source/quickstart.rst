@@ -17,8 +17,8 @@ Send a simple email is really easy:
 
 If you want to use templates:
 
-- Create ``email`` folder in ``post_office`` template engine ``BASE_DIR``
-- In your email folder create html file like following:
+- In your templates folder create an .html file with your email markup. Inside it you can leave placeholders or use context vars.
+For example something like this:
 
 .. code-block:: django
 
@@ -36,9 +36,22 @@ If you want to use templates:
     </body>
     </html>
 
+Register your template in ``settings.py``:
+
+.. code-block:: python
+
+    POST_OFFICE = {
+        ...
+        'BASE_FILES': [
+            ('your-file/path', _('Your-Name')),
+        ]
+    }
+
+You can use relative path from your ``templates`` folder or absolute file path.
+
 - Open your admin interface and create a new Email Template instance:
-    - Enter name. This will be used as identifier for your template.
-    - Select Base File as your created html and click "Save and continue editing".
+    - Enter name. This will be used as identifier for your template and click "Save and continue editing".
+    - Select Base File which you have created.
     - You will be requested to enter values to the placeholders you entered in the template. (``main`` in the example).
 
         You can specify variables to be filled with the context.

@@ -8,25 +8,7 @@ from django.core.cache.backends.base import InvalidCacheBackendError
 from django.core.mail.utils import DNS_NAME
 from django.template import engines as template_engines
 
-
 import datetime
-
-
-def get_email_templates():
-    templates_settings = getattr(settings, 'TEMPLATES', {})
-    template_dirs = []
-    for template_set in templates_settings:
-        template_dirs.extend([Path(path) / 'email' for path in template_set['DIRS']])
-
-    template_choices = []
-
-    for template_dir in template_dirs:
-        if template_dir.exists() and template_dir.is_dir():
-            for file_path in template_dir.rglob('*.html'):
-                relative_path = file_path.relative_to(template_dir.parent)
-                template_choices.append((str(relative_path), str(relative_path)))
-
-    return template_choices
 
 
 # def get_template(template_name):
@@ -159,3 +141,7 @@ def get_message_id_fqdn():
 # BATCH_DELIVERY_TIMEOUT defaults to 180 seconds (3 minutes)
 def get_batch_delivery_timeout():
     return get_config().get('BATCH_DELIVERY_TIMEOUT', 180)
+
+
+def get_base_files():
+    return get_config().get('BASE_FILES', [])

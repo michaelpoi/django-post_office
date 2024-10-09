@@ -123,7 +123,7 @@ def render_on_delivery(request):
         mail.send(
             recipients=['poenko.mishany@gmail.com'],
             sender='sender@email.com',
-            template='test_if',
+            template='test_new_bases',
             context={'new1': 'Bread is cheaper', 'new2': 'New Iphone is out', 'bad1': 'You can not afford that'},
             language='de',
             priority='low',

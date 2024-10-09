@@ -6,7 +6,7 @@ from django.contrib import admin, messages
 from django.core.mail.message import SafeMIMEText
 from django.db import models
 from django.forms import BaseInlineFormSet
-from django.forms.widgets import TextInput
+from django.forms.widgets import TextInput, HiddenInput
 from django.http.response import HttpResponse, HttpResponseNotFound, HttpResponseRedirect
 from django.urls import re_path, reverse
 from django.utils.html import format_html
@@ -16,7 +16,7 @@ from django.utils.safestring import mark_safe
 
 from .models import STATUS, Attachment, EmailModel, EmailMergeModel, Log, EmailAddress, PlaceholderContent
 from .sanitizer import clean_html
-from .settings import get_email_templates, get_default_language, get_template_engine
+from .settings import get_default_language, get_template_engine, get_base_files
 
 
 def get_message_preview(instance):
@@ -102,6 +102,9 @@ class EmailContentInlineForm(forms.ModelForm):
     class Meta:
         model = PlaceholderContent
         fields = ['language', 'placeholder_name', 'content', 'base_file']
+        widgets = {
+            'base_file': HiddenInput(),  # Make base_file hidden
+        }
 
     def __init__(self, *args, **kwargs):
         request = kwargs.pop('request', None)
@@ -145,7 +148,7 @@ class EmailContentInline(admin.TabularInline):
     formset = EmailContentInlineFormset
     form = EmailContentInlineForm
     extra = 0
-    readonly_fields = ('language', 'placeholder_name', 'base_file')
+    readonly_fields = ('language', 'placeholder_name')
     fields = ['content', 'language', 'placeholder_name', 'base_file']
 
     # def get_language_display(self, obj):
@@ -320,7 +323,7 @@ class EmailTemplateAdminForm(forms.ModelForm):
         help_text=_('Render template in alternative language'),
     )
     base_file = forms.ChoiceField(
-        choices=get_email_templates(),  # Set choices to the result of get_email_templates
+        choices=get_base_files(),  # Set choices to the result of get_email_templates
         required=False,
         label=_('Base File'),
         help_text=_('Select the base email template file'),
@@ -356,12 +359,13 @@ class EmailTemplateAdmin(admin.ModelAdmin):
     list_display = ('name', 'description_shortened', 'subject', 'languages_compact', 'created')
     search_fields = ('name', 'description', 'subject')
     fieldsets = [
-        (None, {'fields': ('name', 'description', 'base_file')}),
+        (None, {'fields': ('name', 'description', 'base_file', 'extra_recipients')}),
         (_('Default Content'), {'fields': ('subject', 'content')}),
     ]
     inlines = (EmailTemplateInline, EmailContentInline) if settings.USE_I18N else (EmailContentInline,)
     formfield_overrides = {models.CharField: {'widget': SubjectField}}
 
+    filter_horizontal = ('extra_recipients',)
     def get_queryset(self, request):
         return self.model.objects.filter(default_template__isnull=True)
 

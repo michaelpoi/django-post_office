@@ -13,6 +13,7 @@ import sys
 from pathlib import Path
 # from dotenv import load_dotenv
 import os
+from django.utils.translation import gettext_lazy as _
 
 # load_dotenv()
 
@@ -142,7 +143,12 @@ POST_OFFICE = {
     'BACKENDS': {
         'default': 'django.core.mail.backends.smtp.EmailBackend',
         'ses': 'django_ses.SESBackend'
-    }
+    },
+    'BASE_FILES': [
+        ('/home/mykhailo/Desktop/emails/django-post_office/celery_project/templates/email/default.html', _('Default')),
+        ('email/placeholders.html', _('Placeholders')),
+        ('/home/mykhailo/Desktop/out.html', _('Out')),
+    ]
 }
 WSGI_APPLICATION = "celery_project.wsgi.application"
 

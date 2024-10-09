@@ -577,3 +577,35 @@ def test_errors(settings, template):
     with pytest.raises(InterfaceError):
         # Connection already closed
         _send_bulk([email], uses_multiprocessing=True)
+
+@pytest.mark.django_db
+def test_extra_recipients(template):
+    extra_recipients = [EmailAddress.objects.create(email='bcc1@email.com'),
+                        EmailAddress.objects.create(email='bcc2@email.com')]
+
+    template.extra_recipients.set(extra_recipients)
+
+    template.save()
+
+    recipients = ['mrec1@gmail.com', 'mrec2@gmail.com']
+    sender = 'from@gmail.com'
+    context = {'test': 'val'}
+    email = send(
+        sender=sender,
+        recipients=recipients,
+        template=template,
+        priority='medium',
+        commit=True,
+        context=context,
+        language='de',
+        backend='default',
+    )
+
+    assert email.recipients.count() == 4
+
+    assert (recipients := Recipient.objects.all()).count() == 4
+
+    assert (extra := recipients.filter(send_type='bcc')).count() == 2
+
+    assert extra[0].address.email == 'bcc1@email.com'
+    assert extra[1].address.email == 'bcc2@email.com'

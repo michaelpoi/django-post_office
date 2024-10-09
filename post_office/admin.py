@@ -14,7 +14,8 @@ from django.utils.text import Truncator
 from django.utils.translation import gettext_lazy as _
 from django.utils.safestring import mark_safe
 
-from .models import STATUS, Attachment, EmailModel, EmailMergeModel, Log, EmailAddress, PlaceholderContent
+from .models import STATUS, Attachment, EmailModel, EmailMergeModel, Log, EmailAddress, PlaceholderContent, \
+    EmailMergeContentModel
 from .sanitizer import clean_html
 from .settings import get_default_language, get_template_engine, get_base_files
 
@@ -187,9 +188,9 @@ class EmailAdmin(admin.ModelAdmin):
     ]
     #filter_horizontal = ('to', 'cc', 'bcc')
     search_fields = ['to', 'subject']
-    readonly_fields = ['message_id', 'render_subject', 'render_plaintext_body', 'render_html_body']
+    readonly_fields = ['message_id', 'language', 'render_subject', 'render_plaintext_body', 'render_html_body']
     inlines = [AttachmentInline, LogInline]
-    list_filter = ['status', 'template__language', 'template__name']
+    list_filter = ['status', 'template__name']
     #formfield_overrides = {CommaSeparatedEmailField: {'widget': CommaSeparatedEmailWidget}}
     actions = [requeue]
 
@@ -331,7 +332,7 @@ class EmailTemplateAdminForm(forms.ModelForm):
 
     class Meta:
         model = EmailMergeModel
-        fields = ['name', 'description', 'subject', 'content', 'language', 'default_template', 'base_file']
+        fields = ['name', 'description', 'base_file']
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -339,9 +340,9 @@ class EmailTemplateAdminForm(forms.ModelForm):
 
 
 class EmailTemplateInline(admin.StackedInline):
-    form = EmailTemplateAdminForm
-    formset = EmailTemplateAdminFormSet
-    model = EmailMergeModel
+    # form = EmailTemplateAdminForm
+    # formset = EmailTemplateAdminFormSet
+    model = EmailMergeContentModel
     extra = 0
     fields = ('language', 'subject', 'content')
     formfield_overrides = {models.CharField: {'widget': SubjectField}}
@@ -353,21 +354,19 @@ class EmailTemplateInline(admin.StackedInline):
         return False
 
 
-
 class EmailTemplateAdmin(admin.ModelAdmin):
     form = EmailTemplateAdminForm
-    list_display = ('name', 'description_shortened', 'subject', 'languages_compact', 'created')
+    list_display = ('name', 'created')
     search_fields = ('name', 'description', 'subject')
     fieldsets = [
         (None, {'fields': ('name', 'description', 'base_file', 'extra_recipients')}),
-        (_('Default Content'), {'fields': ('subject', 'content')}),
+        # (_('Default Content'), {'fields': ('subject', 'content')}),
     ]
     inlines = (EmailTemplateInline, EmailContentInline) if settings.USE_I18N else (EmailContentInline,)
     formfield_overrides = {models.CharField: {'widget': SubjectField}}
 
     filter_horizontal = ('extra_recipients',)
-    def get_queryset(self, request):
-        return self.model.objects.filter(default_template__isnull=True)
+
 
     def description_shortened(self, instance):
         return Truncator(instance.description.split('\n')[0]).chars(200)
@@ -381,16 +380,16 @@ class EmailTemplateAdmin(admin.ModelAdmin):
 
     languages_compact.short_description = _('Languages')
 
-    def save_model(self, request, obj, form, change):
-
-        if not obj.language:
-            obj.language = get_default_language()
-
-        obj.save()
-
-        # if the name got changed, also change the translated templates to match again
-        if 'name' in form.changed_data:
-            obj.translated_templates.update(name=obj.name)
+    # def save_model(self, request, obj, form, change):
+    #
+    #     if not obj.language:
+    #         obj.language = get_default_language()
+    #
+    #     obj.save()
+    #
+    #     # if the name got changed, also change the translated templates to match again
+    #     if 'name' in form.changed_data:
+    #         obj.translated_templates.update(name=obj.name)
 
 
 class AttachmentAdmin(admin.ModelAdmin):

@@ -6,7 +6,7 @@ from django.core.files import File
 from django.utils.encoding import force_str
 from post_office import cache
 from .models import EmailModel, PRIORITY, STATUS, EmailMergeModel, Attachment, EmailAddress, Recipient
-from .settings import get_default_priority
+from .settings import get_default_priority, get_default_language
 from .signals import email_queued
 from .validators import validate_email_with_name
 
@@ -22,11 +22,15 @@ def send_mail(
         scheduled_time=None,
         headers=None,
         priority=PRIORITY.medium,
+        language=''
 ):
     """
     Add a new message to the mail queue. This is a replacement for Django's
     ``send_mail`` core email method.
     """
+
+    if not language:
+        language = get_default_language()
 
     subject = force_str(subject)
     status = None if priority == PRIORITY.now else STATUS.queued
@@ -41,6 +45,7 @@ def send_mail(
             headers=headers,
             priority=priority,
             scheduled_time=scheduled_time,
+            language=language,
         )
         set_recipients(email, [get_or_create_recipient(address)])
 
@@ -62,13 +67,13 @@ def get_email_template(name, language=''):
     if use_cache:
         use_cache = getattr(settings, 'POST_OFFICE_TEMPLATE_CACHE', True)
     if not use_cache:
-        return EmailMergeModel.objects.get(name=name, language=language)
+        return EmailMergeModel.objects.get(name=name)
     else:
         composite_name = '%s:%s' % (name, language)
         email_template = cache.get(composite_name)
 
         if email_template is None:
-            email_template = EmailMergeModel.objects.get(name=name, language=language)
+            email_template = EmailMergeModel.objects.get(name=name)
             cache.set(composite_name, email_template)
 
         return email_template

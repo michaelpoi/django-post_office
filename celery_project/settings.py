@@ -53,7 +53,7 @@ LANGUAGES = [
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'post_office',  # Your database name
+        'NAME': 'new_post_office',  # Your database name
         'USER': 'post_office',  # Your database user
         'PASSWORD': 'post_office',  # Your database password
         'HOST': 'localhost',  # Or the database server's IP address

@@ -22,48 +22,24 @@ from post_office.settings import get_available_backends
 
 @pytest.fixture
 def template():
-    common = {
-        'base_file': 'test/test.html',
-        'name': 'test_template',
-        'description': 'test_description'
-    }
-    temp = EmailMergeModel.objects.create(
-        **common,
-        subject='template_subject',
-        content='template_content',
-        language='en',
-        default_template=None,
+    template_context = EmailMergeModel.objects.create(
+        base_file='test/context_test.html',
+        name='test_template',
+        description='test_description',
     )
-    kwargs = dict(
-        subject='de_template_subject',
-        content='de_template_content',
-        language='de',
-        default_template=temp
-    )
-    trans_temp = EmailMergeModel.objects.filter(name='test_template', language='de').update(**kwargs)
-    common = {'emailmerge': temp,
-              'base_file': 'test/test.html'}
 
-    kwargs_en = [
-        {'placeholder_name': 'test1',
-         'content': 'test_content1', },
-        {'placeholder_name': 'test2',
-         'content': 'test_content2', },
-    ]
+    en_translation = template_context.translated_contents.get(language='en')
+    en_translation.subject = 'template_subject'
+    en_translation.content = 'template_content'
+    en_translation.save()
 
-    kwargs_de = [
-        {'placeholder_name': 'test1',
-         'content': 'de_test_content1', },
-        {'placeholder_name': 'test2',
-         'content': 'de_test_content2', },
-    ]
-    #assert PlaceholderContent.objects.first().placeholder_name == 'test1'
-    # placeholders_en = [PlaceholderContent.objects.create(**{**kwarg, "language": 'en', **common}) for kwarg in
-    #                    kwargs_en]
-    # placeholders_de = [PlaceholderContent.objects.create(**{**kwarg, "language": 'de', **common}) for kwarg in
-    #                    kwargs_de]
+    de_translation = template_context.translated_contents.get(language='de')
+    de_translation.subject = 'DE test_subject'
+    de_translation.content = 'DE test_content'
 
-    return temp
+    de_translation.save()
+
+    return template_context
 
 
 @pytest.fixture
@@ -86,7 +62,8 @@ def test_create_email(template):
                          message='message',
                          html_message='html_message',
                          priority='medium',
-                         commit=True)
+                         commit=True,
+                         language='en',)
 
     assert EmailModel.objects.count() == 1
     email = EmailModel.objects.first()
@@ -108,7 +85,8 @@ def test_create_email(template):
            message='message',
            html_message='html_message',
            priority='medium',
-           commit=False)
+           commit=False,
+           language='en')
 
     assert EmailModel.objects.count() == 1
 
@@ -116,7 +94,8 @@ def test_create_email(template):
                          recipients=recipients,
                          template=template,
                          priority='medium',
-                         commit=True)
+                         commit=True,
+                         language='en')
 
     assert EmailModel.objects.count() == 2
     email = EmailModel.objects.last()
@@ -136,7 +115,8 @@ def test_create_email(template):
                          template=template,
                          priority='medium',
                          commit=True,
-                         context=context)
+                         context=context,
+                         language='en')
 
     assert email_model.context['recipient'] == new_recipient.id
 
@@ -148,7 +128,8 @@ def test_create_email(template):
                          template=template,
                          priority='medium',
                          commit=True,
-                         context=context)
+                         context=context,
+                         language='en')
     em = EmailModel.objects.get(pk=email_model.id)
     assert em.recipients.count() == 4
     assert list(em.recipients.values_list('email', flat=True)).sort() == [*cc, *bcc].sort()
@@ -169,7 +150,7 @@ def test_send_email(template, recipient):
                        context=context,
                        cc=cc,
                        bcc=bcc)
-    assert email_model.template.language == 'en'
+    assert email_model.language == 'en'
 
     email = send(sender=sender,
                  recipients=recipients,
@@ -179,7 +160,7 @@ def test_send_email(template, recipient):
                  context=context,
                  language='es')
 
-    assert email.template.language == 'en'
+    assert email.language == 'en'
 
     with pytest.raises(ValidationError):
         nv_recipients = [*recipients, 'not_valid']
@@ -273,7 +254,7 @@ def test_send_email(template, recipient):
 
     assert mail.template == template
 
-    assert EmailModel.objects.last().template == EmailMergeModel.objects.get(name='test_template', language='en')
+    assert EmailModel.objects.last().template == EmailMergeModel.objects.get(name='test_template')
 
     mail = send(
         recipients=recipients,
@@ -284,7 +265,7 @@ def test_send_email(template, recipient):
         language='de',
     )
 
-    assert mail.template == EmailMergeModel.objects.get(name='test_template', language='de')
+    assert mail.template == EmailMergeModel.objects.get(name='test_template')
 
     mail = send(
         recipients=recipients,
@@ -295,7 +276,7 @@ def test_send_email(template, recipient):
         language='de',
     )
 
-    assert mail.template == EmailMergeModel.objects.get(name='test_template', language='de')
+    assert mail.template == EmailMergeModel.objects.get(name='test_template')
 
     with pytest.raises(ValueError):
         send(
@@ -467,10 +448,10 @@ def test_internalization(caplog, template):
         assert 'Language "ua" is not found in LANGUAGES configuration.' in caplog.text
 
     assert len(emails) == 4
-    assert emails[0].template.language == 'en'
-    assert emails[1].template.language == 'de'
-    assert emails[2].template.language == 'en'
-    assert emails[3].template.language == 'en'
+    assert emails[0].language == 'en'
+    assert emails[1].language == 'de'
+    assert emails[2].language == 'en'
+    assert emails[3].language == 'en'
 
     caplog.clear()
 
@@ -482,7 +463,7 @@ def test_internalization(caplog, template):
 
         assert 'Language "ua" is not found in LANGUAGES configuration.' not in caplog.text
 
-    assert all([email.template.language == 'en' for email in emails])
+    assert all([email.language == 'en' for email in emails])
 
 
 def test_split_batches(settings):
@@ -496,6 +477,7 @@ def test_get_queued():
         'from_email': 'bob@example.com',
         'subject': 'Test',
         'message': 'Message',
+        'language': 'en'
     }
     assert list(get_queued()) == []
 

@@ -23,6 +23,7 @@ def simple_email(recipients):
         html_message="<h1>Testing mail to #recipient.first_name#</h1>",
         status=STATUS.queued,
         priority=PRIORITY.medium,
+        language='en'
     )
     set_recipients(email, recipients)
 

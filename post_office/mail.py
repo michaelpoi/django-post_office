@@ -48,11 +48,15 @@ def create(
         priority=None,
         commit=True,
         backend='',
+        language='',
 ):
     """
     Creates an email from supplied keyword arguments. If template is
     specified, email subject and content will be rendered during delivery.
     """
+
+    if not language:
+        language = get_default_language()
     priority = parse_priority(priority)
     status = None if priority == PRIORITY.now else STATUS.queued
 
@@ -70,7 +74,7 @@ def create(
     bcc_addresses = get_recipients_objects(bcc)
 
     if commit and template:
-        bcc_addresses.extend(list(template.get_main_template().extra_recipients.all()))
+        bcc_addresses.extend(list(template.extra_recipients.all()))
 
     if not (recipient := context.get('recipient', None)):  # If recipient is not set use the first one from the list
         context['recipient'] = get_or_create_recipient(recipients[0]).id
@@ -79,8 +83,9 @@ def create(
             context['recipient'] = recipient.id
 
     if template:
-        subject = template.subject
-        message = template.content
+        translated_content = template.translated_contents.get(language=language)
+        subject = translated_content.subject
+        message = translated_content.content
 
     email = EmailModel(
         subject=subject,
@@ -96,6 +101,7 @@ def create(
         context=context,
         template=template,
         backend_alias=backend,
+        language=language
     )
 
     if commit:
@@ -168,13 +174,8 @@ def send(
             raise ValueError('You can\'t specify both "template" and "html_message" arguments')
 
         # template can be an EmailMerge instance or name
-        if isinstance(template, EmailMergeModel):
-            template = template
-            # If language is specified, ensure template uses the right language
-            if language and template.language != language:
-                template = template.translated_templates.get(language=language)
-        else:
-            template = get_email_template(template, language)
+        if not isinstance(template, EmailMergeModel):
+            template = EmailMergeModel.objects.get(name=template)
 
     if backend and backend not in get_available_backends().keys():
         raise ValueError('%s is not a valid backend alias' % backend)
@@ -195,6 +196,7 @@ def send(
         priority,
         commit=commit,
         backend=backend,
+        language=language
     )
 
     if attachments and commit:

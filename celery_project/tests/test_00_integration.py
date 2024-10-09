@@ -27,16 +27,18 @@ def template():
         base_file='test/context_test.html',
         name='test_name',
         description='test_description',
-        subject='test_subject',
-        content='test_content',
-        language='en',
     )
 
-    translated_template = template_context.translated_templates.get(name='test_name')
-    translated_template.subject = 'DE test_subject'
-    translated_template.content = 'DE test_content'
+    en_translation = template_context.translated_contents.get(language='en')
+    en_translation.subject = 'test_subject'
+    en_translation.content = 'test_content'
+    en_translation.save()
 
-    translated_template.save()
+    de_translation = template_context.translated_contents.get(language='de')
+    de_translation.subject = 'DE test_subject'
+    de_translation.content = 'DE test_content'
+
+    de_translation.save()
 
     return template_context
 

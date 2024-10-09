@@ -15,7 +15,7 @@ from post_office.validators import validate_email_with_name, validate_template_s
 @pytest.mark.django_db
 def test_set_recipients():
     # Create test email
-    test_email = EmailModel.objects.create(from_email='test@email.com')
+    test_email = EmailModel.objects.create(from_email='test@email.com', language='en')
 
     # Create test addresses
     to_recipients = [EmailAddress.objects.create(email=f"{i}@email.com") for i in range(5)]
@@ -123,7 +123,7 @@ def test_parse_priority(settings):
 @pytest.mark.django_db
 def test_split_emails():
     for _ in range(225):
-        EmailModel.objects.create(from_email='test@email.com')
+        EmailModel.objects.create(from_email='test@email.com', language='en')
     expected_size = [57, 56, 56, 56]
     email_list = split_emails(EmailModel.objects.all(), 4)
     assert expected_size == [len(emails) for emails in email_list]
@@ -137,10 +137,15 @@ def test_template():
         base_file='test/test.html',
         name='test_name',
         description='test_description',
-        subject='test_subject',
-        content='test_content',
-        language='en',
+        # subject='test_subject',
+        # content='test_content',
+        # language='en',
     )
+
+    en_content = template.translated_contents.get(language='en')
+    en_content.subject = 'test_subject'
+    en_content.content = 'test_content'
+    en_content.save()
     return template
 
 
@@ -206,6 +211,7 @@ def test_email_validator():
         subject='Test',
         message='Message',
         status=STATUS.sent,
+        language='en'
     )
 
     # Should also support international domains
@@ -236,7 +242,7 @@ def test_send_email():
 @pytest.mark.django_db
 def test_cleanup_expired():
     assert cleanup_expired_mails(datetime.now()) == (0, 0)
-    email = EmailModel.objects.create(from_email='test@email.com')
+    email = EmailModel.objects.create(from_email='test@email.com', language='en')
     with tempfile.NamedTemporaryFile(delete=False) as tmp:
         tmp.write(b'Test attachment')
         tmp.seek(0)

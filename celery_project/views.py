@@ -94,7 +94,7 @@ def send_many(request):
         mail.send_many(
             recipients=[EmailAddress.objects.get(email='bob@gmail.com'), 'lena@email.com', 'grisha@gmail.com'],
             sender='Mykhailo.Poienko@uibk.ac.at',
-            template='nice_email',
+            template='first_template',
             context={'id': 228, 'shirts': 100, 'all': 10, 'shoes': 75},
             attachments={'new_test.txt': f},
         )
@@ -123,9 +123,9 @@ def render_on_delivery(request):
         mail.send(
             recipients=['poenko.mishany@gmail.com'],
             sender='sender@email.com',
-            template='test_new_bases',
+            template='first_template',
             context={'new1': 'Bread is cheaper', 'new2': 'New Iphone is out', 'bad1': 'You can not afford that'},
-            language='de',
+            language='en',
             priority='low',
             attachments={'new_test.txt': f},
         )
@@ -158,7 +158,7 @@ def stress_many(request):
     mail.send_many(
         recipients=recipients,
         sender='Mykhailo.Poienko@uibk.ac.at',
-        template='nice_email',
+        template='first_template',
         context={'id': 228, 'shirts': 100, 'all': 10, 'shoes': 75},
     )
     return redirect('home')

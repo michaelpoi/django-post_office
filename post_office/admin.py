@@ -339,8 +339,25 @@ class EmailTemplateAdminForm(forms.ModelForm):
         self.fields['language'].disabled = True
 
 
+class EmailMergeContentForm(forms.ModelForm):
+    language = forms.ChoiceField(
+        choices=settings.LANGUAGES,
+        required=False,
+        label=_('Language'),
+        help_text=_('Render template in alternative language'),
+    )
+
+    class Meta:
+        model = EmailMergeContentModel
+        fields = ['subject', 'content', 'language']
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['language'].disabled = True
+
+
 class EmailTemplateInline(admin.StackedInline):
-    # form = EmailTemplateAdminForm
+    form = EmailMergeContentForm
     # formset = EmailTemplateAdminFormSet
     model = EmailMergeContentModel
     extra = 0
@@ -366,7 +383,6 @@ class EmailTemplateAdmin(admin.ModelAdmin):
     formfield_overrides = {models.CharField: {'widget': SubjectField}}
 
     filter_horizontal = ('extra_recipients',)
-
 
     def description_shortened(self, instance):
         return Truncator(instance.description.split('\n')[0]).chars(200)

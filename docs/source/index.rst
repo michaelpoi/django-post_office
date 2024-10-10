@@ -33,5 +33,6 @@ post_office provides a set of powerful features, such as:
    celery
    uwsgi
    signals
+   testing
 
 

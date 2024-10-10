@@ -13,6 +13,7 @@ from django.utils.html import format_html
 from django.utils.text import Truncator
 from django.utils.translation import gettext_lazy as _
 from django.utils.safestring import mark_safe
+from django.db.models import Case, When, Value, IntegerField
 
 from .models import STATUS, Attachment, EmailModel, EmailMergeModel, Log, EmailAddress, PlaceholderContent, \
     EmailMergeContentModel
@@ -149,11 +150,11 @@ class EmailContentInline(admin.TabularInline):
     formset = EmailContentInlineFormset
     form = EmailContentInlineForm
     extra = 0
-    readonly_fields = ('language', 'placeholder_name')
-    fields = ['content', 'language', 'placeholder_name', 'base_file']
+    readonly_fields = ('get_language_display', 'placeholder_name')
+    fields = ['content', 'get_language_display', 'placeholder_name', 'base_file']
 
-    # def get_language_display(self, obj):
-    #     return obj.get_language_display()
+    def get_language_display(self, obj):
+        return obj.get_language_display()
 
     def get_formset(self, request, obj=None, **kwargs):
         self.parent_obj = obj
@@ -163,9 +164,16 @@ class EmailContentInline(admin.TabularInline):
 
     def get_queryset(self, request, obj=None):
         queryset = super().get_queryset(request)
+        default_language = get_default_language()
 
         if self.parent_obj and self.parent_obj.base_file:
-            return queryset.filter(base_file=self.parent_obj.base_file)
+            return queryset.filter(base_file=self.parent_obj.base_file).annotate(
+                is_default_lang=Case(
+                    When(language=default_language, then=Value(0)),
+                    default=Value(1),
+                    output_field=IntegerField()
+                )
+            ).order_by('is_default_lang', 'language')
 
         return queryset
 
@@ -349,7 +357,7 @@ class EmailMergeContentForm(forms.ModelForm):
 
     class Meta:
         model = EmailMergeContentModel
-        fields = ['subject', 'content', 'language']
+        fields = ['subject', 'content', 'language', 'extra_attachments']
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -361,8 +369,10 @@ class EmailTemplateInline(admin.StackedInline):
     # formset = EmailTemplateAdminFormSet
     model = EmailMergeContentModel
     extra = 0
-    fields = ('language', 'subject', 'content')
+    fields = ('language', 'subject', 'content', 'extra_attachments')
     formfield_overrides = {models.CharField: {'widget': SubjectField}}
+
+    filter_horizontal = ('extra_attachments',)
 
     def has_add_permission(self, request, obj):
         return False
@@ -417,12 +427,13 @@ class AttachmentAdmin(admin.ModelAdmin):
 
 @admin.register(EmailAddress)
 class EmailAddressAdmin(admin.ModelAdmin):
-    pass
+    search_fields = ('email', 'first_name', 'last_name')
+    list_display = ('email', 'first_name', 'last_name', 'gender', 'is_blocked')
 
 
-@admin.register(PlaceholderContent)
-class EmailContentAdmin(admin.ModelAdmin):
-    pass
+# @admin.register(PlaceholderContent)
+# class EmailContentAdmin(admin.ModelAdmin):
+#     pass
 
 
 admin.site.register(EmailModel, EmailAdmin)

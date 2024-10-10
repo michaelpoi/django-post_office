@@ -6,7 +6,7 @@ from django.core.files import File
 from django.utils.encoding import force_str
 from post_office import cache
 from .models import EmailModel, PRIORITY, STATUS, EmailMergeModel, Attachment, EmailAddress, Recipient
-from .settings import get_default_priority, get_default_language
+from .settings import get_default_priority, get_default_language, get_languages_list
 from .signals import email_queued
 from .validators import validate_email_with_name
 
@@ -275,3 +275,14 @@ def cleanup_expired_mails(cutoff_date, delete_attachments=True, batch_size=1000)
             attachments_count += deleted_count
 
     return total_deleted_emails, attachments_count
+
+
+def get_language_from_code(code) -> str:
+    if not code:
+        code = get_default_language()
+    else:
+        if code not in get_languages_list():
+            logger.warning(f'Language "{code}" is not found in LANGUAGES configuration.')
+            code = get_default_language()
+
+    return code

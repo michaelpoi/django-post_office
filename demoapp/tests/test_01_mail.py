@@ -63,7 +63,7 @@ def test_create_email(template):
                          html_message='html_message',
                          priority='medium',
                          commit=True,
-                         language='en',)
+                         language='en', )
 
     assert EmailModel.objects.count() == 1
     email = EmailModel.objects.first()
@@ -560,6 +560,7 @@ def test_errors(settings, template):
         # Connection already closed
         _send_bulk([email], uses_multiprocessing=True)
 
+
 @pytest.mark.django_db
 def test_extra_recipients(template):
     extra_recipients = [EmailAddress.objects.create(email='bcc1@email.com'),
@@ -591,3 +592,109 @@ def test_extra_recipients(template):
 
     assert extra[0].address.email == 'bcc1@email.com'
     assert extra[1].address.email == 'bcc2@email.com'
+
+
+from django.core.files.base import ContentFile
+
+
+@pytest.fixture
+def template_with_extra_attachments(settings, template):
+    en_translation = template.translated_contents.get(language='en')
+
+    en_path = settings.BASE_DIR / 'demoapp' / 'tests' / 'assets' / 'en_attachment.txt'
+
+    with open(en_path, 'rb') as f:
+        file = ContentFile(f.read(), name='en_attachment.txt')
+        en_attachment = Attachment.objects.create(
+            file=file,
+            name='en_attachment.txt',
+            mimetype='text/plain'
+        )
+    en_translation.extra_attachments.set([en_attachment])
+    en_translation.save()
+
+    return template
+
+
+@pytest.mark.django_db
+def test_extra_attachments(settings, template_with_extra_attachments):
+    # Retrieve the template with the extra attachments already set up
+    template = template_with_extra_attachments
+    en_translation = template.translated_contents.get(language='en')
+
+    # No need to create the attachment again since the fixture already does that
+    recipients = ['mrec1@gmail.com', 'mrec2@gmail.com']
+    sender = 'from@gmail.com'
+    context = {'test': 'val'}
+    email = send(
+        sender=sender,
+        recipients=recipients,
+        template=template,
+        priority='medium',
+        commit=True,
+        context=context,
+        language='en',
+        backend='default',
+        attachments={'def.txt': ContentFile(b'Some data...')}
+    )
+
+    assert Attachment.objects.count() == 2  # Should include default.txt and en_attachment.txt
+
+    assert (attachments := list(Attachment.objects.all())) == list(email.attachments.all())
+    assert len(attachments) == 2
+    assert sorted([attachments[0].name, attachments[1].name]) == sorted(['def.txt', 'en_attachment.txt'])
+
+    # Test sending to a different language
+    email = send(
+        sender=sender,
+        recipients=recipients,
+        template=template,
+        priority='medium',
+        commit=True,
+        context=context,
+        language='de',
+        backend='default',
+        attachments={'default.txt': ContentFile(b'Some data...')}
+    )
+
+    assert Attachment.objects.count() == 3  # Expecting default.txt + en_attachment.txt + de_attachment.txt
+    assert (attachments := email.attachments.all()).count() == 1  # Should only be the default.txt
+
+    assert attachments[0].name == 'default.txt'
+
+
+@pytest.mark.django_db
+def test_many_extra_attachments(settings, template_with_extra_attachments):
+    # Retrieve the template with the extra attachments already set up
+    template = template_with_extra_attachments
+
+    de_translation = template.translated_contents.get(language='de')
+    de_path = settings.BASE_DIR / 'demoapp' / 'tests' / 'assets' / 'de_attachment.txt'
+
+    with open(de_path, 'rb') as f:
+        file = ContentFile(f.read(), name='de_attachment.txt')
+        de_attachment = Attachment.objects.create(
+            file=file,
+            name='de_attachment.txt',
+            mimetype='text/plain'
+        )
+    de_translation.extra_attachments.set([de_attachment])
+    de_translation.save()
+
+    john = EmailAddress.objects.create(email='john@email.com')
+    marry = EmailAddress.objects.create(email='marry@email.com', preferred_language='de')
+
+    emails = send_many(
+        recipients=[john, marry],
+        template='test_template',
+        attachments={'defau.txt': ContentFile(b'Some data...')}
+    )
+
+    assert emails[0].language == 'en'
+    assert emails[1].language == 'de'
+
+    assert len((en_attachments := list(emails[0].attachments.all()))) == 2  # Check English attachments
+    assert len((de_attachments := list(emails[1].attachments.all()))) == 2  # Check German attachments
+
+    assert [en_attachments[0].name, en_attachments[1].name] == ['en_attachment.txt','defau.txt']
+    assert [de_attachments[0].name, de_attachments[1].name] == ['de_attachment.txt','defau.txt']

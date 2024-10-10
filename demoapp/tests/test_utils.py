@@ -5,7 +5,7 @@ from django.core.files import File
 from django.core.files.base import ContentFile
 import pytest
 from post_office.utils import set_recipients, get_recipients_objects, parse_emails, parse_priority, split_emails, \
-    create_attachments, send_mail, get_email_template, cleanup_expired_mails
+    create_attachments, send_mail, get_email_template, cleanup_expired_mails, get_language_from_code
 from post_office.models import EmailAddress, EmailModel, PRIORITY, Attachment, STATUS, EmailMergeModel
 from django.core.exceptions import ValidationError
 
@@ -278,3 +278,9 @@ def test_template_syntax():
                                  "{% for template in test.values %}"
                                  "{{ template }}"
                                  "</h1>")
+
+def test_get_language_from_code():
+    assert get_language_from_code('en') == 'en'
+    assert get_language_from_code(None) == 'en'
+    assert get_language_from_code('de') == 'de'
+    assert get_language_from_code('fr') == 'en'

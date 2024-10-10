@@ -12,7 +12,7 @@ from django.utils import timezone
 from ckeditor_uploader.fields import RichTextUploadingField
 from post_office import cache
 from .cache_utils import get_placeholders
-
+from django.conf import settings
 from .connections import connections
 from .logutils import setup_loghandlers
 from .parser import process_template
@@ -70,7 +70,7 @@ class EmailAddress(models.Model):
         default='',
         blank=True,
     )
-    is_blocked = models.BooleanField(default=False)
+    is_blocked = models.BooleanField(_('Is blocked'), default=False)
 
     def __str__(self):
         return self.email
@@ -445,6 +445,11 @@ class EmailMergeContentModel(models.Model):
     content = models.TextField(blank=True,
                                verbose_name=_('Content'),
                                validators=[validate_template_syntax])
+    extra_attachments = models.ManyToManyField('Attachment',
+                                               related_name='extra_attachments',
+                                               verbose_name=_('Extra Attachments'),
+                                               blank=True,
+                                               )
 
     def __str__(self):
         return f"{self.emailmerge.name}: {self.language}"
@@ -476,7 +481,7 @@ class Attachment(models.Model):
 
     file = models.FileField(_('File'), upload_to=get_upload_path)
     name = models.CharField(_('Name'), max_length=255, help_text=_('The original filename'))
-    emails = models.ManyToManyField(EmailModel, related_name='attachments', verbose_name=_('Emails'))
+    emails = models.ManyToManyField(EmailModel, related_name='attachments', verbose_name=_('Emails'), blank=True)
     mimetype = models.CharField(max_length=255, default='', blank=True)
     headers = models.JSONField(_('Headers'), blank=True, null=True)
 
@@ -517,6 +522,7 @@ class PlaceholderContent(models.Model):
         max_length=12,
         default='',
         blank=True,
+        choices=settings.LANGUAGES,
     )
     placeholder_name = models.CharField(_('Placeholder name'),
                                         max_length=63, )

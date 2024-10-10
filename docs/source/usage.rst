@@ -524,6 +524,21 @@ Management commands
    * - --batch-size or -b
      - Limits number of emails being deleted in a batch. Defaults to ``1000``.
 
+- dblocks - when ``post_office`` is sending emails using ``send_queued_mail`` management command it blocks the entire database.
+  You can use this command to manage these DB locks.
+
+.. list-table:: dblocks
+   :widths: 50 100
+   :header-rows: 1
+
+   * - Argument
+     - Description
+   * - --delete or -d
+     - Delete expired locks.
+   * - --delete-all
+     - Delete all locks.
+
+
 
 
 

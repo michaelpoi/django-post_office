@@ -25,7 +25,7 @@ from .utils import (
     parse_emails,
     parse_priority,
     get_recipients_objects, set_recipients,
-    get_or_create_recipient,
+    get_or_create_recipient, get_language_from_code,
 )
 from django.db import transaction
 
@@ -132,12 +132,7 @@ def send(
         language='',
         backend='',
 ):
-    if not language:
-        language = get_default_language()
-    else:
-        if language not in get_languages_list():
-            logger.warning(f'Language "{language}" is not found in LANGUAGES configuration.')
-            language = get_default_language()
+    language = get_language_from_code(language)
     try:
         recipients = parse_emails(recipients)
     except ValidationError as e:
@@ -203,6 +198,10 @@ def send(
         attachments = create_attachments(attachments)
         email.attachments.add(*attachments)
 
+    if template and commit:
+        extra_attachments = template.translated_contents.get(language=language).extra_attachments.all()
+        email.attachments.add(*extra_attachments)
+
     if priority == PRIORITY.now:
         email.dispatch(log_level=log_level)
     elif commit:
@@ -241,19 +240,33 @@ def send_many(**kwargs):
             for recipient in recipients_objs]
 
     if emails:
-
         emails = EmailModel.objects.bulk_create(emails)
 
         email_recipients = []
-        for email, recipient in list(zip(emails, recipients_objs)):
+        for email, recipient in zip(emails, recipients_objs):
             email_recipients.append(Recipient(email=email, address=recipient, send_type='to'))
         Recipient.objects.bulk_create(email_recipients)
 
         if attachments := kwargs.get('attachments', None):
             through_objs = []
             attach_objs = create_attachments(attachments)
-            for email in emails:
-                for attach in attach_objs:
+
+            if template := kwargs.get('template'):
+                if not isinstance(template, EmailMergeModel):
+                    template = get_email_template(template)
+
+            extra_attachments_cache = {}
+
+            for email, emailaddress in zip(emails, recipients_objs):
+                language = get_language_from_code(emailaddress.preferred_language)
+
+                if language not in extra_attachments_cache:
+                    extra_attachments = template.translated_contents.get(language=language).extra_attachments.all()
+                    extra_attachments_cache[language] = extra_attachments
+                else:
+                    extra_attachments = extra_attachments_cache[language]
+
+                for attach in [*attach_objs, *extra_attachments]:
                     through_objs.append(email.attachments.through(emailmodel_id=email.id, attachment_id=attach.id))
 
             emails[0].attachments.through.objects.bulk_create(through_objs)

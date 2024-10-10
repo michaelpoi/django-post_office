@@ -31,7 +31,7 @@ def test_absolute_path(settings):
     template._attached_images = []
     context = Context({'dry_run': False})
     context.template = template
-    path = str(settings.BASE_DIR / 'celery_project' / 'tests' / 'assets' / 'logo.png')
+    path = str(settings.BASE_DIR / 'demoapp' / 'tests' / 'assets' / 'logo.png')
     print(path)
     result = inline_image(context, path)
     assert result.startswith('cid:')
@@ -45,7 +45,7 @@ def test_fileobj(settings):
     template._attached_images = []
     context = Context({'dry_run': False})
     context.template = template
-    path = str(settings.BASE_DIR / 'celery_project' / 'tests' / 'assets' / 'logo.png')
+    path = str(settings.BASE_DIR / 'demoapp' / 'tests' / 'assets' / 'logo.png')
     file = ImageFile(open(path, 'rb'))
     result = inline_image(context, file)
     assert result.startswith('cid:')
@@ -54,7 +54,7 @@ def test_fileobj(settings):
 
 
 def test_media_urls(settings):
-    settings.MEDIA_ROOT = str(settings.BASE_DIR / 'celery_project' / 'tests' / 'assets')
+    settings.MEDIA_ROOT = str(settings.BASE_DIR / 'demoapp' / 'tests' / 'assets')
     template = mock.Mock()
     template._attached_images = []
     context = Context({'dry_run': False})
@@ -72,13 +72,13 @@ def test_placeholders():
 
 
 def test_static(settings):
-    settings.STATICFILES_DIRS = [str(settings.BASE_DIR / 'celery_project' / 'tests' / 'assets')]
+    settings.STATICFILES_DIRS = [str(settings.BASE_DIR / 'demoapp' / 'tests' / 'assets')]
     template = mock.Mock()
     template._attached_images = []
     context = Context({'dry_run': False})
     context.template = template
     filename = 'logo.png'
-    abs_path = str(settings.BASE_DIR / 'celery_project' / 'tests' / 'assets' / filename)
+    abs_path = str(settings.BASE_DIR / 'demoapp' / 'tests' / 'assets' / filename)
     result = inline_image(context, filename)
     assert result.startswith('cid:')
     assert len(template._attached_images) == 1

@@ -6,7 +6,7 @@ def get_placeholders(template, language=''):
     """
     Function that returns an email template instance, from cache or DB.
     """
-    use_cache = getattr(settings, 'POST_OFFICE_CACHE', True)
+    use_cache = getattr(settings, 'POST_OFFICE_CACHE', False)
     if use_cache:
         use_cache = getattr(settings, 'POST_OFFICE_PLACEHOLDERS_CACHE', True)
     if not use_cache:

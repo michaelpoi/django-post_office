@@ -201,3 +201,5 @@ def test_send_many(settings, cleanup_messages, template):
 
     assert get_html_message_for_recipient('john@gmail.com', messages).count('#test_var#') == 0
     assert get_html_message_for_recipient('marry@gmail.com', messages).count('#test_var#') == 0
+
+

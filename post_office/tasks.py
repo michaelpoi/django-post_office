@@ -6,14 +6,11 @@ of auto-discovering tasks in "tasks" submodules.
 """
 
 import datetime
-import logging
-import time
 
 from django.utils.timezone import now
 
 from post_office.mail import _send_bulk, get_queued
 from post_office.utils import cleanup_expired_mails
-from .dblock import db_lock, TimeoutException, LockedException
 from django.db import connection as db_connection
 from django.db import transaction
 

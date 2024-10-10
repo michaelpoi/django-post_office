@@ -175,7 +175,7 @@ def send(
 
         # template can be an EmailMerge instance or name
         if not isinstance(template, EmailMergeModel):
-            template = EmailMergeModel.objects.get(name=template)
+            template = get_email_template(template)
 
     if backend and backend not in get_available_backends().keys():
         raise ValueError('%s is not a valid backend alias' % backend)

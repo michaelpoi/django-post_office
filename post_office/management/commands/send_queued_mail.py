@@ -42,8 +42,7 @@ class Command(BaseCommand):
                     try:
                         self.send_queued()
                     except Exception as e:
-                        #self.stderr.write(e)
-                        raise
+                        self.stderr.write(str(e))
 
 
                     db_connection.close()

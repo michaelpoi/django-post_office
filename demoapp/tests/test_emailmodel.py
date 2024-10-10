@@ -83,7 +83,7 @@ def test_get_message(settings, simple_email):
     assert isinstance(email, EmailMessage)
 
     html_with_inlines = (f"{{% load post_office %}}\n "
-                         f"<img src='{{% inline_image '{settings.BASE_DIR / 'celery_project' / 'tests' / 'assets' / 'logo.png'}'%}}'"
+                         f"<img src='{{% inline_image '{settings.BASE_DIR / 'demoapp' / 'tests' / 'assets' / 'logo.png'}'%}}'"
                          f"{simple_email.html_message}")
     simple_email.html_message = html_with_inlines
 

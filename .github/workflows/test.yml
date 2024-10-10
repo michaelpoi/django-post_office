@@ -83,6 +83,6 @@ jobs:
 
     - name: Run Test
       env:
-        DJANGO_SETTINGS_MODULE: post_office.test_settings
+        DJANGO_SETTINGS_MODULE: demoapp.test_settings
       run: |
-        pytest celery_project
+        pytest demoapp

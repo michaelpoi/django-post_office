@@ -59,17 +59,17 @@ def send_mail(
     return emails
 
 
-def get_email_template(name, language=''):
+def get_email_template(name):
     """
     Function that returns an email template instance, from cache or DB.
     """
-    use_cache = getattr(settings, 'POST_OFFICE_CACHE', True)
+    use_cache = getattr(settings, 'POST_OFFICE_CACHE', False)
     if use_cache:
         use_cache = getattr(settings, 'POST_OFFICE_TEMPLATE_CACHE', True)
     if not use_cache:
         return EmailMergeModel.objects.get(name=name)
     else:
-        composite_name = '%s:%s' % (name, language)
+        composite_name = '%s' % name
         email_template = cache.get(composite_name)
 
         if email_template is None:

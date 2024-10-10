@@ -3,4 +3,4 @@
 omit =
     */post_office/migrations/*
     */post_office/tests/*
-    */celery_project/*
+    */demoapp/*

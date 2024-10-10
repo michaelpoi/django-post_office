@@ -151,9 +151,9 @@ def test_template():
 
 @pytest.mark.django_db
 def test_get_template(settings, test_template):
-    assert get_email_template('test_name', 'en') == test_template
+    assert get_email_template('test_name') == test_template
     settings.POST_OFFICE_TEMPLATE_CACHE = False
-    assert get_email_template('test_name', 'en') == test_template
+    assert get_email_template('test_name') == test_template
 
 
 @pytest.mark.django_db

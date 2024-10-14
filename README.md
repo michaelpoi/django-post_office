@@ -194,4 +194,4 @@ You can schedule this management command to run regularly via cron:
 * * * * * (/usr/bin/python manage.py send_queued_mail >> send_mail.log 2>&1)
 ```
 
-Full documentation can be found [here]('https://docs_link.com')
+Full documentation can be found [here](https://docs_link.com)

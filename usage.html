@@ -1,0 +1,918 @@
+<!doctype html>
+<html class="no-js" lang="en" data-content_root="./">
+  <head><meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width,initial-scale=1"/>
+    <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="index" title="Index" href="genindex.html" /><link rel="search" title="Search" href="search.html" /><link rel="next" title="5. Settings" href="settings.html" /><link rel="prev" title="3. Quickstart" href="quickstart.html" />
+
+    <!-- Generated with Sphinx 8.1.3 and Furo 2024.08.06 -->
+        <title>4. Usage - post_office documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=a746c00c" />
+    <link rel="stylesheet" type="text/css" href="_static/styles/furo.css?v=354aac6f" />
+    <link rel="stylesheet" type="text/css" href="_static/styles/furo-extensions.css?v=302659d7" />
+    
+    
+
+
+<style>
+  body {
+    --color-code-background: #f8f8f8;
+  --color-code-foreground: black;
+  
+  }
+  @media not print {
+    body[data-theme="dark"] {
+      --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+    }
+    @media (prefers-color-scheme: dark) {
+      body:not([data-theme="light"]) {
+        --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+      }
+    }
+  }
+</style></head>
+  <body>
+    
+    <script>
+      document.body.dataset.theme = localStorage.getItem("theme") || "auto";
+    </script>
+    
+
+<svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+  <symbol id="svg-toc" viewBox="0 0 24 24">
+    <title>Contents</title>
+    <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 1024 1024">
+      <path d="M408 442h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8zm-8 204c0 4.4 3.6 8 8 8h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56zm504-486H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zm0 632H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zM115.4 518.9L271.7 642c5.8 4.6 14.4.5 14.4-6.9V388.9c0-7.4-8.5-11.5-14.4-6.9L115.4 505.1a8.74 8.74 0 0 0 0 13.8z"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-menu" viewBox="0 0 24 24">
+    <title>Menu</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-menu">
+      <line x1="3" y1="12" x2="21" y2="12"></line>
+      <line x1="3" y1="6" x2="21" y2="6"></line>
+      <line x1="3" y1="18" x2="21" y2="18"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-arrow-right" viewBox="0 0 24 24">
+    <title>Expand</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-chevron-right">
+      <polyline points="9 18 15 12 9 6"></polyline>
+    </svg>
+  </symbol>
+  <symbol id="svg-sun" viewBox="0 0 24 24">
+    <title>Light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="feather-sun">
+      <circle cx="12" cy="12" r="5"></circle>
+      <line x1="12" y1="1" x2="12" y2="3"></line>
+      <line x1="12" y1="21" x2="12" y2="23"></line>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+      <line x1="1" y1="12" x2="3" y2="12"></line>
+      <line x1="21" y1="12" x2="23" y2="12"></line>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon" viewBox="0 0 24 24">
+    <title>Dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-moon">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454z" />
+    </svg>
+  </symbol>
+  <symbol id="svg-sun-with-moon" viewBox="0 0 24 24">
+    <title>Auto light/dark, in light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path style="opacity: 50%" d="M 5.411 14.504 C 5.471 14.504 5.532 14.504 5.591 14.504 C 3.639 16.319 4.383 19.569 6.931 20.352 C 7.693 20.586 8.512 20.551 9.25 20.252 C 8.023 23.207 4.056 23.725 2.11 21.184 C 0.166 18.642 1.702 14.949 4.874 14.536 C 5.051 14.512 5.231 14.5 5.411 14.5 L 5.411 14.504 Z"/>
+      <line x1="14.5" y1="3.25" x2="14.5" y2="1.25"/>
+      <line x1="14.5" y1="15.85" x2="14.5" y2="17.85"/>
+      <line x1="10.044" y1="5.094" x2="8.63" y2="3.68"/>
+      <line x1="19" y1="14.05" x2="20.414" y2="15.464"/>
+      <line x1="8.2" y1="9.55" x2="6.2" y2="9.55"/>
+      <line x1="20.8" y1="9.55" x2="22.8" y2="9.55"/>
+      <line x1="10.044" y1="14.006" x2="8.63" y2="15.42"/>
+      <line x1="19" y1="5.05" x2="20.414" y2="3.636"/>
+      <circle cx="14.5" cy="9.55" r="3.6"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon-with-sun" viewBox="0 0 24 24">
+    <title>Auto light/dark, in dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path d="M 8.282 7.007 C 8.385 7.007 8.494 7.007 8.595 7.007 C 5.18 10.184 6.481 15.869 10.942 17.24 C 12.275 17.648 13.706 17.589 15 17.066 C 12.851 22.236 5.91 23.143 2.505 18.696 C -0.897 14.249 1.791 7.786 7.342 7.063 C 7.652 7.021 7.965 7 8.282 7 L 8.282 7.007 Z"/>
+      <line style="opacity: 50%" x1="18" y1="3.705" x2="18" y2="2.5"/>
+      <line style="opacity: 50%" x1="18" y1="11.295" x2="18" y2="12.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="4.816" x2="14.464" y2="3.964"/>
+      <line style="opacity: 50%" x1="20.711" y1="10.212" x2="21.563" y2="11.063"/>
+      <line style="opacity: 50%" x1="14.205" y1="7.5" x2="13.001" y2="7.5"/>
+      <line style="opacity: 50%" x1="21.795" y1="7.5" x2="23" y2="7.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="10.184" x2="14.464" y2="11.036"/>
+      <line style="opacity: 50%" x1="20.711" y1="4.789" x2="21.563" y2="3.937"/>
+      <circle style="opacity: 50%" cx="18" cy="7.5" r="2.169"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-pencil" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-pencil-code">
+      <path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" />
+      <path d="M13.5 6.5l4 4" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+  <symbol id="svg-eye" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-eye-code">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M10 12a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" />
+      <path
+        d="M11.11 17.958c-3.209 -.307 -5.91 -2.293 -8.11 -5.958c2.4 -4 5.4 -6 9 -6c3.6 0 6.6 2 9 6c-.21 .352 -.427 .688 -.647 1.008" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+</svg>
+
+<input type="checkbox" class="sidebar-toggle" name="__navigation" id="__navigation">
+<input type="checkbox" class="sidebar-toggle" name="__toc" id="__toc">
+<label class="overlay sidebar-overlay" for="__navigation">
+  <div class="visually-hidden">Hide navigation sidebar</div>
+</label>
+<label class="overlay toc-overlay" for="__toc">
+  <div class="visually-hidden">Hide table of contents sidebar</div>
+</label>
+
+<a class="skip-to-content muted-link" href="#furo-main-content">Skip to content</a>
+
+
+
+<div class="page">
+  <header class="mobile-header">
+    <div class="header-left">
+      <label class="nav-overlay-icon" for="__navigation">
+        <div class="visually-hidden">Toggle site navigation sidebar</div>
+        <i class="icon"><svg><use href="#svg-menu"></use></svg></i>
+      </label>
+    </div>
+    <div class="header-center">
+      <a href="index.html"><div class="brand">post_office  documentation</div></a>
+    </div>
+    <div class="header-right">
+      <div class="theme-toggle-container theme-toggle-header">
+        <button class="theme-toggle">
+          <div class="visually-hidden">Toggle Light / Dark / Auto color theme</div>
+          <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+          <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+          <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+          <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+        </button>
+      </div>
+      <label class="toc-overlay-icon toc-header-icon" for="__toc">
+        <div class="visually-hidden">Toggle table of contents sidebar</div>
+        <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
+      </label>
+    </div>
+  </header>
+  <aside class="sidebar-drawer">
+    <div class="sidebar-container">
+      
+      <div class="sidebar-sticky"><a class="sidebar-brand" href="index.html">
+  
+  
+  <span class="sidebar-brand-text">post_office  documentation</span>
+  
+</a><form class="sidebar-search-container" method="get" action="search.html" role="search">
+  <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
+  <input type="hidden" name="check_keywords" value="yes">
+  <input type="hidden" name="area" value="default">
+</form>
+<div id="searchbox"></div><div class="sidebar-scroll"><div class="sidebar-tree">
+  <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="dependencies.html">1. Dependencies</a></li>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">2. Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="quickstart.html">3. Quickstart</a></li>
+<li class="toctree-l1 current current-page"><a class="current reference internal" href="#">4. Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="settings.html">5. Settings</a></li>
+<li class="toctree-l1"><a class="reference internal" href="celery.html">6. Integration with Celery</a></li>
+<li class="toctree-l1"><a class="reference internal" href="uwsgi.html">7. Integration with uWSGI</a></li>
+<li class="toctree-l1"><a class="reference internal" href="signals.html">8. Signals</a></li>
+<li class="toctree-l1"><a class="reference internal" href="testing.html">9. Testing</a></li>
+</ul>
+
+</div>
+</div>
+
+      </div>
+      
+    </div>
+  </aside>
+  <div class="main">
+    <div class="content">
+      <div class="article-container">
+        <a href="#" class="back-to-top muted-link">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12z"></path>
+          </svg>
+          <span>Back to top</span>
+        </a>
+        <div class="content-icon-container">
+          <div class="view-this-page">
+  <a class="muted-link" href="_sources/usage.rst.txt" title="View this page">
+    <svg><use href="#svg-eye"></use></svg>
+    <span class="visually-hidden">View this page</span>
+  </a>
+</div>
+<div class="theme-toggle-container theme-toggle-content">
+            <button class="theme-toggle">
+              <div class="visually-hidden">Toggle Light / Dark / Auto color theme</div>
+              <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+              <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+              <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+              <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+            </button>
+          </div>
+          <label class="toc-overlay-icon toc-content-icon" for="__toc">
+            <div class="visually-hidden">Toggle table of contents sidebar</div>
+            <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
+          </label>
+        </div>
+        <article role="main" id="furo-main-content">
+          <section id="usage">
+<h1><span class="section-number">4. </span>Usage<a class="headerlink" href="#usage" title="Link to this heading">¶</a></h1>
+<section id="mail-send">
+<h2><span class="section-number">4.1. </span>mail.send()<a class="headerlink" href="#mail-send" title="Link to this heading">¶</a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">mail.send()</span></code> is one of the most important function in this library.
+It is used to send <strong>one</strong> email to a list of recipients. It takes these arguments:</p>
+<div class="table-wrapper colwidths-given docutils container" id="id1">
+<table class="docutils align-default" id="id1">
+<caption><span class="caption-text">mail.send() arguments</span><a class="headerlink" href="#id1" title="Link to this table">¶</a></caption>
+<colgroup>
+<col style="width: 12.5%" />
+<col style="width: 25.0%" />
+<col style="width: 12.5%" />
+<col style="width: 50.0%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Argument</p></th>
+<th class="head"><p>Type</p></th>
+<th class="head"><p>Required</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>recipients</p></td>
+<td><p>str | List[str | EmailAddress]</p></td>
+<td><p>Yes</p></td>
+<td><p>List of recipient email addresses</p></td>
+</tr>
+<tr class="row-odd"><td><p>sender</p></td>
+<td><p>str</p></td>
+<td><p>No</p></td>
+<td><p>Defaults to <code class="docutils literal notranslate"><span class="pre">settings.DEFAULT_FROM_EMAIL</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p>subject</p></td>
+<td><p>str (context vars allowed)</p></td>
+<td><p>No</p></td>
+<td><p>Subject of Email, if <code class="docutils literal notranslate"><span class="pre">template</span></code> is not specified</p></td>
+</tr>
+<tr class="row-odd"><td><p>message</p></td>
+<td><p>str (context vars allowed)</p></td>
+<td><p>No</p></td>
+<td><p>Content of Email, if <code class="docutils literal notranslate"><span class="pre">template</span></code> is not specified</p></td>
+</tr>
+<tr class="row-even"><td><p>html_message</p></td>
+<td><p>str (context vars allowed)</p></td>
+<td><p>No</p></td>
+<td><p>HTML content of Email, if <code class="docutils literal notranslate"><span class="pre">template</span></code> is not specified</p></td>
+</tr>
+<tr class="row-odd"><td><p>template</p></td>
+<td><p>str | EmailMerge</p></td>
+<td><p>No</p></td>
+<td><p>EmailMerge instance or name</p></td>
+</tr>
+<tr class="row-even"><td><p>language</p></td>
+<td><p>str</p></td>
+<td><p>No</p></td>
+<td><p>Language (code) in which you want to send email. Defaults to <code class="docutils literal notranslate"><span class="pre">settings.LANGUAGE_CODE</span></code>.</p></td>
+</tr>
+<tr class="row-odd"><td><p>cc</p></td>
+<td><p>List[str | EmailAddress]</p></td>
+<td><p>No</p></td>
+<td><p>List of emails in cc(Carbon copy) field</p></td>
+</tr>
+<tr class="row-even"><td><p>bcc</p></td>
+<td><p>List[str | EmailAddress]</p></td>
+<td><p>No</p></td>
+<td><p>List of emails in bcc(Blind carbon copy) field</p></td>
+</tr>
+<tr class="row-odd"><td><p>attachments</p></td>
+<td><p>dict</p></td>
+<td><p>No</p></td>
+<td><p>Email attachments - a dict where the keys are the filenames and the values are files, file-like-objects or path to file</p></td>
+</tr>
+<tr class="row-even"><td><p>context</p></td>
+<td><p>dict</p></td>
+<td><p>No</p></td>
+<td><p>Dictionary where keys are strings and values are any serializable objects. Used to render email</p></td>
+</tr>
+<tr class="row-odd"><td><p>headers</p></td>
+<td><p>dict</p></td>
+<td><p>No</p></td>
+<td><p>Extra headers on the message</p></td>
+</tr>
+<tr class="row-even"><td><p>scheduled_time</p></td>
+<td><p>datetime | date</p></td>
+<td><p>No</p></td>
+<td><p>Indicates when the message should be sent</p></td>
+</tr>
+<tr class="row-odd"><td><p>expires_at</p></td>
+<td><p>datetime | date</p></td>
+<td><p>No</p></td>
+<td><p>If specified, mails that are not yet sent won’t be delivered after this date.</p></td>
+</tr>
+<tr class="row-even"><td><p>expires_at</p></td>
+<td><p>datetime | date</p></td>
+<td><p>No</p></td>
+<td><p>If specified, mails that are not yet sent won’t be delivered after this date.</p></td>
+</tr>
+<tr class="row-odd"><td><p>priority</p></td>
+<td><p>str</p></td>
+<td><p>No</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">high</span></code>, <code class="docutils literal notranslate"><span class="pre">medium</span></code>, <code class="docutils literal notranslate"><span class="pre">low</span></code> or <code class="docutils literal notranslate"><span class="pre">now</span></code> (send immediately)</p></td>
+</tr>
+<tr class="row-even"><td><p>backend</p></td>
+<td><p>str</p></td>
+<td><p>No</p></td>
+<td><p>Alias of the backend you want to use from <code class="docutils literal notranslate"><span class="pre">settings.POST_OFFICE['BACKENDS']</span></code>. Defaults to <code class="docutils literal notranslate"><span class="pre">default</span></code></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p><strong>Note:</strong> Some arguments can take strings with special variables allowed.
+Examples of special variables include: <code class="docutils literal notranslate"><span class="pre">#var1#</span></code>, <code class="docutils literal notranslate"><span class="pre">#recipient.first_name#</span></code>, etc.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">post_office</span> <span class="kn">import</span> <span class="n">mail</span>
+
+<span class="n">mail</span><span class="o">.</span><span class="n">send</span><span class="p">(</span>
+    <span class="p">[</span><span class="n">EmailAddress</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="n">email</span><span class="o">=</span><span class="s1">&#39;peter@gmail.com&#39;</span><span class="p">,</span> <span class="n">first_name</span><span class="o">=</span><span class="s1">&#39;Peter&#39;</span><span class="p">),</span> <span class="s1">&#39;lena@email.com&#39;</span><span class="p">,</span> <span class="s1">&#39;ben@yahoo.com&#39;</span><span class="p">],</span>
+    <span class="s1">&#39;from@example.com&#39;</span><span class="p">,</span>
+    <span class="n">subject</span><span class="o">=</span><span class="s1">&#39;My email&#39;</span><span class="p">,</span>
+    <span class="n">message</span><span class="o">=</span><span class="s1">&#39;Hi there!&#39;</span><span class="p">,</span>
+    <span class="n">html_message</span><span class="o">=</span><span class="s1">&#39;Hi &lt;strong&gt;#where#&lt;/strong&gt;!&#39;</span><span class="p">,</span>
+    <span class="n">context</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;where&#39;</span><span class="p">:</span> <span class="s1">&#39;there&#39;</span><span class="p">},</span>
+    <span class="n">cc</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;cc1@email.com&#39;</span><span class="p">],</span>
+    <span class="n">bcc</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;bcc1@email.com&#39;</span><span class="p">,</span> <span class="s1">&#39;bcc2@email.com&#39;</span><span class="p">]</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<p>The command above will queue 1 email specified lists of recipients. HTML message will be equal to Hi <strong>there</strong>!</p>
+<p>Passing <code class="docutils literal notranslate"><span class="pre">now</span></code> as the priority allows to bypass the queue and deliver the email right away.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">post_office</span> <span class="kn">import</span> <span class="n">mail</span>
+
+ <span class="n">mail</span><span class="o">.</span><span class="n">send</span><span class="p">(</span>
+     <span class="s1">&#39;recipient@example.com&#39;</span><span class="p">,</span> <span class="c1"># List of email addresses or list of EmailAddress also accepted</span>
+     <span class="s1">&#39;from@example.com&#39;</span><span class="p">,</span>
+     <span class="n">template</span><span class="o">=</span><span class="s1">&#39;your-template-here&#39;</span><span class="p">,</span> <span class="c1"># Could be an EmailTemplate instance or name</span>
+     <span class="n">context</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;generator&#39;</span><span class="p">:</span> <span class="s1">&#39;post_office&#39;</span><span class="p">,</span>
+     <span class="s1">&#39;username&#39;</span><span class="p">:</span> <span class="s1">&#39;michaelpoi&#39;</span><span class="p">,},</span> <span class="c1"># Context is used to fill both {{ var }} in html and #var# in ckeditor.</span>
+     <span class="n">language</span><span class="o">=</span><span class="s1">&#39;en&#39;</span><span class="p">,</span> <span class="c1"># If not specified settings.LANGUAGE_CODE is used,</span>
+     <span class="n">priority</span><span class="o">=</span><span class="s1">&#39;now&#39;</span>
+ <span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="emailaddress-and-recipient-context">
+<h2><span class="section-number">4.2. </span>EmailAddress and recipient context<a class="headerlink" href="#emailaddress-and-recipient-context" title="Link to this heading">¶</a></h2>
+<p>In the post office recipients are stored as EmailAddress model instances. This was done to allow personalization of emails.
+EmailAddress model has the following attributes:</p>
+<div class="table-wrapper colwidths-given docutils container" id="id2">
+<table class="docutils align-default" id="id2">
+<caption><span class="caption-text">EmailAddress attributes</span><a class="headerlink" href="#id2" title="Link to this table">¶</a></caption>
+<colgroup>
+<col style="width: 11.1%" />
+<col style="width: 8.9%" />
+<col style="width: 8.9%" />
+<col style="width: 11.1%" />
+<col style="width: 15.6%" />
+<col style="width: 44.4%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Attribute</p></th>
+<th class="head"><p>Type</p></th>
+<th class="head"><p>Req.</p></th>
+<th class="head"><p>Signature text</p></th>
+<th class="head"><p>Signature html</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>email</p></td>
+<td><p>str</p></td>
+<td><p>Yes</p></td>
+<td><p>#recipient.email#</p></td>
+<td><p>{{ recipient.email }}</p></td>
+<td><p>Recipient email address, can also be a display name (Johh &lt;<a class="reference external" href="mailto:johh&#37;&#52;&#48;email&#46;com">johh<span>&#64;</span>email<span>&#46;</span>com</a>&gt;)</p></td>
+</tr>
+<tr class="row-odd"><td><p>first_name</p></td>
+<td><p>str</p></td>
+<td><p>No</p></td>
+<td><p>#recipient.first_name#</p></td>
+<td><p>{{ recipient.first_name }}</p></td>
+<td><p>Recipient first name.</p></td>
+</tr>
+<tr class="row-even"><td><p>last_name</p></td>
+<td><p>str</p></td>
+<td><p>No</p></td>
+<td><p>#recipient.last_name#</p></td>
+<td><p>{{ recipient.last_name }}</p></td>
+<td><p>Recipient surname.</p></td>
+</tr>
+<tr class="row-odd"><td><p>gender</p></td>
+<td><p>str</p></td>
+<td><p>No</p></td>
+<td><p>#recipient.gender#</p></td>
+<td><p>{{ recipient.gender }}</p></td>
+<td><p>Recipient gender. Can be <code class="docutils literal notranslate"><span class="pre">male</span></code>, <code class="docutils literal notranslate"><span class="pre">female</span></code> or <code class="docutils literal notranslate"><span class="pre">other</span></code>. Is useful to generate greetings in HTML templates.</p></td>
+</tr>
+<tr class="row-even"><td><p>preferred_language</p></td>
+<td><p>str</p></td>
+<td><p>No</p></td>
+<td><p>-</p></td>
+<td><p>{{ recipient.preferred_language }}</p></td>
+<td><p>Recipient preferred_language. If using <a class="reference internal" href="#mail-send-many"><span class="std std-ref">mail.send_many()</span></a> without language argument email to a certain user will be translated.
+If specified here language is not in <code class="docutils literal notranslate"><span class="pre">settings.LANGUAGES</span></code> default will be used.</p></td>
+</tr>
+<tr class="row-odd"><td><p>is_blocked</p></td>
+<td><p>bool</p></td>
+<td><p>No</p></td>
+<td><p>-</p></td>
+<td><p>-</p></td>
+<td><p>Defaults to False. If set to True recipient wont get any emails, no matter with <a class="reference internal" href="#mail-send"><span class="std std-ref">mail.send()</span></a> or <a class="reference internal" href="#mail-send-many"><span class="std std-ref">mail.send_many()</span></a></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Every time you use <a class="reference internal" href="#mail-send"><span class="std std-ref">mail.send()</span></a> or <a class="reference internal" href="#mail-send-many"><span class="std std-ref">mail.send_many()</span></a> list of recipients and cc or bcc (only for <a class="reference internal" href="#mail-send"><span class="std std-ref">mail.send()</span></a> ) are transformed to a list
+of EmailAddress instances. If recipient is in database it just selects it by email, otherwise creates a new instance with <code class="docutils literal notranslate"><span class="pre">None</span></code> for
+all non-required fields.</p>
+<p>Recipient context is always passed to extend email context, however:</p>
+<ul class="simple">
+<li><p>If you use <a class="reference internal" href="#mail-send"><span class="std std-ref">mail.send()</span></a> only 1 email is generated, so the context for the first recipient in a list is used to render email.</p></li>
+<li><p>If you use <a class="reference internal" href="#mail-send-many"><span class="std std-ref">mail.send_many()</span></a> recipient context is passed to all emails generated.</p></li>
+</ul>
+<p>Recipient context can be used in all phases of template creation (see more <a class="reference internal" href="#templating"><span class="std std-ref">Templating</span></a>).
+For example you can add to html template something like this:</p>
+<div class="highlight-django notranslate"><div class="highlight"><pre><span></span><span class="cp">{%</span> <span class="k">with</span> <span class="nv">gender</span><span class="o">=</span><span class="nv">recipient.gender</span> <span class="cp">%}</span>
+<span class="x">        </span><span class="cp">{%</span> <span class="k">if</span> <span class="nv">gender</span> <span class="o">==</span> <span class="s1">&#39;male&#39;</span> <span class="cp">%}</span>
+<span class="x">            Mr.</span>
+<span class="x">            </span><span class="cp">{%</span> <span class="k">elif</span> <span class="nv">gender</span> <span class="o">==</span> <span class="s1">&#39;female&#39;</span> <span class="cp">%}</span>
+<span class="x">            Ms.</span>
+<span class="x">            </span><span class="cp">{%</span> <span class="k">else</span> <span class="cp">%}</span>
+<span class="x">            Human</span>
+<span class="x">        </span><span class="cp">{%</span> <span class="k">endif</span> <span class="cp">%}</span>
+<span class="x">    </span><span class="cp">{%</span> <span class="k">endwith</span> <span class="cp">%}</span>
+<span class="cp">{{</span> <span class="nv">recipient.first_name</span> <span class="cp">}}</span><span class="x"> </span><span class="cp">{{</span> <span class="nv">recipient.last_name</span> <span class="cp">}}</span>
+</pre></div>
+</div>
+<p>This way you can achieve personalized greeting for each recipient when using <a class="reference internal" href="#mail-send-many"><span class="std std-ref">mail.send_many()</span></a>.</p>
+<p>You can use this context when filling subject, content or placeholders values in CKEditor fields as well. For example:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">post_office</span> <span class="kn">import</span> <span class="n">mail</span>
+<span class="kn">from</span> <span class="nn">post_office.models</span> <span class="kn">import</span> <span class="n">EmailAddress</span>
+
+<span class="n">john</span> <span class="o">=</span> <span class="n">EmailAddress</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="n">email</span><span class="o">=</span><span class="s1">&#39;john.doe@email.com&#39;</span><span class="p">,</span>
+                                   <span class="n">first_name</span><span class="o">=</span><span class="s1">&#39;John&#39;</span><span class="p">,</span>
+                                   <span class="n">last_name</span><span class="o">=</span><span class="s1">&#39;Doe&#39;</span><span class="p">)</span>
+
+<span class="n">mail</span><span class="o">.</span><span class="n">send</span><span class="p">(</span>
+    <span class="s1">&#39;john.doe@email.com&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;from@example.com&#39;</span><span class="p">,</span>
+    <span class="n">subject</span><span class="o">=</span><span class="s1">&#39;Message for #recipient.first_name#&#39;</span><span class="p">,</span>
+    <span class="n">html_message</span> <span class="o">=</span> <span class="s1">&#39;&lt;h1&gt;#recipient.first_name# #recipient.last_name#&lt;/h1&gt;&#39;</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="mail-send-many">
+<h2><span class="section-number">4.3. </span>mail.send_many()<a class="headerlink" href="#mail-send-many" title="Link to this heading">¶</a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">mail.send_many()</span></code> is one of the most important function in the library. It is used to generate n (number of recipients)
+emails (one for each recipient in <code class="docutils literal notranslate"><span class="pre">recipients</span></code>).
+<code class="docutils literal notranslate"><span class="pre">mail.send_many()</span></code> is much more efficient alternative for <a class="reference internal" href="#mail-send"><span class="std std-ref">mail.send()</span></a> , because it utilizes much less database queries.
+Using <code class="docutils literal notranslate"><span class="pre">mail.send_many()</span></code> you can maximize personalization like discussed in section above.
+<code class="docutils literal notranslate"><span class="pre">mail.send_many()</span></code> takes the same set of parameters like <a class="reference internal" href="#mail-send"><span class="std std-ref">mail.send()</span></a> , except:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">cc</span></code> and <code class="docutils literal notranslate"><span class="pre">bcc</span></code> can not be used in <code class="docutils literal notranslate"><span class="pre">mail.send_many()</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">priority</span></code> can not be <code class="docutils literal notranslate"><span class="pre">now</span></code></p></li>
+</ul>
+<p>Other parameters are shared among generated emails.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">tempfile</span>
+<span class="kn">from</span> <span class="nn">post_office</span> <span class="kn">import</span> <span class="n">mail</span>
+<span class="kn">from</span> <span class="nn">post_office.models</span> <span class="kn">import</span> <span class="n">EmailAddress</span>
+
+<span class="n">lena</span> <span class="o">=</span> <span class="n">EmailAddress</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="n">email</span><span class="o">=</span><span class="s1">&#39;lena@email.com&#39;</span><span class="p">,</span> <span class="n">first_name</span><span class="o">=</span><span class="s1">&#39;Lena&#39;</span><span class="p">)</span>
+<span class="n">ben</span> <span class="o">=</span> <span class="n">EmailAddress</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="n">email</span><span class="o">=</span><span class="s1">&#39;ben@yahoo.com&#39;</span><span class="p">,</span> <span class="n">first_name</span><span class="o">=</span><span class="s1">&#39;Ben&#39;</span><span class="p">,</span> <span class="n">is_blocked</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+<span class="k">with</span> <span class="n">tempfile</span><span class="o">.</span><span class="n">NamedTemporaryFile</span><span class="p">(</span><span class="n">delete</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+    <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="sa">b</span><span class="s1">&#39;Testing attachments&#39;</span><span class="p">)</span>
+    <span class="n">f</span><span class="o">.</span><span class="n">seek</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+
+    <span class="n">mail</span><span class="o">.</span><span class="n">send_many</span><span class="p">(</span>
+        <span class="n">recipients</span><span class="o">=</span><span class="p">[</span><span class="n">EmailAddress</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="n">email</span><span class="o">=</span><span class="s1">&#39;bob@gmail.com&#39;</span><span class="p">,</span> <span class="n">first_name</span><span class="o">=</span><span class="s1">&#39;Bob&#39;</span><span class="p">),</span> <span class="s1">&#39;lena@email.com&#39;</span><span class="p">,</span> <span class="s1">&#39;ben@yahoo.com&#39;</span><span class="p">],</span>
+        <span class="n">sender</span><span class="o">=</span><span class="s1">&#39;from@email.com&#39;</span><span class="p">,</span>
+        <span class="n">subject</span><span class="o">=</span><span class="s1">&#39;Hello #recipient.first_name#&#39;</span><span class="p">,</span>
+        <span class="n">message</span><span class="o">=</span><span class="s1">&#39;This is a letter #id#&#39;</span><span class="p">,</span>
+        <span class="n">context</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;id&#39;</span><span class="p">:</span> <span class="mi">453</span><span class="p">},</span>
+        <span class="n">language</span><span class="o">=</span><span class="s1">&#39;en&#39;</span><span class="p">,</span>
+        <span class="n">attachments</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;new_test.txt&#39;</span><span class="p">:</span> <span class="n">f</span><span class="p">},</span>
+    <span class="p">)</span>
+</pre></div>
+</div>
+<p>Running this will result in 2 emails queued (because user ben is_blocked and hence is excluded).
+Subjects will be personalized as “Hello Bob” and “Hello Lena”. Content will be the same: “This is a letter 453”.
+Both emails have the same attachment.</p>
+</section>
+<section id="templating">
+<h2><span class="section-number">4.4. </span>Templating<a class="headerlink" href="#templating" title="Link to this heading">¶</a></h2>
+<p>post_office introduces a two-phase approach for creating email templates. This process ensures a flexible and powerful way to handle email templates, leveraging both HTML expertise and user-friendly editing tools.</p>
+<ol class="arabic simple">
+<li><dl class="simple">
+<dt><a class="reference internal" href="#html-base-file-creation"><span class="std std-ref">HTML Base File Creation</span></a></dt><dd><p>In the first phase, experienced email HTML developers create base files while adhering to the specific limitations of rendering emails in various clients. During this phase, developers can:</p>
+<ul class="simple">
+<li><p>Embed images using the {% inline_image %}(see more <a class="reference internal" href="#inlines"><span class="std std-ref">Inlines</span></a>) template tag.</p></li>
+<li><p>Insert placeholders using the {% placeholder %} template tag, which will be filled in the second phase.</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+</ol>
+<p>These base files act as a foundation for further customization.</p>
+<ol class="arabic simple" start="2">
+<li><dl class="simple">
+<dt><a class="reference internal" href="#ckeditor-placeholders-editor"><span class="std std-ref">CKEDITOR Placeholders editor</span></a></dt><dd><p>Once the base file is ready, users can move on to the second phase. Using the admin interface, they select the base file and fill in the placeholders defined in the previous phase. In this phase, users can:</p>
+<ul class="simple">
+<li><p>Create rich content such as lists, tables, headers, and more features allowed by the configuration in <code class="docutils literal notranslate"><span class="pre">settings.CKEDITOR_CONFIGS</span></code>.</p></li>
+<li><p>Embed images, which will automatically be converted to a suitable format for sending via email.</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+</ol>
+<p>This two-step process provides both technical flexibility for developers and ease of use for non-technical users.</p>
+<section id="html-base-file-creation">
+<h3><span class="section-number">4.4.1. </span>HTML Base File Creation<a class="headerlink" href="#html-base-file-creation" title="Link to this heading">¶</a></h3>
+<p>Base Files should be stored in <code class="docutils literal notranslate"><span class="pre">settings.TEMPLATES['DIRS']</span> <span class="pre">/</span> <span class="pre">'email'</span></code>.
+post_office looks for email folders in all specified DIRS.</p>
+<p>In each of your base files you should load post_office to use custom tags, which can be done as following:</p>
+<p><code class="docutils literal notranslate"><span class="pre">{%</span> <span class="pre">load</span> <span class="pre">post_office</span> <span class="pre">%}</span></code></p>
+<p>In your templates you can specify variables to be filled with the context:</p>
+<div class="highlight-django notranslate"><div class="highlight"><pre><span></span><span class="cp">{%</span> <span class="k">load</span> <span class="nv">post_office</span> <span class="cp">%}</span>
+
+<span class="x">&lt;!DOCTYPE html&gt;</span>
+<span class="x">&lt;html lang=&quot;en&quot;&gt;</span>
+<span class="x">&lt;head&gt;</span>
+<span class="x">    &lt;meta charset=&quot;UTF-8&quot;&gt;</span>
+<span class="x">    &lt;title&gt;Example email template&lt;/title&gt;</span>
+<span class="x">&lt;/head&gt;</span>
+<span class="x">&lt;body&gt;</span>
+<span class="x">    Hello, </span><span class="cp">{{</span> <span class="nv">username</span> <span class="cp">}}</span>
+<span class="x">    </span><span class="cp">{%</span> <span class="k">placeholder</span> <span class="s1">&#39;main&#39;</span> <span class="cp">%}</span>
+<span class="x">&lt;/body&gt;</span>
+<span class="x">&lt;/html&gt;</span>
+</pre></div>
+</div>
+<p>username variable is expected then to be filled with <a class="reference internal" href="#mail-send"><span class="std std-ref">mail.send()</span></a> or <a class="reference internal" href="#mail-send-many"><span class="std std-ref">mail.send_many()</span></a> context. If it wont be passed user
+wont see any errors. You can still handle this using django build-in filters, for example:</p>
+<p><code class="docutils literal notranslate"><span class="pre">Hello,</span> <span class="pre">{{</span> <span class="pre">username|default:'user'}}</span></code></p>
+<p>In your templates you may want to use placeholders inside conditions, loops or includes. With post_office it is possible.</p>
+<p>main.html</p>
+<div class="highlight-django notranslate"><div class="highlight"><pre><span></span><span class="x">&lt;html lang=&quot;en&quot;&gt;</span>
+<span class="x">&lt;head&gt;</span>
+<span class="x">    &lt;meta charset=&quot;UTF-8&quot;&gt;</span>
+<span class="x">    &lt;title&gt;Title&lt;/title&gt;</span>
+<span class="x">&lt;/head&gt;</span>
+<span class="x">&lt;body&gt;</span>
+<span class="cp">{%</span> <span class="k">if</span> <span class="kp">True</span> <span class="cp">%}</span>
+<span class="cp">{%</span> <span class="k">placeholder</span> <span class="s1">&#39;basic1&#39;</span> <span class="cp">%}</span>
+<span class="cp">{%</span> <span class="k">placeholder</span> <span class="s1">&#39;basic2&#39;</span> <span class="cp">%}</span>
+<span class="x">    </span><span class="cp">{%</span> <span class="k">else</span> <span class="cp">%}</span>
+<span class="x">    </span><span class="cp">{%</span> <span class="k">placeholder</span> <span class="s1">&#39;basic3&#39;</span> <span class="cp">%}</span>
+<span class="cp">{%</span> <span class="k">endif</span> <span class="cp">%}</span>
+<span class="cp">{%</span> <span class="k">include</span> <span class="s1">&#39;email/in.html&#39;</span> <span class="cp">%}</span>
+
+<span class="x">&lt;/body&gt;</span>
+<span class="x">&lt;/html&gt;</span>
+</pre></div>
+</div>
+<p>in.html</p>
+<div class="highlight-django notranslate"><div class="highlight"><pre><span></span><span class="cp">{%</span> <span class="k">load</span> <span class="nv">post_office</span> <span class="cp">%}</span>
+
+<span class="x">&lt;!DOCTYPE html&gt;</span>
+<span class="x">&lt;html lang=&quot;en&quot;&gt;</span>
+<span class="x">&lt;head&gt;</span>
+<span class="x">    &lt;meta charset=&quot;UTF-8&quot;&gt;</span>
+<span class="x">    &lt;title&gt;Title&lt;/title&gt;</span>
+<span class="x">&lt;/head&gt;</span>
+<span class="x">&lt;body&gt;</span>
+<span class="cp">{%</span> <span class="k">placeholder</span> <span class="s1">&#39;include1&#39;</span> <span class="cp">%}</span>
+<span class="cp">{%</span> <span class="k">placeholder</span> <span class="s1">&#39;include2&#39;</span> <span class="cp">%}</span>
+
+<span class="x">&lt;/body&gt;</span>
+<span class="x">&lt;/html&gt;</span>
+</pre></div>
+</div>
+<p>All placeholders in the previous example will be parsed successfully and provided for users.</p>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>Placeholders are not recognized in child templates when using the Django {% extends %} tag.</p>
+</div>
+</section>
+<section id="inlines">
+<h3><span class="section-number">4.4.2. </span>Inlines<a class="headerlink" href="#inlines" title="Link to this heading">¶</a></h3>
+<p>You may want to use embed images to your templates. This can be done using post_office <code class="docutils literal notranslate"><span class="pre">{%</span> <span class="pre">inline_image</span> <span class="pre">%}</span></code> template tag.</p>
+<p><code class="docutils literal notranslate"><span class="pre">&lt;img</span> <span class="pre">src=&quot;{%</span> <span class="pre">inline_image</span> <span class="pre">'images/logo.png'</span> <span class="pre">%}&quot;</span> <span class="pre">alt=&quot;&quot;</span> <span class="pre">width=&quot;100&quot;&gt;</span></code></p>
+<p>You can specify either alias or absolute path to your image. Alias are resolved in the following order:</p>
+<ol class="arabic simple">
+<li><p>In MEDIA_ROOT</p></li>
+<li><p>In <code class="docutils literal notranslate"><span class="pre">static</span></code> (using <code class="docutils literal notranslate"><span class="pre">django.contrib.staticfiles.finder</span></code>)</p></li>
+</ol>
+<p>If no file found <code class="docutils literal notranslate"><span class="pre">FileNotFoundError</span></code> exception will be raised</p>
+</section>
+<section id="ckeditor-placeholders-editor">
+<h3><span class="section-number">4.4.3. </span>CKEDITOR Placeholders editor<a class="headerlink" href="#ckeditor-placeholders-editor" title="Link to this heading">¶</a></h3>
+<p>When needed base file was created, users can create 2-phase templates using it. For it you should simply:</p>
+<ol class="arabic">
+<li><p>Open admin interface and click create new Email Template.</p></li>
+<li><p>Enter a name which will be used as an template alias for sending.</p></li>
+<li><p>Click “Save and continue editing” (This event is also triggered when a base file is changing)</p></li>
+<li><p>Forms for placeholders editing will appear with defaults, such as:</p>
+<blockquote>
+<div><p>Placeholder: &lt;name&gt;, Language: &lt;lang_code&gt;</p>
+</div></blockquote>
+</li>
+</ol>
+<p>5. Fill these placeholders with your rich content (you can include variables like #var#, #price#, etc. or recipients context
+(see more <a class="reference internal" href="#emailaddress-and-recipient-context"><span class="std std-ref">EmailAddress and recipient context</span></a>))</p>
+</section>
+</section>
+<section id="multilingual-templates">
+<h2><span class="section-number">4.5. </span>Multilingual Templates<a class="headerlink" href="#multilingual-templates" title="Link to this heading">¶</a></h2>
+<p>In post_office you can create and send templates in multiple languages. For this simply edit your <code class="docutils literal notranslate"><span class="pre">settings.py</span></code>:</p>
+<p>Default templates language can be changed in <code class="docutils literal notranslate"><span class="pre">settings.LANGUAGE_CODE</span></code></p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">LANGUAGE_CODE</span> <span class="o">=</span> <span class="s1">&#39;en&#39;</span>
+</pre></div>
+</div>
+<p>List of all translation languages should be specified in <code class="docutils literal notranslate"><span class="pre">settings.LANGUAGES</span></code></p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">LANGUAGES</span> <span class="o">=</span> <span class="p">[</span>
+<span class="p">(</span><span class="s1">&#39;en&#39;</span><span class="p">,</span> <span class="s1">&#39;English&#39;</span><span class="p">),</span>
+<span class="p">(</span><span class="s1">&#39;de&#39;</span><span class="p">,</span> <span class="s1">&#39;German&#39;</span><span class="p">),</span>
+<span class="p">]</span>
+</pre></div>
+</div>
+<p>Adjust this as needed.</p>
+<p>The default language will be used when:</p>
+<ol class="arabic simple">
+<li><p>Language for <a class="reference internal" href="#mail-send"><span class="std std-ref">mail.send()</span></a> is not provided or is not valid (not in <code class="docutils literal notranslate"><span class="pre">LANGUAGES</span></code>)</p></li>
+<li><p>if <a class="reference internal" href="#mail-send-many"><span class="std std-ref">mail.send_many()</span></a> language is not set and recipient preferred language is <code class="docutils literal notranslate"><span class="pre">None</span></code> or not valid</p></li>
+</ol>
+<p>If <a class="reference internal" href="#mail-send-many"><span class="std std-ref">mail.send_many()</span></a> is called with defined language then all the emails will be forced to that language.
+Otherwise each email is translated to recipient <code class="docutils literal notranslate"><span class="pre">preferred</span> <span class="pre">language</span></code> if it is available.
+Extra attachments are also translated to this language.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">post_office.mail</span> <span class="kn">import</span> <span class="n">send_many</span>
+<span class="kn">from</span> <span class="nn">post_office.models</span> <span class="kn">import</span> <span class="n">EmailAddress</span>
+
+<span class="n">en_recipient</span> <span class="o">=</span> <span class="n">EmailAddress</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="n">email</span><span class="o">=</span><span class="s1">&#39;en@gmail.com&#39;</span><span class="p">,</span> <span class="n">first_name</span><span class="o">=</span><span class="s1">&#39;John&#39;</span><span class="p">,</span> <span class="n">preferred_language</span><span class="o">=</span><span class="s1">&#39;en&#39;</span><span class="p">)</span>
+<span class="n">de_recipient</span> <span class="o">=</span> <span class="n">EmailAddress</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="n">email</span><span class="o">=</span><span class="s1">&#39;de@gmail.com&#39;</span><span class="p">,</span> <span class="n">first_name</span><span class="o">=</span><span class="s1">&#39;Ali&#39;</span><span class="p">,</span> <span class="n">preferred_language</span><span class="o">=</span><span class="s1">&#39;de&#39;</span><span class="p">)</span>
+
+<span class="n">send_many</span><span class="p">(</span><span class="n">recipients</span><span class="o">=</span><span class="p">[</span><span class="n">en_recipient</span><span class="p">,</span> <span class="n">de_recipient</span><span class="p">],</span> <span class="n">template</span><span class="o">=</span><span class="s1">&#39;your-template&#39;</span><span class="p">,</span> <span class="n">language</span><span class="o">=</span><span class="s1">&#39;en&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>In this case de_recipient also gets English copy of an email. To use preferred language you can do something like this:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">post_office.mail</span> <span class="kn">import</span> <span class="n">send_many</span>
+<span class="kn">from</span> <span class="nn">post_office.models</span> <span class="kn">import</span> <span class="n">EmailAddress</span>
+
+<span class="n">en_recipient</span> <span class="o">=</span> <span class="n">EmailAddress</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="n">email</span><span class="o">=</span><span class="s1">&#39;en@gmail.com&#39;</span><span class="p">,</span> <span class="n">first_name</span><span class="o">=</span><span class="s1">&#39;John&#39;</span><span class="p">,</span> <span class="n">preferred_language</span><span class="o">=</span><span class="s1">&#39;en&#39;</span><span class="p">)</span>
+<span class="n">de_recipient</span> <span class="o">=</span> <span class="n">EmailAddress</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="n">email</span><span class="o">=</span><span class="s1">&#39;de@gmail.com&#39;</span><span class="p">,</span> <span class="n">first_name</span><span class="o">=</span><span class="s1">&#39;Ali&#39;</span><span class="p">,</span> <span class="n">preferred_language</span><span class="o">=</span><span class="s1">&#39;de&#39;</span><span class="p">)</span>
+
+<span class="n">send_many</span><span class="p">(</span><span class="n">recipients</span><span class="o">=</span><span class="p">[</span><span class="n">en_recipient</span><span class="p">,</span> <span class="n">de_recipient</span><span class="p">],</span> <span class="n">template</span><span class="o">=</span><span class="s1">&#39;your-template&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Now de_recipient gets German letter and en_recipient English copy.</p>
+</section>
+<section id="custom-email-backends">
+<h2><span class="section-number">4.6. </span>Custom Email Backends<a class="headerlink" href="#custom-email-backends" title="Link to this heading">¶</a></h2>
+<p>By default post_office uses <code class="docutils literal notranslate"><span class="pre">django.core.mail.backends.smtp.EmailBackend</span></code>.
+If you want to use other email backends, you can change it by configuring <code class="docutils literal notranslate"><span class="pre">settings.POST_OFFICE['BACKENDS']</span></code></p>
+<p>For example to use <a class="reference external" href="https://github.com/django-ses/django-ses">django-ses</a> you can do:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">POST_OFFICE</span> <span class="o">=</span> <span class="p">{</span>
+<span class="c1"># other settings</span>
+<span class="s1">&#39;BACKENDS&#39;</span><span class="p">:</span> <span class="p">{</span>
+    <span class="s1">&#39;default&#39;</span><span class="p">:</span> <span class="s1">&#39;django.core.mail.backends.smtp.EmailBackend&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;ses&#39;</span><span class="p">:</span> <span class="s1">&#39;django_ses.SESBackend&#39;</span><span class="p">,</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>Now when you use <a class="reference internal" href="#mail-send"><span class="std std-ref">mail.send()</span></a> or <a class="reference internal" href="#mail-send-many"><span class="std std-ref">mail.send_many()</span></a> you can which backend will be used for sending by specifying
+<code class="docutils literal notranslate"><span class="pre">backend</span></code> argument. If <code class="docutils literal notranslate"><span class="pre">backend</span></code> is not specified <code class="docutils literal notranslate"><span class="pre">default</span></code> will be used.</p>
+<p><strong>Note</strong> For <a class="reference internal" href="#mail-send-many"><span class="std std-ref">mail.send_many()</span></a> all generated emails will inherit <code class="docutils literal notranslate"><span class="pre">backend</span></code> argument.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">post_office</span> <span class="kn">import</span> <span class="n">mail</span>
+
+<span class="n">mail</span><span class="o">.</span><span class="n">send</span><span class="p">(</span>
+<span class="p">[</span><span class="s1">&#39;recipient@example.com&#39;</span><span class="p">],</span>
+<span class="s1">&#39;from@example.com&#39;</span><span class="p">,</span>
+<span class="n">subject</span><span class="o">=</span><span class="s1">&#39;Hello&#39;</span><span class="p">,</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<p>Resulting email will be sent using <code class="docutils literal notranslate"><span class="pre">default</span></code> backend.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">post_office</span> <span class="kn">import</span> <span class="n">mail</span>
+
+<span class="n">mail</span><span class="o">.</span><span class="n">send_many</span><span class="p">(</span>
+<span class="n">recipients</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;recipient@example.com&#39;</span><span class="p">,</span> <span class="s1">&#39;next@gmail.com&#39;</span><span class="p">],</span>
+<span class="n">sender</span><span class="o">=</span><span class="s1">&#39;from@example.com&#39;</span><span class="p">,</span>
+<span class="n">subject</span><span class="o">=</span><span class="s1">&#39;Hello&#39;</span><span class="p">,</span>
+<span class="n">backend</span><span class="o">=</span><span class="s1">&#39;ses&#39;</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<p>Resulting 2 emails will be sent using <code class="docutils literal notranslate"><span class="pre">django-ses</span></code> backend.</p>
+</section>
+<section id="management-commands">
+<h2><span class="section-number">4.7. </span>Management commands<a class="headerlink" href="#management-commands" title="Link to this heading">¶</a></h2>
+<ul class="simple">
+<li><p>send_queued_mail - send queued emails, those are not successfully sent are marked as failed or requeued depending on settings. &lt;link&gt;</p></li>
+</ul>
+<div class="table-wrapper colwidths-given docutils container" id="id3">
+<table class="docutils align-default" id="id3">
+<caption><span class="caption-text">send_queued_mail arguments</span><a class="headerlink" href="#id3" title="Link to this table">¶</a></caption>
+<colgroup>
+<col style="width: 33.3%" />
+<col style="width: 66.7%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Argument</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>–processes or -p</p></td>
+<td><p>Number of concurrent processes to send queued emails. Defaults to <code class="docutils literal notranslate"><span class="pre">1</span></code>.</p></td>
+</tr>
+<tr class="row-odd"><td><p>–log-level or -l</p></td>
+<td><p>Log level <code class="docutils literal notranslate"><span class="pre">0</span></code> to log nothing, <code class="docutils literal notranslate"><span class="pre">1</span></code> to log only errors. Defaults to <code class="docutils literal notranslate"><span class="pre">2</span></code> - log everything.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<ul class="simple">
+<li><p>cleanup_mail - delete all emails created before an X number of days (defaults to 90).</p></li>
+</ul>
+<div class="table-wrapper colwidths-given docutils container" id="id4">
+<table class="docutils align-default" id="id4">
+<caption><span class="caption-text">cleanup_mail arguments</span><a class="headerlink" href="#id4" title="Link to this table">¶</a></caption>
+<colgroup>
+<col style="width: 33.3%" />
+<col style="width: 66.7%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Argument</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>–days or -d</p></td>
+<td><p>Email older than this argument will be deleted. Defaults to <code class="docutils literal notranslate"><span class="pre">90</span></code>.</p></td>
+</tr>
+<tr class="row-odd"><td><p>–delete-attachments or -da</p></td>
+<td><p>Flag to delete orphaned attachment records and files on disk. If not specified attachments wont be deleted.</p></td>
+</tr>
+<tr class="row-even"><td><p>–batch-size or -b</p></td>
+<td><p>Limits number of emails being deleted in a batch. Defaults to <code class="docutils literal notranslate"><span class="pre">1000</span></code>.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<ul class="simple">
+<li><p>dblocks - when <code class="docutils literal notranslate"><span class="pre">post_office</span></code> is sending emails using <code class="docutils literal notranslate"><span class="pre">send_queued_mail</span></code> management command it blocks the entire database.
+You can use this command to manage these DB locks.</p></li>
+</ul>
+<div class="table-wrapper colwidths-given docutils container" id="id5">
+<table class="docutils align-default" id="id5">
+<caption><span class="caption-text">dblocks</span><a class="headerlink" href="#id5" title="Link to this table">¶</a></caption>
+<colgroup>
+<col style="width: 33.3%" />
+<col style="width: 66.7%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Argument</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>–delete or -d</p></td>
+<td><p>Delete expired locks.</p></td>
+</tr>
+<tr class="row-odd"><td><p>–delete-all</p></td>
+<td><p>Delete all locks.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+</section>
+
+        </article>
+      </div>
+      <footer>
+        
+        <div class="related-pages">
+          <a class="next-page" href="settings.html">
+              <div class="page-info">
+                <div class="context">
+                  <span>Next</span>
+                </div>
+                <div class="title"><span class="section-number">5. </span>Settings</div>
+              </div>
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+            </a>
+          <a class="prev-page" href="quickstart.html">
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+              <div class="page-info">
+                <div class="context">
+                  <span>Previous</span>
+                </div>
+                
+                <div class="title"><span class="section-number">3. </span>Quickstart</div>
+                
+              </div>
+            </a>
+        </div>
+        <div class="bottom-of-page">
+          <div class="left-details">
+            <div class="copyright">
+                Copyright &#169; 2024, Mykhailo Poienko
+            </div>
+            Made with <a href="https://www.sphinx-doc.org/">Sphinx</a> and <a class="muted-link" href="https://pradyunsg.me">@pradyunsg</a>'s
+            
+            <a href="https://github.com/pradyunsg/furo">Furo</a>
+            
+          </div>
+          <div class="right-details">
+            
+          </div>
+        </div>
+        
+      </footer>
+    </div>
+    <aside class="toc-drawer">
+      
+      
+      <div class="toc-sticky toc-scroll">
+        <div class="toc-title-container">
+          <span class="toc-title">
+            On this page
+          </span>
+        </div>
+        <div class="toc-tree-container">
+          <div class="toc-tree">
+            <ul>
+<li><a class="reference internal" href="#">4. Usage</a><ul>
+<li><a class="reference internal" href="#mail-send">4.1. mail.send()</a></li>
+<li><a class="reference internal" href="#emailaddress-and-recipient-context">4.2. EmailAddress and recipient context</a></li>
+<li><a class="reference internal" href="#mail-send-many">4.3. mail.send_many()</a></li>
+<li><a class="reference internal" href="#templating">4.4. Templating</a><ul>
+<li><a class="reference internal" href="#html-base-file-creation">4.4.1. HTML Base File Creation</a></li>
+<li><a class="reference internal" href="#inlines">4.4.2. Inlines</a></li>
+<li><a class="reference internal" href="#ckeditor-placeholders-editor">4.4.3. CKEDITOR Placeholders editor</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#multilingual-templates">4.5. Multilingual Templates</a></li>
+<li><a class="reference internal" href="#custom-email-backends">4.6. Custom Email Backends</a></li>
+<li><a class="reference internal" href="#management-commands">4.7. Management commands</a></li>
+</ul>
+</li>
+</ul>
+
+          </div>
+        </div>
+      </div>
+      
+      
+    </aside>
+  </div>
+</div><script src="_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="_static/doctools.js?v=9bcbadda"></script>
+    <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/scripts/furo.js?v=5fa4622c"></script>
+    </body>
+</html>

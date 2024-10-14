@@ -3,7 +3,7 @@ name: Deploy Documentation
 on:
   push:
     branches:
-      - main  # Change this if your main branch has a different name
+      - master  # Change this if your main branch has a different name
 
 jobs:
   deploy:

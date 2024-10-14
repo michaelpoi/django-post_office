@@ -1,6 +1,6 @@
 import uuid
 from email.mime.image import MIMEImage
-import hashlib
+from django.core.files.storage import default_storage
 import os
 
 from django import template
@@ -16,34 +16,31 @@ from django.utils.html import SafeString
 
 @register.simple_tag(takes_context=True)
 def inline_image(context, file):
-    if context['dry_run']:
+    if context.get('dry_run'):
         return SafeString(f"{{% inline_image '{file}' %}}")
 
     if context.get('media'):
-        file_name = file.split('/')[-1]
+        file_name = file.split(settings.MEDIA_URL[1:])[-1]
         if host := context.get('host'):
-            return f"{host}media/{file_name}"
+            return f"{host[:-1]}{settings.MEDIA_URL}{file_name}"
+        else:
+            raise ValueError('Unknown host')
 
     assert hasattr(
         context.template, '_attached_images'
     ), "You must use template engine 'post_office' when rendering images using templatetag 'inline_image'."
     if isinstance(file, ImageFile):
         fileobj = file
-    elif os.path.isabs(file) and os.path.exists(file):
-        fileobj = File(open(file, 'rb'), name=file)
     else:
-        try:
-            absfilename = finders.find(file)
-            if absfilename is None:
-                raise FileNotFoundError(f'No such file: {file}')
-        except Exception:
+        if default_storage.exists(file):
+            fileobj = default_storage.open(file)
+        else:
             if settings.DEBUG:
-                raise
-            return ''
-        fileobj = File(open(absfilename, 'rb'), name=file)
+                raise FileNotFoundError(f"No such file or directory: {file}")
+            else:
+                return ''
     raw_data = fileobj.read()
     image = MIMEImage(raw_data)
-    #md5sum = hashlib.md5(raw_data).hexdigest()
     md5sum = uuid.uuid4().hex
     image.add_header('Content-Disposition', 'inline', filename=md5sum)
     image.add_header('Content-ID', f'<{md5sum}>')

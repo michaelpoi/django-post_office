@@ -21,23 +21,5 @@ class Settings:
         config.setdefault('MESSAGE_ID_FQDN', DNS_NAME)
         return config
 
-    @property
-    def CKEDITOR_CONFIGS(self):
-        config = getattr(django_settings, 'CKEDITOR_CONFIGS', {})
-        config.setdefault('default', {
-                    'toolbar': 'Basic',
-                    'toolbar_Basic': [
-                        ['Bold', 'Italic'],
-                        ['NumberedList', 'BulletedList'],
-                        ['Link', 'Unlink'],
-                        ['RemoveFormat'],
-                    ],
-                    'height': 200,
-                    'width': '100%',
-                    'removePlugins': 'sourcearea,anchor,image',
-                })
-
-        return config
-
 
 settings = Settings()

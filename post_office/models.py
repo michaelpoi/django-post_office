@@ -1,27 +1,23 @@
 import os
-import time
-import uuid
-
 from collections import namedtuple
 from typing import Union
 from uuid import uuid4
 from email.mime.nonmultipart import MIMENonMultipart
-from django.core.files.base import ContentFile
-from django.core.files.storage import default_storage
 from django.core.exceptions import ValidationError
 from django.core.mail import EmailMessage, EmailMultiAlternatives
 from django.db import models
 from django.utils.encoding import smart_str
 from django.utils.translation import pgettext_lazy, gettext_lazy as _
 from django.utils import timezone
-from django.db.models.constraints import UniqueConstraint
-from ckeditor.fields import RichTextField
+from ckeditor_uploader.fields import RichTextUploadingField
 from post_office import cache
-
+from .cache_utils import get_placeholders
+from django.conf import settings
 from .connections import connections
 from .logutils import setup_loghandlers
+from .parser import process_template
 from .sanitizer import clean_html
-from .settings import get_log_level, get_template_engine, get_override_recipients
+from .settings import get_log_level, get_template_engine, get_languages_list
 from .validators import validate_email_with_name, validate_template_syntax
 from django.template import loader
 
@@ -74,7 +70,7 @@ class EmailAddress(models.Model):
         default='',
         blank=True,
     )
-    is_blocked = models.BooleanField(default=False)
+    is_blocked = models.BooleanField(_('Is blocked'), default=False)
 
     def __str__(self):
         return self.email
@@ -146,6 +142,7 @@ class EmailModel(models.Model):
     template = models.ForeignKey(
         'post_office.EmailMergeModel', blank=True, null=True, verbose_name=_('Email template'), on_delete=models.CASCADE
     )
+    language = models.CharField(max_length=12)
     context = models.JSONField(_('Context'), blank=True, null=True)
     backend_alias = models.CharField(_('Backend alias'), blank=True, default='', max_length=64)
 
@@ -181,7 +178,6 @@ class EmailModel(models.Model):
             'headers': headers,
             'connection': connection,
         }
-
         if html_message:
 
             msg = EmailMultiAlternatives(body=plaintext_message or html_message, **common_args)
@@ -210,34 +206,6 @@ class EmailModel(models.Model):
 
         return self.prepare_email_message()
 
-    def render_email_template(self, recipient=None):
-        """
-        Function to render an email template. Takes an EmailAddress object.
-        """
-        template_instance = self.template
-        engine = get_template_engine()
-        context = {'recipient': recipient, 'dry_run': True} if recipient else {'dry_run': True}
-        html_content = template_instance.get_html_content()
-
-        # Replace all {% placeholder <name> %} to {{ name }}
-        django_template_first_pass = engine.from_string(html_content)
-        first_pass_content = django_template_first_pass.render(context)
-
-        # Placeholders are always assigned to main template
-        main_template = template_instance.get_main_template()
-
-        placeholders = PlaceholderContent.objects.filter(emailmerge=main_template, language=template_instance.language)
-        context_data = {placeholder.placeholder_name: clean_html(placeholder.content) for placeholder in placeholders}
-        context_data = {**context_data, 'dry_run': True}
-
-        # Replaces placeholders with actual values
-        django_template_second_pass = engine.from_string("{% load post_office %}" + first_pass_content)
-        final_content = django_template_second_pass.render(context_data)
-
-        final_content = f"{{% load post_office %}}\n {final_content}"
-
-        return final_content
-
     def prepare_email_message(self):
         """
         Returns a django ``EmailMessage`` or ``EmailMultiAlternatives`` object,
@@ -247,21 +215,25 @@ class EmailModel(models.Model):
         #     self.to = get_override_recipients()
 
         # Replace recipient id with EmailAddress object
-        context = {**self.context}
-        context['recipient'] = EmailAddress.objects.get(id=self.context['recipient'])
+        if self.context:
+            context = {**self.context}
+            context['recipient'] = EmailAddress.objects.get(id=self.context['recipient'])
+        else:
+            context = {}
+
+        subject = render_message(self.subject, context)
+        plaintext_message = render_message(self.message, context)
 
         if self.template is not None and self.context is not None:
-            subject = render_message(self.template.subject, context)
-            plaintext_message = render_message(self.template.content, context)
-            html_message = self.render_email_template(recipient=context['recipient'])
+            html_message = self.template.render_email_template(recipient=context['recipient'],
+                                                               language=self.language,
+                                                               context_dict=context)
             html_message = render_message(html_message, context)
 
             engine = get_template_engine()
             multipart_template = engine.from_string(html_message)
 
         else:
-            subject = smart_str(render_message(self.subject, context))
-            plaintext_message = render_message(self.message, context)
             multipart_template = None
             html_message = render_message(self.html_message, context)
 
@@ -373,84 +345,123 @@ class Log(models.Model):
         return str(self.date)
 
 
-class EmailTemplateManager(models.Manager):
-    def get_by_natural_key(self, name, language, default_template):
-        return self.get(name=name, language=language, default_template=default_template)
-
-
 class EmailMergeModel(models.Model):
     """
     Model to hold template information from db
     """
 
     base_file = models.CharField(max_length=255, verbose_name=_('File name'))
-    name = models.CharField(_('Name'), max_length=255, help_text=_("e.g: 'welcome_email'"))
+    name = models.CharField(_('Name'), max_length=255, help_text=_("e.g: 'welcome_email'"), unique=True)
     description = models.TextField(_('Description'), blank=True, help_text=_('Description of this template.'))
     created = models.DateTimeField(auto_now_add=True)
     last_updated = models.DateTimeField(auto_now=True)
-    subject = models.CharField(
-        max_length=255, blank=True, verbose_name=_('Subject'), validators=[validate_template_syntax]
-    )
-    content = models.TextField(blank=True, verbose_name=_('Content'), validators=[validate_template_syntax])
-    #html_content = models.TextField(blank=True, verbose_name=_('HTML content'), validators=[validate_template_syntax])
-    language = models.CharField(
-        max_length=12,
-        verbose_name=_('Language'),
-        help_text=_('Render template in alternative language'),
-        default='',
-        blank=True,
-    )
-    default_template = models.ForeignKey(
-        'self',
-        related_name='translated_templates',
-        null=True,
-        default=None,
-        verbose_name=_('Default template'),
-        on_delete=models.CASCADE,
-    )
     extra_recipients = models.ManyToManyField(
         EmailAddress,
         blank=True,
         help_text='extra bcc recipients',
     )
-    objects = EmailTemplateManager()
 
     class Meta:
         app_label = 'post_office'
-        #unique_together = ('name', 'language', 'default_template')
-        constraints = [
-            UniqueConstraint(fields=['name', 'language', 'default_template'], name='unique_emailmerge'),
-        ]
         verbose_name = _('Email Template')
         verbose_name_plural = _('Email Templates')
         ordering = ['name']
 
     def __str__(self):
-        return '%s %s' % (self.name, self.language)
+        return self.name
 
-    def natural_key(self):
-        return (self.name, self.language, self.default_template)
+    def render_email_template(self, language='', recipient=None, context_dict=None):
+        """
+        Function to render an email template. Takes an EmailAddress object.
+        """
+        if not language:
+            raise
+        if not context_dict:
+            context_dict = {}
 
-    def get_main_template(self):
-        if self.default_template:
-            return self.default_template
+        engine = get_template_engine()
+        context = {'recipient': recipient, 'dry_run': True, **context_dict} \
+            if recipient else {'dry_run': True, **context_dict}
 
-        return self
+        django_template_first_pass = loader.get_template(self.base_file, using='post_office')
 
-    def get_html_content(self):
-        main_template = self.get_main_template()
-        template = loader.get_template(main_template.base_file, using='post_office').template
-        html_content = template.source
-        return html_content
+        # Replace all {% placeholder <name> %} to {{ name }}
+        first_pass_content = django_template_first_pass.render(context)
+
+        placeholders = get_placeholders(self, language=language)
+        context_data = {placeholder.placeholder_name: clean_html(placeholder.content) for placeholder in placeholders}
+        context_data = {**context_data, 'dry_run': True}
+
+        # Replaces placeholders with actual values
+        django_template_second_pass = engine.from_string("{% load post_office %}" + first_pass_content)
+        final_content = django_template_second_pass.render(context_data)
+
+        final_content = f"{{% load post_office %}}\n {final_content}"
+
+        return final_content
 
     def save(self, *args, **kwargs):
-        # If template is a translation, use default template's name
-        if self.default_template and not self.name:
-            self.name = self.default_template.name
-
         template = super().save(*args, **kwargs)
         cache.delete(self.name)
+        existing_languages = set(self.translated_contents.values_list('language', flat=True))
+        for lang in set(get_languages_list()) - existing_languages:
+            EmailMergeContentModel.objects.create(subject=f'Subject, language: {lang}',
+                                                  content=f'Content, language: {lang}',
+                                                  emailmerge=self,
+                                                  language=lang
+                                                  )
+
+        placeholder_names = process_template(self.base_file)
+
+        existing_placeholders = set(
+            self.contents.filter(base_file=self.base_file).values_list('placeholder_name',
+                                                                       'language'))
+        placeholder_objs = []
+        for placeholder_name in placeholder_names:
+            for lang in get_languages_list():
+                if (placeholder_name, lang) not in existing_placeholders:
+                    placeholder_objs.append(PlaceholderContent(placeholder_name=placeholder_name,
+                                                               language=lang,
+                                                               base_file=self.base_file,
+                                                               emailmerge=self,
+                                                               content=f"Placeholder: {placeholder_name}, "
+                                                                       f"Language: {lang}", ), )
+
+        PlaceholderContent.objects.bulk_create(placeholder_objs)
+
         return template
+
+
+class EmailMergeContentModel(models.Model):
+    emailmerge = models.ForeignKey(EmailMergeModel,
+                                   related_name='translated_contents',
+                                   on_delete=models.CASCADE)
+    language = models.CharField(max_length=12)
+    subject = models.CharField(max_length=255,
+                               blank=True,
+                               verbose_name=_('Subject'),
+                               validators=[validate_template_syntax]
+                               )
+    content = models.TextField(blank=True,
+                               verbose_name=_('Content'),
+                               validators=[validate_template_syntax])
+    extra_attachments = models.ManyToManyField('Attachment',
+                                               related_name='extra_attachments',
+                                               verbose_name=_('Extra Attachments'),
+                                               blank=True,
+                                               )
+
+    def __str__(self):
+        return f"{self.emailmerge.name}: {self.language}"
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['emailmerge', 'language'],
+                                    name='unique_content'),
+        ]
+        app_label = 'post_office'
+        verbose_name = _('Email Template Content')
+        verbose_name_plural = _('Email Template Contents')
 
 
 def get_upload_path(instance, filename):
@@ -470,7 +481,7 @@ class Attachment(models.Model):
 
     file = models.FileField(_('File'), upload_to=get_upload_path)
     name = models.CharField(_('Name'), max_length=255, help_text=_('The original filename'))
-    emails = models.ManyToManyField(EmailModel, related_name='attachments', verbose_name=_('Emails'))
+    emails = models.ManyToManyField(EmailModel, related_name='attachments', verbose_name=_('Emails'), blank=True)
     mimetype = models.CharField(max_length=255, default='', blank=True)
     headers = models.JSONField(_('Headers'), blank=True, null=True)
 
@@ -503,14 +514,6 @@ class DBMutex(models.Model):
         return f"<DBMutex(pk={self.pk}, lock_id={self.lock_id}>"
 
 
-import base64
-from io import BytesIO
-from lxml import etree, html
-from django.conf import settings
-from html import unescape
-from django.utils.html import SafeString
-
-
 class PlaceholderContent(models.Model):
     emailmerge = models.ForeignKey(EmailMergeModel,
                                    on_delete=models.CASCADE,
@@ -519,54 +522,13 @@ class PlaceholderContent(models.Model):
         max_length=12,
         default='',
         blank=True,
+        choices=settings.LANGUAGES,
     )
     placeholder_name = models.CharField(_('Placeholder name'),
                                         max_length=63, )
-    content = RichTextField(_('Content'),
-                            config_name='default')
+    content = RichTextUploadingField(_('Content'), default='')
 
     base_file = models.CharField(max_length=255, verbose_name=_('File name'))
-
-    def save(self, *args, **kwargs):
-        """
-        Store base64 image representation from CKEditor fields in media/ folder
-        and replaces img tags with custom inline image with corresponding path.
-        """
-        parser = html.HTMLParser()
-        tree = html.fromstring(self.content, parser=parser)
-        for img in tree.xpath('//img'):
-            img_src = img.get('src')
-            if img_src and img_src.startswith('data:image'):
-                header, base64_data = img_src.split(',', 1)
-                file_ext = header.split('/')[1].split(';')[0]
-                img_data = base64.b64decode(base64_data)
-
-                #img_filename = f"image_{uuid.uuid4()}.{file_ext}"
-
-                # if default_storage.exists(img_filename):
-                #     img_path = default_storage.url(img_filename)
-                # else:
-                #     file = ContentFile(img_data)
-                #     img_path = default_storage.save(img_filename, file)
-
-                img_filename = f"image_{str(uuid.uuid4())}.{file_ext}"
-
-                img_path = settings.MEDIA_ROOT / img_filename
-
-                with open(img_path, 'wb') as f:
-                    f.write(img_data)
-
-                    inline_img_tag = clean_html(f"{{% inline_image '{img_path}' %}}")
-
-                img.set('src', inline_img_tag)
-
-                #inline_img_tag = clean_html(f"{{% inline_image '{settings.MEDIA_ROOT / img_path}' %}}")
-
-                #img.set('src', inline_img_tag)
-        self.content = unescape(html.tostring(tree, pretty_print=False, encoding='unicode'))
-        self.content = SafeString(self.content.replace('%20', ' '))
-
-        super().save(*args, **kwargs)
 
     class Meta:
         app_label = 'post_office'
@@ -575,13 +537,6 @@ class PlaceholderContent(models.Model):
                                     name='unique_placeholder'),
         ]
 
-
-import tempfile
-from django.template import Template as DjangoTemplate
-
-
-def get_template_from_html(html_content):
-    engine = get_template_engine()
-    template = engine.from_string(html_content)
-
-    return template
+    def save(self, *args, **kwargs):
+        cache.delete('placeholders %s:%s:%s' % (self.emailmerge.name, self.language, self.base_file))
+        return super().save(*args, **kwargs)

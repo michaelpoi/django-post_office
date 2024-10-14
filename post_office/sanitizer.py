@@ -4,7 +4,7 @@ from django.utils.translation import gettext_lazy
 try:
     import nh3
 except ImportError:
-    # if bleach is not installed, render HTML as escaped text to prevent XSS attacks
+    # if nh3 is not installed, render HTML as escaped text to prevent XSS attacks
     heading = gettext_lazy("Install 'nh3' to render HTML properly.")
     clean_html = lambda body: format_html('<p><em>{heading}</em></p>\n<div>{body}</div>', heading=heading, body=body)
 else:

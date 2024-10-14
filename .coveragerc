@@ -1,0 +1,6 @@
+# .coveragerc
+[run]
+omit =
+    */post_office/migrations/*
+    */post_office/tests/*
+    */demoapp/*

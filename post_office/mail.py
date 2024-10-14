@@ -1,29 +1,22 @@
-import time
-
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import connection as db_connection
 from django.db.models import Q
-from django.template import Context, Template
-from django.core.mail import EmailMultiAlternatives
 from django.utils import timezone
 from email.utils import make_msgid
-from multiprocessing import Pool
 
 from .connections import connections
-from .dblock import db_lock, TimeoutException, LockedException
 from .logutils import setup_loghandlers
 from .models import EmailModel, EmailMergeModel, Log, PRIORITY, STATUS, Recipient, EmailAddress
 from .settings import (
     get_available_backends,
-    get_batch_delivery_timeout,
     get_batch_size,
     get_log_level,
     get_max_retries,
     get_message_id_enabled,
     get_message_id_fqdn,
     get_retry_timedelta,
-    get_sending_order, get_default_language, get_languages_list, get_template,
+    get_sending_order, get_default_language, get_languages_list,
 )
 from .signals import email_queued
 from .utils import (
@@ -31,8 +24,8 @@ from .utils import (
     get_email_template,
     parse_emails,
     parse_priority,
-    split_emails, get_recipients_objects, set_recipients,
-    get_or_create_recipient, render_email_template, get_main_template
+    get_recipients_objects, set_recipients,
+    get_or_create_recipient, get_language_from_code,
 )
 from django.db import transaction
 
@@ -53,7 +46,6 @@ def create(
         headers=None,
         template=None,
         priority=None,
-        render_on_delivery=False,
         commit=True,
         backend='',
         language='',
@@ -62,6 +54,9 @@ def create(
     Creates an email from supplied keyword arguments. If template is
     specified, email subject and content will be rendered during delivery.
     """
+
+    if not language:
+        language = get_default_language()
     priority = parse_priority(priority)
     status = None if priority == PRIORITY.now else STATUS.queued
 
@@ -78,17 +73,19 @@ def create(
     cc_addresses = get_recipients_objects(cc)
     bcc_addresses = get_recipients_objects(bcc)
 
-    if not (recipient:=context.get('recipient', None)):  # If recipient is not set use the first one from the list
+    if commit and template:
+        bcc_addresses.extend(list(template.extra_recipients.all()))
+
+    if not (recipient := context.get('recipient', None)):  # If recipient is not set use the first one from the list
         context['recipient'] = get_or_create_recipient(recipients[0]).id
     else:
         if isinstance(recipient, EmailAddress):
             context['recipient'] = recipient.id
-    # If email is to be rendered during delivery, save all necessary
-    # information
 
     if template:
-        subject = template.subject
-        message = template.content
+        translated_content = template.translated_contents.get(language=language)
+        subject = translated_content.subject
+        message = translated_content.content
 
     email = EmailModel(
         subject=subject,
@@ -104,6 +101,7 @@ def create(
         context=context,
         template=template,
         backend_alias=backend,
+        language=language
     )
 
     if commit:
@@ -127,7 +125,6 @@ def send(
         headers=None,
         priority=None,
         attachments=None,
-        render_on_delivery=False,
         log_level=None,
         commit=True,
         cc=None,
@@ -135,11 +132,7 @@ def send(
         language='',
         backend='',
 ):
-    if not language:
-        language = get_default_language()
-    else:
-        if language not in get_languages_list():
-            raise ValidationError(f'Language "{language}" is not found in LANGUAGES configuration.')
+    language = get_language_from_code(language)
     try:
         recipients = parse_emails(recipients)
     except ValidationError as e:
@@ -166,8 +159,6 @@ def send(
     if not commit:
         if priority == PRIORITY.now:
             raise ValueError("send_many() can't be used with priority = 'now'")
-        if attachments:
-            raise ValueError("Can't add attachments with send_many()")
 
     if template:
         if subject:
@@ -177,14 +168,9 @@ def send(
         if html_message:
             raise ValueError('You can\'t specify both "template" and "html_message" arguments')
 
-        # template can be an EmailTemplate instance or name
-        if isinstance(template, EmailMergeModel):
-            template = template
-            # If language is specified, ensure template uses the right language
-            if language and template.language != language:
-                template = template.translated_templates.get(language=language)
-        else:
-            template = get_email_template(template, language)
+        # template can be an EmailMerge instance or name
+        if not isinstance(template, EmailMergeModel):
+            template = get_email_template(template)
 
     if backend and backend not in get_available_backends().keys():
         raise ValueError('%s is not a valid backend alias' % backend)
@@ -203,15 +189,18 @@ def send(
         headers,
         template,
         priority,
-        render_on_delivery,
         commit=commit,
         backend=backend,
-        language=language,
+        language=language
     )
 
-    if attachments:
+    if attachments and commit:
         attachments = create_attachments(attachments)
         email.attachments.add(*attachments)
+
+    if template and commit:
+        extra_attachments = template.translated_contents.get(language=language).extra_attachments.all()
+        email.attachments.add(*extra_attachments)
 
     if priority == PRIORITY.now:
         email.dispatch(log_level=log_level)
@@ -226,32 +215,71 @@ def send_many(**kwargs):
     This function allows to send multiple emails separately. Using it is beneficial if you need a user data as a
     context and you want to serve every recipient separately.
     """
-    if not (recipients := parse_emails(kwargs.pop('recipients'))):
+    if not (recipients := parse_emails(kwargs.pop('recipients', None))):
         raise ValueError('You must specify recipients')
+    if kwargs.get('cc') or kwargs.get('bcc'):
+        raise ValueError('send_many() can not be used with cc, bcc')
 
     recipients_objs = get_recipients_objects(recipients)
 
     context = kwargs.pop('context', {})
-    emails = [send(recipients=[recipient.email], context={**context, 'recipient': recipient.id}, commit=False, **kwargs)
-              for recipient in recipients_objs]
-
+    if kwargs.get('language'):
+        emails = [
+            send(recipients=[recipient.email],
+                 context={**context, 'recipient': recipient.id},
+                 commit=False,
+                 **kwargs)
+            for recipient in recipients_objs]
+    else:
+        emails = [
+            send(recipients=[recipient.email],
+                 context={**context, 'recipient': recipient.id},
+                 commit=False,
+                 language=recipient.preferred_language,
+                 **kwargs)
+            for recipient in recipients_objs]
 
     if emails:
-
         emails = EmailModel.objects.bulk_create(emails)
 
         email_recipients = []
-        for email, recipient in list(zip(emails, recipients_objs)):
+        for email, recipient in zip(emails, recipients_objs):
             email_recipients.append(Recipient(email=email, address=recipient, send_type='to'))
         Recipient.objects.bulk_create(email_recipients)
+
+        if attachments := kwargs.get('attachments', None):
+            through_objs = []
+            attach_objs = create_attachments(attachments)
+
+            if template := kwargs.get('template'):
+                if not isinstance(template, EmailMergeModel):
+                    template = get_email_template(template)
+
+            extra_attachments_cache = {}
+
+            for email, emailaddress in zip(emails, recipients_objs):
+                language = get_language_from_code(emailaddress.preferred_language)
+
+                if language not in extra_attachments_cache:
+                    extra_attachments = template.translated_contents.get(language=language).extra_attachments.all()
+                    extra_attachments_cache[language] = extra_attachments
+                else:
+                    extra_attachments = extra_attachments_cache[language]
+
+                for attach in [*attach_objs, *extra_attachments]:
+                    through_objs.append(email.attachments.through(emailmodel_id=email.id, attachment_id=attach.id))
+
+            emails[0].attachments.through.objects.bulk_create(through_objs)
 
         for batch in split_into_batches(emails):
             email_queued.send(sender=EmailModel, emails=batch)
 
+        return emails
+
+
 def split_into_batches(emails):
     n = get_batch_size()
     return [emails[i:i + n] for i in range(0, len(emails), n)]
-
 
 
 def get_queued():
@@ -269,8 +297,6 @@ def get_queued():
         .order_by(*get_sending_order())
         .prefetch_related('attachments')[: get_batch_size()]
     )
-
-
 
 
 def _send_bulk(emails, uses_multiprocessing=True, log_level=None):
@@ -309,28 +335,8 @@ def _send_bulk(emails, uses_multiprocessing=True, log_level=None):
             logger.exception('Failed to prepare email #%d' % email.id)
             failed_emails.append((email, e))
 
-    # number_of_threads = min(get_threads_per_process(), email_count)
-    # pool = ThreadPool(number_of_threads)
-
     for email in emails:
         send(email)
-
-    # timeout = get_batch_delivery_timeout()
-
-    # Wait for all tasks to complete with a timeout
-    # The get method is used with a timeout to wait for each result
-    # for result in results:
-    #     result.get(timeout=timeout)
-    # for result in results:
-    #     try:
-    #         # Wait for all tasks to complete with a timeout
-    #         # The get method is used with a timeout to wait for each result
-    #         result.get(timeout=timeout)
-    #     except TimeoutError:
-    #         logger.exception("Process timed out after %d seconds" % timeout)
-
-    # pool.close()
-    # pool.join()
 
     connections.close()
 
@@ -392,28 +398,3 @@ def _send_bulk(emails, uses_multiprocessing=True, log_level=None):
     )
 
     return len(sent_emails), num_failed, num_requeued
-
-
-# def send_queued_mail_until_done(processes=1, log_level=None):
-#     """
-#     Send mail in queue batch by batch, until all emails have been processed.
-#     """
-#     try:
-#         with db_lock('send_queued_mail_until_done'):
-#             logger.info('Acquired lock for sending queued emails')
-#             while True:
-#                 try:
-#                     send_queued(processes, log_level)
-#                 except Exception as e:
-#                     logger.exception(e, extra={'status_code': 500})
-#                     raise
-#
-#                 # Close DB connection to avoid multiprocessing errors
-#                 db_connection.close()
-#
-#                 if not get_queued().exists():
-#                     break
-#     except TimeoutException:
-#         logger.info('Sending queued mail required too long, terminating now.')
-#     except LockedException:
-#         logger.info('Failed to acquire lock, terminating now.')

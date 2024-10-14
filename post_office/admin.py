@@ -1,26 +1,25 @@
+import pathlib
 import re
 from lxml import html
 from django import forms
 from django.conf import settings
 from django.contrib import admin, messages
-from django.core.exceptions import ValidationError
 from django.core.mail.message import SafeMIMEText
 from django.db import models
 from django.forms import BaseInlineFormSet
-from django.forms.widgets import TextInput
+from django.forms.widgets import TextInput, HiddenInput
 from django.http.response import HttpResponse, HttpResponseNotFound, HttpResponseRedirect
-from django.template import Context, Template
 from django.urls import re_path, reverse
 from django.utils.html import format_html
 from django.utils.text import Truncator
 from django.utils.translation import gettext_lazy as _
 from django.utils.safestring import mark_safe
+from django.db.models import Case, When, Value, IntegerField
 
-#from .fields import CommaSeparatedEmailField
-from .models import STATUS, Attachment, EmailModel, EmailMergeModel, Log, EmailAddress, PlaceholderContent
+from .models import STATUS, Attachment, EmailModel, EmailMergeModel, Log, EmailAddress, PlaceholderContent, \
+    EmailMergeContentModel
 from .sanitizer import clean_html
-from .settings import get_email_templates, get_languages_list, get_default_language, get_template_engine
-from .utils import get_html_content
+from .settings import get_default_language, get_template_engine, get_base_files
 
 
 def get_message_preview(instance):
@@ -37,18 +36,18 @@ def render_placeholder_content(content, host):
     context = {'media': True, 'dry_run': False, 'host': host}
     return template.render(context)
 
+
 def convert_media_urls_to_tags(content):
     """Convert media URLs back to {% inlined_image <url> %} tags using lxml."""
     tree = html.fromstring(content)
 
     for img in tree.xpath('//img'):
         src = img.get('src')
-        if src and '/media/' in src:
+        if src and settings.MEDIA_URL in src:
             # Extract the media path after '/media/'
-            media_path = src.split('/media/', 1)[1]
+            media_path = src.split(settings.MEDIA_URL, 1)[1]
             # Replace src with the inlined_image template tag
-
-            inline_img_tag = f"{{% inline_image '{settings.MEDIA_ROOT / media_path}' %}}"
+            inline_img_tag = f"{{% inline_image '{pathlib.Path(settings.MEDIA_ROOT) / media_path}' %}}"
             img.set('src', inline_img_tag)
 
     html_str = html.tostring(tree, encoding='unicode', method='html')
@@ -94,20 +93,6 @@ class LogInline(admin.TabularInline):
         return False
 
 
-class CommaSeparatedEmailWidget(TextInput):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.attrs.update({'class': 'vTextField'})
-
-    def format_value(self, value):
-        # If the value is a string wrap it in a list so it does not get sliced.
-        if not value:
-            return ''
-        if isinstance(value, str):
-            value = [value]
-        return ','.join([item for item in value])
-
-
 def requeue(modeladmin, request, queryset):
     """An admin action to requeue emails."""
     queryset.update(status=STATUS.queued)
@@ -115,33 +100,34 @@ def requeue(modeladmin, request, queryset):
 
 requeue.short_description = 'Requeue selected emails'
 
-from django.http.request import HttpRequest
+
 class EmailContentInlineForm(forms.ModelForm):
     class Meta:
         model = PlaceholderContent
-        fields = ['placeholder_name', 'content', 'language', 'base_file']
+        fields = ['language', 'placeholder_name', 'content', 'base_file']
+        widgets = {
+            'base_file': HiddenInput(),  # Make base_file hidden
+        }
 
     def __init__(self, *args, **kwargs):
-        request: HttpRequest = kwargs.pop('request', None)
+        request = kwargs.pop('request', None)
         if request:
-            host = request.build_absolute_uri('/') # TODO: urllib
+            host = request.build_absolute_uri('/')  # TODO: urllib
         else:
             host = 'http://127.0.0.1:8000'
-        super().__init__(*args, **kwargs)
-        self.fields['placeholder_name'].disabled = True
-        self.fields['language'].disabled = True
 
-        self.fields['base_file'].disabled = True
+        super().__init__(*args, **kwargs)
 
         if 'content' in self.initial:
             self.initial['content'] = render_placeholder_content(self.initial['content'], host)
+        else:
+            self.initial['content'] = f"NOT FILLED"
 
     def save(self, commit=True):
 
         instance = super().save(commit=False)
 
         instance.content = convert_media_urls_to_tags(self.cleaned_data['content'])
-        print(instance.content)
 
         if commit:
             instance.save()
@@ -149,30 +135,10 @@ class EmailContentInlineForm(forms.ModelForm):
         return instance
 
 
-
 class EmailContentInlineFormset(forms.BaseInlineFormSet):
     def __init__(self, *args, **kwargs):
         request = self.request
         super().__init__(*args, **kwargs)
-        if self.instance and self.instance.pk:
-            placeholders = get_html_content(self.instance).split("{% placeholder '")[1:]
-            placeholder_names = [ph.split("' %}")[0] for ph in placeholders]
-            existing_placeholders = set(
-                self.instance.contents.filter(base_file=self.instance.base_file).values_list('placeholder_name',
-                                                                                             'language'))
-
-            for placeholder_name in placeholder_names:
-                for lang in get_languages_list():
-                    if (placeholder_name, lang) not in existing_placeholders:
-                        form_kwargs = {
-                            'initial': {
-                                'placeholder_name': placeholder_name,
-                                'language': lang,
-                                'base_file': self.instance.base_file
-                            },
-                            'request': request
-                        }
-                        self.forms.append(self._construct_form(len(self.forms), **form_kwargs))
 
     def get_form_kwargs(self, index):
         kwargs = super().get_form_kwargs(index)
@@ -185,6 +151,11 @@ class EmailContentInline(admin.TabularInline):
     formset = EmailContentInlineFormset
     form = EmailContentInlineForm
     extra = 0
+    readonly_fields = ('get_language_display', 'placeholder_name')
+    fields = ['content', 'get_language_display', 'placeholder_name', 'base_file']
+
+    def get_language_display(self, obj):
+        return obj.get_language_display()
 
     def get_formset(self, request, obj=None, **kwargs):
         self.parent_obj = obj
@@ -194,17 +165,24 @@ class EmailContentInline(admin.TabularInline):
 
     def get_queryset(self, request, obj=None):
         queryset = super().get_queryset(request)
+        default_language = get_default_language()
 
         if self.parent_obj and self.parent_obj.base_file:
-            return queryset.filter(base_file=self.parent_obj.base_file)
+            return queryset.filter(base_file=self.parent_obj.base_file).annotate(
+                is_default_lang=Case(
+                    When(language=default_language, then=Value(0)),
+                    default=Value(1),
+                    output_field=IntegerField()
+                )
+            ).order_by('is_default_lang', 'language')
 
         return queryset
 
-    # def has_add_permission(self, request, obj=None):
-    #     return False
-    #
-    # def has_delete_permission(self, request, obj=None):
-    #     return False
+    def has_add_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
 
 
 class EmailAdmin(admin.ModelAdmin):
@@ -219,9 +197,9 @@ class EmailAdmin(admin.ModelAdmin):
     ]
     #filter_horizontal = ('to', 'cc', 'bcc')
     search_fields = ['to', 'subject']
-    readonly_fields = ['message_id', 'render_subject', 'render_plaintext_body', 'render_html_body']
+    readonly_fields = ['message_id', 'language', 'render_subject', 'render_plaintext_body', 'render_html_body']
     inlines = [AttachmentInline, LogInline]
-    list_filter = ['status', 'template__language', 'template__name']
+    list_filter = ['status', 'template__name']
     #formfield_overrides = {CommaSeparatedEmailField: {'widget': CommaSeparatedEmailWidget}}
     actions = [requeue]
 
@@ -344,28 +322,6 @@ class EmailTemplateAdminFormSet(BaseInlineFormSet):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        if self.instance and self.instance.pk:
-            existing_languages = set(self.instance.translated_templates.values_list('language', flat=True))
-            existing_languages.add(get_default_language())
-            for lang in set(get_languages_list()) - existing_languages:
-                self.forms.append(self._construct_form(len(self.forms), initial={
-                    'language': lang,
-                }))
-
-    # def clean(self):
-    #     """
-    #     Check that no two Email templates have the same default_template and language.
-    #     """
-    #     super().clean()
-    #     data = set()
-    #     for form in self.forms:
-    #         default_template = form.cleaned_data['default_template']
-    #         language = form.cleaned_data['language']
-    #         if (default_template.id, language) in data:
-    #             msg = _("Duplicate template for language '{language}'.")
-    #             language = dict(form.fields['language'].choices)[language]
-    #             raise ValidationError(msg.format(language=language))
-    #         data.add((default_template.id, language))
 
 
 class EmailTemplateAdminForm(forms.ModelForm):
@@ -377,7 +333,7 @@ class EmailTemplateAdminForm(forms.ModelForm):
         help_text=_('Render template in alternative language'),
     )
     base_file = forms.ChoiceField(
-        choices=get_email_templates(),  # Set choices to the result of get_email_templates
+        choices=get_base_files(),  # Set choices to the result of get_email_templates
         required=False,
         label=_('Base File'),
         help_text=_('Select the base email template file'),
@@ -385,7 +341,24 @@ class EmailTemplateAdminForm(forms.ModelForm):
 
     class Meta:
         model = EmailMergeModel
-        fields = ['name', 'description', 'subject', 'content', 'language', 'default_template', 'base_file']
+        fields = ['name', 'description', 'base_file']
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['language'].disabled = True
+
+
+class EmailMergeContentForm(forms.ModelForm):
+    language = forms.ChoiceField(
+        choices=settings.LANGUAGES,
+        required=False,
+        label=_('Language'),
+        help_text=_('Render template in alternative language'),
+    )
+
+    class Meta:
+        model = EmailMergeContentModel
+        fields = ['subject', 'content', 'language', 'extra_attachments']
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -393,30 +366,34 @@ class EmailTemplateAdminForm(forms.ModelForm):
 
 
 class EmailTemplateInline(admin.StackedInline):
-    form = EmailTemplateAdminForm
-    formset = EmailTemplateAdminFormSet
-    model = EmailMergeModel
+    form = EmailMergeContentForm
+    # formset = EmailTemplateAdminFormSet
+    model = EmailMergeContentModel
     extra = 0
-    fields = ('language', 'subject', 'content')
+    fields = ('language', 'subject', 'content', 'extra_attachments')
     formfield_overrides = {models.CharField: {'widget': SubjectField}}
 
-    def get_max_num(self, request, obj=None, **kwargs):
-        return len(settings.LANGUAGES)
+    filter_horizontal = ('extra_attachments',)
+
+    def has_add_permission(self, request, obj):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
 
 
 class EmailTemplateAdmin(admin.ModelAdmin):
     form = EmailTemplateAdminForm
-    list_display = ('name', 'description_shortened', 'subject', 'languages_compact', 'created')
+    list_display = ('name', 'created')
     search_fields = ('name', 'description', 'subject')
     fieldsets = [
-        (None, {'fields': ('name', 'description', 'base_file')}),
-        (_('Default Content'), {'fields': ('subject', 'content')}),
+        (None, {'fields': ('name', 'description', 'base_file', 'extra_recipients')}),
+        # (_('Default Content'), {'fields': ('subject', 'content')}),
     ]
     inlines = (EmailTemplateInline, EmailContentInline) if settings.USE_I18N else (EmailContentInline,)
     formfield_overrides = {models.CharField: {'widget': SubjectField}}
 
-    def get_queryset(self, request):
-        return self.model.objects.filter(default_template__isnull=True)
+    filter_horizontal = ('extra_recipients',)
 
     def description_shortened(self, instance):
         return Truncator(instance.description.split('\n')[0]).chars(200)
@@ -430,16 +407,16 @@ class EmailTemplateAdmin(admin.ModelAdmin):
 
     languages_compact.short_description = _('Languages')
 
-    def save_model(self, request, obj, form, change):
-
-        if not obj.language:
-            obj.language = get_default_language()
-
-        obj.save()
-
-        # if the name got changed, also change the translated templates to match again
-        if 'name' in form.changed_data:
-            obj.translated_templates.update(name=obj.name)
+    # def save_model(self, request, obj, form, change):
+    #
+    #     if not obj.language:
+    #         obj.language = get_default_language()
+    #
+    #     obj.save()
+    #
+    #     # if the name got changed, also change the translated templates to match again
+    #     if 'name' in form.changed_data:
+    #         obj.translated_templates.update(name=obj.name)
 
 
 class AttachmentAdmin(admin.ModelAdmin):
@@ -451,12 +428,13 @@ class AttachmentAdmin(admin.ModelAdmin):
 
 @admin.register(EmailAddress)
 class EmailAddressAdmin(admin.ModelAdmin):
-    pass
+    search_fields = ('email', 'first_name', 'last_name')
+    list_display = ('email', 'first_name', 'last_name', 'gender', 'is_blocked')
 
 
-@admin.register(PlaceholderContent)
-class EmailContentAdmin(admin.ModelAdmin):
-    pass
+# @admin.register(PlaceholderContent)
+# class EmailContentAdmin(admin.ModelAdmin):
+#     pass
 
 
 admin.site.register(EmailModel, EmailAdmin)

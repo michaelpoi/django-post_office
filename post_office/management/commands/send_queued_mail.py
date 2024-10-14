@@ -6,12 +6,14 @@ from django.core.management.base import BaseCommand
 from django.utils import timezone
 from post_office.dblock import db_lock, TimeoutException, LockedException
 from post_office.connections import connections
-from post_office.mail import get_queued, split_emails, _send_bulk
+from post_office.mail import get_queued, _send_bulk
+from post_office.utils import split_emails
 from post_office.settings import get_batch_delivery_timeout
 
 
 class Command(BaseCommand):
     processes = 1
+    log_level = 2
 
     def add_arguments(self, parser):
         parser.add_argument(
@@ -23,13 +25,13 @@ class Command(BaseCommand):
         )
         parser.add_argument(
             '-l', '--log-level',
-            '--log-level',
             type=int,
             help='"0" to log nothing, "1" to only log errors',
         )
 
     def handle(self, *args, **options):
         self.processes = options['processes']
+        self.log_level = options.get('log_level')
         self.send_queued_mail_until_done()
 
     def send_queued_mail_until_done(self):
@@ -40,8 +42,8 @@ class Command(BaseCommand):
                     try:
                         self.send_queued()
                     except Exception as e:
-                        #self.stderr.write(e)
-                        raise
+                        self.stderr.write(str(e))
+
 
                     db_connection.close()
 
@@ -66,7 +68,10 @@ class Command(BaseCommand):
                 self.processes = total_email
 
             if self.processes == 1:
-                total_sent, total_failed, total_requeued = _send_bulk(queued_emails, uses_multiprocessing=False)
+                total_sent, total_failed, total_requeued = _send_bulk(queued_emails,
+                                                                      uses_multiprocessing=False,
+                                                                      log_level=self.log_level,
+                                                                      )
 
             else:
                 email_lists = split_emails(queued_emails, self.processes)
@@ -75,7 +80,7 @@ class Command(BaseCommand):
 
                 tasks = []
                 for email_list in email_lists:
-                    tasks.append(pool.apply_async(_send_bulk, args=(email_list,)))
+                    tasks.append(pool.apply_async(_send_bulk, args=(email_list, True, self.log_level)))
 
                 timeout = get_batch_delivery_timeout()
                 results = []

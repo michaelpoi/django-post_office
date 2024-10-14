@@ -1,0 +1,16 @@
+{% load post_office %}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+    <h1>Dear {% if recipient.gender == 'male' %}Mr.{% elif recipient.gender == 'female' %}Ms. {% else %} Smth.{% endif %}
+        
+        {{ recipient.first_name }} {{ recipient.last_name }}</h1>
+    <p>Hello, {% placeholder 'first_name' %}</p>
+    <p>Your order will be delivered to {% placeholder 'address' %}</p>
+</body>
+</html>

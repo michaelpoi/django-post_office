@@ -11,8 +11,6 @@ from django.template import engines as template_engines
 import datetime
 
 
-# def get_template(template_name):
-#     return loader.get_template(template_name)
 
 
 def get_backend(alias='default'):
@@ -97,8 +95,6 @@ def get_lock_file_name():
     return get_config().get('LOCK_FILE_NAME', 'post_office')
 
 
-# def get_threads_per_process():
-#     return get_config().get('THREADS_PER_PROCESS', 5)
 
 
 def get_default_priority():
@@ -118,8 +114,8 @@ def get_template_engine():
     return template_engines[using]
 
 
-def get_override_recipients():
-    return get_config().get('OVERRIDE_RECIPIENTS', None)
+# def get_override_recipients():
+#     return get_config().get('OVERRIDE_RECIPIENTS', None)
 
 
 def get_max_retries():

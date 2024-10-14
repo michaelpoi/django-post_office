@@ -164,15 +164,15 @@ EmailAddress model has the following attributes:
     * - preferred_language
       - str
       - No
-      - #recipient.preferred_language#
+      - \-
       - {{ recipient.preferred_language }}
       - Recipient preferred_language. If using :ref:`mail.send_many()` without language argument email to a certain user will be translated.
         If specified here language is not in ``settings.LANGUAGES`` default will be used.
     * - is_blocked
       - bool
       - No
-      - No sense
-      - No sense
+      - \-
+      - \-
       - Defaults to False. If set to True recipient wont get any emails, no matter with :ref:`mail.send()` or :ref:`mail.send_many()`
 
 Every time you use :ref:`mail.send()` or :ref:`mail.send_many()` list of recipients and cc or bcc (only for :ref:`mail.send()` ) are transformed to a list
@@ -419,6 +419,8 @@ The default language will be used when:
 2. if :ref:`mail.send_many()` language is not set and recipient preferred language is ``None`` or not valid
 
 If :ref:`mail.send_many()` is called with defined language then all the emails will be forced to that language.
+Otherwise each email is translated to recipient ``preferred language`` if it is available.
+Extra attachments are also translated to this language.
 
 .. code-block:: python
 

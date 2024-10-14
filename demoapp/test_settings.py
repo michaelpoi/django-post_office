@@ -39,7 +39,7 @@ INSTALLED_APPS = [
 CKEDITOR_UPLOAD_PATH = 'ckeditor_uploads'
 
 MEDIA_URL = '/media/'
-MEDIA_ROOT = BASE_DIR / 'workdir' / 'media'
+MEDIA_ROOT = BASE_DIR / 'demoapp' / 'tests'
 print(MEDIA_ROOT)
 
 LANGUAGE_CODE = 'en'

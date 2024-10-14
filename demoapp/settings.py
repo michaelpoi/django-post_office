@@ -35,13 +35,25 @@ INSTALLED_APPS = [
     'ckeditor',
     'ckeditor_uploader',
     'post_office',
+    'storages',
 ]
 
-CKEDITOR_UPLOAD_PATH = 'ckeditor_uploads'
+# Media files settings
+# DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
+# AWS_S3_ENDPOINT_URL = 'http://138.232.3.68:9000'  # MinIO endpoint
+# AWS_ACCESS_KEY_ID = 'minioadmin'  # Default MinIO access key
+# AWS_SECRET_ACCESS_KEY = 'minioadmin'  # Default MinIO secret key
+# AWS_STORAGE_BUCKET_NAME = 'media'  # Your media bucket name
+# AWS_S3_USE_SSL = False  # Set this to True if using HTTPS
+# AWS_DEFAULT_ACL = 'public-read'
+
+# Set MEDIA_URL for media files
+# MEDIA_URL = f"{AWS_S3_ENDPOINT_URL}/{AWS_STORAGE_BUCKET_NAME}/"
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'workdir' / 'media'
-print(MEDIA_ROOT)
+
+CKEDITOR_UPLOAD_PATH = 'ckeditor_uploads'
 
 LANGUAGE_CODE = 'en'
 

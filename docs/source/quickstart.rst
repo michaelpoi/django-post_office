@@ -17,8 +17,7 @@ Send a simple email is really easy:
 
 If you want to use templates:
 
-- In your templates folder create an .html file with your email markup. Inside it you can leave placeholders or use context vars.
-For example something like this:
+- In your templates folder create an .html file with your email markup. Inside it you can leave placeholders or use context vars. For example something like this:
 
 .. code-block:: django
 
@@ -56,7 +55,7 @@ You can use relative path from your ``templates`` folder or absolute file path.
 
         You can specify variables to be filled with the context.
 
-         ** Syntax is `#var#`. **
+         Syntax is `#var#`.
 
         Example: This is a simple mail created by #generator#
 

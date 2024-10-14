@@ -1,6 +1,6 @@
 import uuid
 from email.mime.image import MIMEImage
-import hashlib
+from django.core.files.storage import default_storage
 import os
 
 from django import template
@@ -31,25 +31,16 @@ def inline_image(context, file):
     ), "You must use template engine 'post_office' when rendering images using templatetag 'inline_image'."
     if isinstance(file, ImageFile):
         fileobj = file
-    elif os.path.isabs(file) and os.path.exists(file):
-        fileobj = File(open(file, 'rb'), name=file)
     else:
-        media_path = os.path.join(settings.MEDIA_ROOT, file)
-        if os.path.exists(media_path):
-            fileobj = File(open(media_path, 'rb'), name=file)
+        if default_storage.exists(file):
+            fileobj = default_storage.open(file)
         else:
-            try:
-                absfilename = finders.find(file)
-                if absfilename is None:
-                    raise FileNotFoundError(f'No such file: {file}')
-            except Exception as e:
-                if settings.DEBUG:
-                    raise
+            if settings.DEBUG:
+                raise FileNotFoundError(f"No such file or directory: {file}")
+            else:
                 return ''
-            fileobj = File(open(absfilename, 'rb'), name=file)
     raw_data = fileobj.read()
     image = MIMEImage(raw_data)
-    #md5sum = hashlib.md5(raw_data).hexdigest()
     md5sum = uuid.uuid4().hex
     image.add_header('Content-Disposition', 'inline', filename=md5sum)
     image.add_header('Content-ID', f'<{md5sum}>')

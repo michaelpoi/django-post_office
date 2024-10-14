@@ -17,7 +17,7 @@ from .connections import connections
 from .logutils import setup_loghandlers
 from .parser import process_template
 from .sanitizer import clean_html
-from .settings import get_log_level, get_template_engine, get_override_recipients, get_languages_list
+from .settings import get_log_level, get_template_engine, get_languages_list
 from .validators import validate_email_with_name, validate_template_syntax
 from django.template import loader
 

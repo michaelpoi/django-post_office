@@ -1,3 +1,4 @@
+import pathlib
 import re
 from lxml import html
 from django import forms
@@ -46,7 +47,7 @@ def convert_media_urls_to_tags(content):
             # Extract the media path after '/media/'
             media_path = src.split(settings.MEDIA_URL, 1)[1]
             # Replace src with the inlined_image template tag
-            inline_img_tag = f"{{% inline_image '{settings.MEDIA_ROOT / media_path}' %}}"
+            inline_img_tag = f"{{% inline_image '{pathlib.Path(settings.MEDIA_ROOT) / media_path}' %}}"
             img.set('src', inline_img_tag)
 
     html_str = html.tostring(tree, encoding='unicode', method='html')

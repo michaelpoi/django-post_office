@@ -1,3 +1,5 @@
+import pathlib
+
 import pytest
 from django.core.files.images import ImageFile
 import re
@@ -79,7 +81,7 @@ def test_static(settings):
     context.template = template
     filename = 'logo.png'
     abs_path = str(settings.BASE_DIR / 'demoapp' / 'tests' / 'assets' / filename)
-    result = inline_image(context, filename)
+    result = inline_image(context, pathlib.Path('assets') / filename)
     assert result.startswith('cid:')
     assert len(template._attached_images) == 1
     assert template._attached_images[0].get_payload(decode=True) == open(abs_path, 'rb').read()

@@ -3,6 +3,7 @@ from .logutils import setup_loghandlers
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.files import File
+from django.core.files.storage import default_storage
 from django.utils.encoding import force_str
 from post_office import cache
 from .models import EmailModel, PRIORITY, STATUS, EmailMergeModel, Attachment, EmailAddress, Recipient
@@ -114,7 +115,11 @@ def create_attachments(attachment_files):
 
         if isinstance(content, str):
             # `content` is a filename - try to open the file
-            opened_file = open(content, 'rb')
+            if default_storage.exists(content):
+                opened_file = default_storage.open(content, 'rb')
+            else:
+                raise FileNotFoundError(f'File {content} not found in storage.')
+
             content = File(opened_file)
 
         attachment = Attachment()
@@ -286,3 +291,7 @@ def get_language_from_code(code) -> str:
             code = get_default_language()
 
     return code
+
+
+def get_ckeditor_filename(filename, request):
+    return filename

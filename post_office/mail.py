@@ -16,7 +16,7 @@ from .settings import (
     get_message_id_enabled,
     get_message_id_fqdn,
     get_retry_timedelta,
-    get_sending_order, get_default_language, get_languages_list,
+    get_sending_order, get_default_language
 )
 from .signals import email_queued
 from .utils import (
@@ -258,7 +258,7 @@ def send_many(**kwargs):
             extra_attachments_cache = {}
 
             for email, emailaddress in zip(emails, recipients_objs):
-                language = get_language_from_code(emailaddress.preferred_language)
+                language = get_language_from_code(emailaddress.preferred_language, log=False)
 
                 if language not in extra_attachments_cache:
                     extra_attachments = template.translated_contents.get(language=language).extra_attachments.all()

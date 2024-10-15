@@ -6,7 +6,10 @@ try:
 except ImportError:
     # if nh3 is not installed, render HTML as escaped text to prevent XSS attacks
     heading = gettext_lazy("Install 'nh3' to render HTML properly.")
-    clean_html = lambda body: format_html('<p><em>{heading}</em></p>\n<div>{body}</div>', heading=heading, body=body)
+
+
+    def clean_html(body):
+        return format_html('<p><em>{heading}</em></p>\n<div>{body}</div>', heading=heading, body=body)
 else:
     styles = [
         'border',
@@ -205,18 +208,18 @@ else:
         'ul': ['class', 'id', 'style', 'dir', 'type'],
     }
 
-    from nh3 import clean
-
     new_attrs = {}
 
     for tag, attrs in attributes.items():
         new_attrs[tag] = set(attrs)
 
-    clean_html = lambda body: mark_safe(
-        nh3.clean(
-            body,
-            tags=tags,
-            attributes=new_attrs,
-            strip_comments=True,
+
+    def clean_html(body):
+        return mark_safe(
+            nh3.clean(
+                body,
+                tags=tags,
+                attributes=new_attrs,
+                strip_comments=True,
+            )
         )
-    )

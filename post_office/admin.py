@@ -110,18 +110,11 @@ class EmailContentInlineForm(forms.ModelForm):
         }
 
     def __init__(self, *args, **kwargs):
-        # request = kwargs.pop('request', None)
-        # if request:
-        #     host = request.build_absolute_uri('/')  # TODO: urllib
-        # else:
-        #     host = 'http://127.0.0.1:8000'
 
         super().__init__(*args, **kwargs)
 
         if 'content' in self.initial:
             self.initial['content'] = render_placeholder_content(self.initial['content'])
-        else:
-            self.initial['content'] = f"NOT FILLED"
 
     def save(self, commit=True):
 

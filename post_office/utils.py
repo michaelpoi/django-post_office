@@ -282,16 +282,14 @@ def cleanup_expired_mails(cutoff_date, delete_attachments=True, batch_size=1000)
     return total_deleted_emails, attachments_count
 
 
-def get_language_from_code(code) -> str:
+def get_language_from_code(code, log=True) -> str:
     if not code:
         code = get_default_language()
     else:
         if code not in get_languages_list():
-            logger.warning(f'Language "{code}" is not found in LANGUAGES configuration.')
+            if log:
+                logger.warning(f'Language "{code}" is not found in LANGUAGES configuration.')
             code = get_default_language()
 
     return code
 
-
-def get_ckeditor_filename(filename, request):
-    return filename

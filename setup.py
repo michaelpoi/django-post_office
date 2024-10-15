@@ -24,6 +24,8 @@ setup(
     python_requires='>=3.9',
     install_requires=[
         'django>=4.2',
+        'django-ckeditor>=6.7.0',
+        'lxml>=5.0'
     ],
     classifiers=[
         'Development Status :: 5 - Production/Stable',

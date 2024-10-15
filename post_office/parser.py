@@ -1,5 +1,5 @@
 from django.template.base import NodeList
-from django.template.loader_tags import IncludeNode, ExtendsNode
+from django.template.loader_tags import IncludeNode
 from django.template import loader
 
 

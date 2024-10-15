@@ -8,6 +8,9 @@ from post_office.utils import set_recipients, get_recipients_objects, parse_emai
     create_attachments, send_mail, get_email_template, cleanup_expired_mails, get_language_from_code
 from post_office.models import EmailAddress, EmailModel, PRIORITY, Attachment, STATUS, EmailMergeModel
 from django.core.exceptions import ValidationError
+from django.core.files.storage import default_storage, FileSystemStorage
+
+from post_office.settings import get_attachments_storage
 
 from post_office.validators import validate_email_with_name, validate_template_syntax
 
@@ -261,8 +264,6 @@ def test_cleanup_expired():
     assert Attachment.objects.count() == 0
 
 
-
-
 def test_template_syntax():
     validate_template_syntax("<h1>{{ test.value }}"
                              "{% for template in test.values %}"
@@ -279,8 +280,24 @@ def test_template_syntax():
                                  "{{ template }}"
                                  "</h1>")
 
+
 def test_get_language_from_code():
     assert get_language_from_code('en') == 'en'
     assert get_language_from_code(None) == 'en'
     assert get_language_from_code('de') == 'de'
     assert get_language_from_code('fr') == 'en'
+
+
+def test_default_storage(settings):
+    assert get_attachments_storage() == default_storage
+
+    settings.STORAGES.update({'post_office_attachments': {'post_office_attachments': {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
+        "OPTIONS": {
+            "location": settings.MEDIA_ROOT,  # Specify the directory for storage
+        }
+    }}})
+
+    assert isinstance(storage := get_attachments_storage(), FileSystemStorage)
+
+    assert storage.base_url == '/media/'

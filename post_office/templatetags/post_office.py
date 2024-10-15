@@ -1,17 +1,14 @@
 import uuid
 from email.mime.image import MIMEImage
 from django.core.files.storage import default_storage
-import os
 
 from django import template
 from django.conf import settings
-from django.contrib.staticfiles import finders
-from django.core.files import File
 from django.core.files.images import ImageFile
+from django.utils.html import SafeString
 
 register = template.Library()
 
-from django.utils.html import SafeString
 
 
 @register.simple_tag(takes_context=True)

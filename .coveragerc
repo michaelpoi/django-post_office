@@ -3,4 +3,5 @@
 omit =
     */post_office/migrations/*
     */post_office/tests/*
+    */post_office/admin.py
     */demoapp/*

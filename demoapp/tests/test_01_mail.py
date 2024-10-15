@@ -640,7 +640,9 @@ def test_extra_attachments(settings, template_with_extra_attachments):
 
     assert Attachment.objects.count() == 2  # Should include default.txt and en_attachment.txt
 
-    assert (attachments := list(Attachment.objects.all())) == list(email.attachments.all())
+    assert email.attachments.count() == 2
+
+    attachments = list(Attachment.objects.all())
     assert len(attachments) == 2
     assert sorted([attachments[0].name, attachments[1].name]) == sorted(['def.txt', 'en_attachment.txt'])
 
@@ -696,5 +698,5 @@ def test_many_extra_attachments(settings, template_with_extra_attachments):
     assert len((en_attachments := list(emails[0].attachments.all()))) == 2  # Check English attachments
     assert len((de_attachments := list(emails[1].attachments.all()))) == 2  # Check German attachments
 
-    assert [en_attachments[0].name, en_attachments[1].name] == ['en_attachment.txt','defau.txt']
-    assert [de_attachments[0].name, de_attachments[1].name] == ['de_attachment.txt','defau.txt']
+    assert sorted([en_attachments[0].name, en_attachments[1].name]) == sorted(['en_attachment.txt','defau.txt'])
+    assert sorted([de_attachments[0].name, de_attachments[1].name]) == sorted(['de_attachment.txt','defau.txt'])

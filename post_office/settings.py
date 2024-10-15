@@ -1,6 +1,4 @@
-from pathlib import Path
 import warnings
-from django.template import loader
 from django.core.files.storage import default_storage
 from django.core.files.storage import storages, InvalidStorageError
 
@@ -20,7 +18,6 @@ def get_attachments_storage():
         storage = default_storage
 
     return storage
-
 
 
 def get_backend(alias='default'):
@@ -99,10 +96,6 @@ def get_batch_size():
 
 def get_celery_enabled():
     return get_config().get('CELERY_ENABLED', False)
-
-
-def get_lock_file_name():
-    return get_config().get('LOCK_FILE_NAME', 'post_office')
 
 
 def get_default_priority():

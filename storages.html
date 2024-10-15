@@ -3,10 +3,10 @@
   <head><meta charset="utf-8"/>
     <meta name="viewport" content="width=device-width,initial-scale=1"/>
     <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
-<link rel="index" title="Index" href="genindex.html" /><link rel="search" title="Search" href="search.html" /><link rel="next" title="9. Signals" href="signals.html" /><link rel="prev" title="7. Integration with Celery" href="celery.html" />
+<link rel="index" title="Index" href="genindex.html" /><link rel="search" title="Search" href="search.html" /><link rel="next" title="7. Integration with Celery" href="celery.html" /><link rel="prev" title="5. Settings" href="settings.html" />
 
     <!-- Generated with Sphinx 8.1.3 and Furo 2024.08.06 -->
-        <title>8. Integration with uWSGI - post_office documentation</title>
+        <title>6. Storages - post_office documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=a746c00c" />
     <link rel="stylesheet" type="text/css" href="_static/styles/furo.css?v=354aac6f" />
     <link rel="stylesheet" type="text/css" href="_static/styles/furo-extensions.css?v=302659d7" />
@@ -205,9 +205,9 @@
 <li class="toctree-l1"><a class="reference internal" href="quickstart.html">3. Quickstart</a></li>
 <li class="toctree-l1"><a class="reference internal" href="usage.html">4. Usage</a></li>
 <li class="toctree-l1"><a class="reference internal" href="settings.html">5. Settings</a></li>
-<li class="toctree-l1"><a class="reference internal" href="storages.html">6. Storages</a></li>
+<li class="toctree-l1 current current-page"><a class="current reference internal" href="#">6. Storages</a></li>
 <li class="toctree-l1"><a class="reference internal" href="celery.html">7. Integration with Celery</a></li>
-<li class="toctree-l1 current current-page"><a class="current reference internal" href="#">8. Integration with uWSGI</a></li>
+<li class="toctree-l1"><a class="reference internal" href="uwsgi.html">8. Integration with uWSGI</a></li>
 <li class="toctree-l1"><a class="reference internal" href="signals.html">9. Signals</a></li>
 <li class="toctree-l1"><a class="reference internal" href="testing.html">10. Testing</a></li>
 </ul>
@@ -230,7 +230,7 @@
         </a>
         <div class="content-icon-container">
           <div class="view-this-page">
-  <a class="muted-link" href="_sources/uwsgi.rst.txt" title="View this page">
+  <a class="muted-link" href="_sources/storages.rst.txt" title="View this page">
     <svg><use href="#svg-eye"></use></svg>
     <span class="visually-hidden">View this page</span>
   </a>
@@ -250,34 +250,59 @@
           </label>
         </div>
         <article role="main" id="furo-main-content">
-          <section id="integration-with-uwsgi">
-<h1><span class="section-number">8. </span>Integration with uWSGI<a class="headerlink" href="#integration-with-uwsgi" title="Link to this heading">¶</a></h1>
-<p>If setting up Celery is too daunting and you use <a class="reference external" href="https://uwsgi-docs.readthedocs.io/en/latest/">uWSGI</a> as application server,
-then uWSGI decorators can act as a poor men’s scheduler.
-Just add this short snipped to the project’s <code class="docutils literal notranslate"><span class="pre">wsgi.py</span></code> file:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">django.core.wsgi</span> <span class="kn">import</span> <span class="n">get_wsgi_application</span>
-
-<span class="n">application</span> <span class="o">=</span> <span class="n">get_wsgi_application</span><span class="p">()</span>
-
-<span class="c1"># add this block of code</span>
-<span class="k">try</span><span class="p">:</span>
-    <span class="kn">import</span> <span class="nn">uwsgidecorators</span>
-    <span class="kn">from</span> <span class="nn">django.core.management</span> <span class="kn">import</span> <span class="n">call_command</span>
-
-    <span class="nd">@uwsgidecorators</span><span class="o">.</span><span class="n">timer</span><span class="p">(</span><span class="mi">10</span><span class="p">)</span>
-    <span class="k">def</span> <span class="nf">send_queued_mail</span><span class="p">(</span><span class="n">num</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Send queued mail every 10 seconds&quot;&quot;&quot;</span>
-        <span class="n">call_command</span><span class="p">(</span><span class="s1">&#39;send_queued_mail&#39;</span><span class="p">,</span> <span class="n">processes</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
-
-<span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;uwsgidecorators not found. Cron and timers are disabled&quot;</span><span class="p">)</span>
+          <section id="storages">
+<h1><span class="section-number">6. </span>Storages<a class="headerlink" href="#storages" title="Link to this heading">¶</a></h1>
+<p><code class="docutils literal notranslate"><span class="pre">post_office</span></code> supports integration with <code class="docutils literal notranslate"><span class="pre">django-storages</span></code>. By default FileSystemStorage is used for storing post_office data.
+You can override this behaviour by specifying <code class="docutils literal notranslate"><span class="pre">STORAGES</span></code> config in <code class="docutils literal notranslate"><span class="pre">settings.py</span></code>.</p>
+<p>For example for configuring <a class="reference external" href="https://github.com/minio/minio?tab=readme-ov-file">MiniIO</a> (compatible with S3 API). You can do:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">STORAGES</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;default&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s2">&quot;BACKEND&quot;</span><span class="p">:</span> <span class="s2">&quot;storages.backends.s3boto3.S3Boto3Storage&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;OPTIONS&quot;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="s2">&quot;endpoint_url&quot;</span><span class="p">:</span> <span class="s1">&#39;http://138.232.3.68:9000&#39;</span><span class="p">,</span>  <span class="c1"># Note the lowercase &#39;endpoint_url&#39;</span>
+            <span class="s1">&#39;access_key&#39;</span><span class="p">:</span> <span class="s1">&#39;minioadmin&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;secret_key&#39;</span><span class="p">:</span> <span class="s1">&#39;minioadmin&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;bucket_name&#39;</span><span class="p">:</span> <span class="s1">&#39;media&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;querystring_auth&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span>
+            <span class="s1">&#39;use_ssl&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span>  <span class="c1"># Set this to True if you use HTTPS</span>
+            <span class="s1">&#39;file_overwrite&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span>  <span class="c1"># Optional: set to False to avoid overwriting files with the same name</span>
+        <span class="p">},</span>
+    <span class="p">},</span>
+    <span class="s1">&#39;staticfiles&#39;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s2">&quot;BACKEND&quot;</span><span class="p">:</span> <span class="s2">&quot;storages.backends.s3boto3.S3Boto3Storage&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;OPTIONS&quot;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="s2">&quot;endpoint_url&quot;</span><span class="p">:</span> <span class="s1">&#39;http://138.232.3.68:9000&#39;</span><span class="p">,</span>  <span class="c1"># Note the lowercase &#39;endpoint_url&#39;</span>
+            <span class="s1">&#39;access_key&#39;</span><span class="p">:</span> <span class="s1">&#39;minioadmin&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;secret_key&#39;</span><span class="p">:</span> <span class="s1">&#39;minioadmin&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;bucket_name&#39;</span><span class="p">:</span> <span class="s1">&#39;static&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;querystring_auth&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span>
+            <span class="s1">&#39;use_ssl&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span>  <span class="c1"># Set this to True if you use HTTPS</span>
+            <span class="s1">&#39;file_overwrite&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span>  <span class="c1"># Optional: set to False to avoid overwriting files with the same name</span>
+        <span class="p">},</span>
+    <span class="p">},</span>
+    <span class="s1">&#39;post_office_attachments&#39;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s2">&quot;BACKEND&quot;</span><span class="p">:</span> <span class="s2">&quot;storages.backends.s3boto3.S3Boto3Storage&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;OPTIONS&quot;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="s2">&quot;endpoint_url&quot;</span><span class="p">:</span> <span class="s1">&#39;http://138.232.3.68:9000&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;access_key&#39;</span><span class="p">:</span> <span class="s1">&#39;minioadmin&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;secret_key&#39;</span><span class="p">:</span> <span class="s1">&#39;minioadmin&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;bucket_name&#39;</span><span class="p">:</span> <span class="s1">&#39;attachments&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;querystring_auth&#39;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
+            <span class="s1">&#39;use_ssl&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span>
+            <span class="s1">&#39;file_overwrite&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+<span class="p">}</span>
 </pre></div>
 </div>
-<p>Alternatively you can also use the decorator <code class="docutils literal notranslate"><span class="pre">&#64;uwsgidecorators.cron(minute,</span> <span class="pre">hour,</span> <span class="pre">day,</span> <span class="pre">month,</span> <span class="pre">weekday)</span></code>.
-This will schedule a task at specific times. Use <code class="docutils literal notranslate"><span class="pre">-1</span></code> to signal any time, it corresponds to the <code class="docutils literal notranslate"><span class="pre">*</span></code> in cron.</p>
-<p>Please note that <code class="docutils literal notranslate"><span class="pre">uwsgidecorators</span></code> are available only, if the application has been started with uWSGI.
-However, Django’s internal <code class="docutils literal notranslate"><span class="pre">./manange.py</span> <span class="pre">runserver</span></code> also access this file, therefore wrap the block into an exception handler as shown above.</p>
-<p>This configuration can be useful in environments, such as Docker containers, where you don’t have a running cron-daemon.</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">default</span></code> storage is used to store <code class="docutils literal notranslate"><span class="pre">mediafiles</span></code>.
+In context of <code class="docutils literal notranslate"><span class="pre">boto3</span></code> it should always have <code class="docutils literal notranslate"><span class="pre">querystring_auth</span> <span class="pre">=</span> <span class="pre">False</span></code>. To ensure proper work of <code class="docutils literal notranslate"><span class="pre">ckeditor_uploader</span></code>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">staticfiles</span></code> storage is used to store project <code class="docutils literal notranslate"><span class="pre">staticfiles</span></code>.
+As project depends on <code class="docutils literal notranslate"><span class="pre">ckeditor</span></code> it should always have <code class="docutils literal notranslate"><span class="pre">querystring_auth</span> <span class="pre">=</span> <span class="pre">False</span></code>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">post_office_attachments</span></code> storage used to store ckeditor attachments. Defaults to <code class="docutils literal notranslate"><span class="pre">default_storage</span></code>.
+<strong>Strongly recommended to override it with any private storage.</strong></p></li>
+</ul>
 </section>
 
         </article>
@@ -285,23 +310,23 @@ However, Django’s internal <code class="docutils literal notranslate"><span cl
       <footer>
         
         <div class="related-pages">
-          <a class="next-page" href="signals.html">
+          <a class="next-page" href="celery.html">
               <div class="page-info">
                 <div class="context">
                   <span>Next</span>
                 </div>
-                <div class="title"><span class="section-number">9. </span>Signals</div>
+                <div class="title"><span class="section-number">7. </span>Integration with Celery</div>
               </div>
               <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
             </a>
-          <a class="prev-page" href="celery.html">
+          <a class="prev-page" href="settings.html">
               <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
               <div class="page-info">
                 <div class="context">
                   <span>Previous</span>
                 </div>
                 
-                <div class="title"><span class="section-number">7. </span>Integration with Celery</div>
+                <div class="title"><span class="section-number">5. </span>Settings</div>
                 
               </div>
             </a>

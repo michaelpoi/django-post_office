@@ -21,10 +21,7 @@ def inline_image(context, file):
 
     if context.get('media'):
         file_name = file.split(settings.MEDIA_URL[1:])[-1]
-        if host := context.get('host'):
-            return f"{host[:-1]}{settings.MEDIA_URL}{file_name}"
-        else:
-            raise ValueError('Unknown host')
+        return f"{settings.MEDIA_URL}{file_name}"
 
     assert hasattr(
         context.template, '_attached_images'

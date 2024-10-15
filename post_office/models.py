@@ -17,7 +17,7 @@ from .connections import connections
 from .logutils import setup_loghandlers
 from .parser import process_template
 from .sanitizer import clean_html
-from .settings import get_log_level, get_template_engine, get_languages_list
+from .settings import get_log_level, get_template_engine, get_languages_list, get_attachments_storage
 from .validators import validate_email_with_name, validate_template_syntax
 from django.template import loader
 
@@ -479,7 +479,7 @@ class Attachment(models.Model):
     A model describing an email attachment.
     """
 
-    file = models.FileField(_('File'), upload_to=get_upload_path)
+    file = models.FileField(_('File'), upload_to=get_upload_path, storage=get_attachments_storage)
     name = models.CharField(_('Name'), max_length=255, help_text=_('The original filename'))
     emails = models.ManyToManyField(EmailModel, related_name='attachments', verbose_name=_('Emails'), blank=True)
     mimetype = models.CharField(max_length=255, default='', blank=True)

@@ -18,13 +18,10 @@ def test_dry_run():
 
 @pytest.mark.django_db
 def test_media(settings):
-    context = Context({'media': True, "host": "https://example.com/"})
+    context = Context({'media': True})
     result = inline_image(context, str(settings.BASE_DIR / 'media/images/test.png'))
-    assert result == "https://example.com/media/images/test.png"
+    assert result == "/media/images/test.png"
 
-    with pytest.raises(ValueError):
-        context = Context({'media': True})
-        inline_image(context, str(settings.BASE_DIR / 'media/images/test.png'))
 
 
 @pytest.mark.django_db

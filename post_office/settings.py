@@ -1,6 +1,8 @@
 from pathlib import Path
 import warnings
 from django.template import loader
+from django.core.files.storage import default_storage
+from django.core.files.storage import storages, InvalidStorageError
 
 from django.conf import settings
 from django.core.cache import caches
@@ -10,6 +12,14 @@ from django.template import engines as template_engines
 
 import datetime
 
+
+def get_attachments_storage():
+    try:
+        storage = storages['post_office_attachments']
+    except InvalidStorageError:
+        storage = default_storage
+
+    return storage
 
 
 
@@ -93,8 +103,6 @@ def get_celery_enabled():
 
 def get_lock_file_name():
     return get_config().get('LOCK_FILE_NAME', 'post_office')
-
-
 
 
 def get_default_priority():

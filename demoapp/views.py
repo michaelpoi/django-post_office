@@ -122,7 +122,7 @@ def render_on_delivery(request):
         f.seek(0)
         mail.send(
             recipients=['Mykhailo.Poienko@uibk.ac.at'],
-            template='first_template',
+            template='test_custom',
             context={'new1': 'Bread is cheaper', 'new2': 'New Iphone is out', 'bad1': 'You can not afford that'},
             language='en',
             priority='low',

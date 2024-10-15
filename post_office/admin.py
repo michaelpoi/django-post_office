@@ -29,11 +29,11 @@ def get_message_preview(instance):
 get_message_preview.short_description = 'Message'
 
 
-def render_placeholder_content(content, host):
+def render_placeholder_content(content):
     """Render placeholders content to replace {% inline_image %} tags with actual images. """
     engine = get_template_engine()
     template = engine.from_string(f"{{% load post_office %}}{content}")
-    context = {'media': True, 'dry_run': False, 'host': host}
+    context = {'media': True, 'dry_run': False}
     return template.render(context)
 
 
@@ -110,16 +110,16 @@ class EmailContentInlineForm(forms.ModelForm):
         }
 
     def __init__(self, *args, **kwargs):
-        request = kwargs.pop('request', None)
-        if request:
-            host = request.build_absolute_uri('/')  # TODO: urllib
-        else:
-            host = 'http://127.0.0.1:8000'
+        # request = kwargs.pop('request', None)
+        # if request:
+        #     host = request.build_absolute_uri('/')  # TODO: urllib
+        # else:
+        #     host = 'http://127.0.0.1:8000'
 
         super().__init__(*args, **kwargs)
 
         if 'content' in self.initial:
-            self.initial['content'] = render_placeholder_content(self.initial['content'], host)
+            self.initial['content'] = render_placeholder_content(self.initial['content'])
         else:
             self.initial['content'] = f"NOT FILLED"
 
@@ -137,13 +137,13 @@ class EmailContentInlineForm(forms.ModelForm):
 
 class EmailContentInlineFormset(forms.BaseInlineFormSet):
     def __init__(self, *args, **kwargs):
-        request = self.request
+        #request = self.request
         super().__init__(*args, **kwargs)
 
-    def get_form_kwargs(self, index):
-        kwargs = super().get_form_kwargs(index)
-        kwargs['request'] = self.request
-        return kwargs
+    # def get_form_kwargs(self, index):
+    #     kwargs = super().get_form_kwargs(index)
+    #     kwargs['request'] = self.request
+    #     return kwargs
 
 
 class EmailContentInline(admin.TabularInline):

@@ -18,10 +18,9 @@ def test_message_preview():
 def test_render_placeholder_content(settings):
     rendered = render_placeholder_content(
         f"<img src='{{% inline_image '{settings.BASE_DIR}/media/images/logo.png' %}}'>",
-        host='https://example.com/',
     )
 
-    assert rendered == "<img src='https://example.com/media/images/logo.png'>"
+    assert rendered == "<img src='/media/images/logo.png'>"
 
 
 def test_media_to_tags(settings):

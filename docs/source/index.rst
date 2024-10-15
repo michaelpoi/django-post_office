@@ -18,6 +18,7 @@ post_office provides a set of powerful features, such as:
 - Scheduling support.
 - Works with task queues like RQ and Celery.
 - Uses multiprocessing to send emails in parallel.
+- Support of different storages.
 
 
 .. toctree::
@@ -30,6 +31,7 @@ post_office provides a set of powerful features, such as:
    quickstart
    usage
    settings
+   storages
    celery
    uwsgi
    signals

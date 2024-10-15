@@ -32,26 +32,65 @@ INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.staticfiles',
     'django.contrib.messages',
+    'storages',
     'ckeditor',
     'ckeditor_uploader',
     'post_office',
-    'storages',
 ]
 
+USE_S3 = False
+if USE_S3:
+    STORAGES = {
+        "default": {
+            "BACKEND": "storages.backends.s3boto3.S3Boto3Storage",
+            "OPTIONS": {
+                "endpoint_url": 'http://138.232.3.68:9000',  # Note the lowercase 'endpoint_url'
+                'access_key': 'minioadmin',
+                'secret_key': 'minioadmin',
+                'bucket_name': 'media',
+                'querystring_auth': False,
+                'use_ssl': False,  # Set this to True if you use HTTPS
+                'file_overwrite': False,  # Optional: set to False to avoid overwriting files with the same name
+            },
+        },
+        'staticfiles': {
+            "BACKEND": "storages.backends.s3boto3.S3Boto3Storage",
+            "OPTIONS": {
+                "endpoint_url": 'http://138.232.3.68:9000',  # Note the lowercase 'endpoint_url'
+                'access_key': 'minioadmin',
+                'secret_key': 'minioadmin',
+                'bucket_name': 'static',
+                'querystring_auth': False,
+                'use_ssl': False,  # Set this to True if you use HTTPS
+                'file_overwrite': False,  # Optional: set to False to avoid overwriting files with the same name
+            },
+        },
+        'post_office_attachments': {
+            "BACKEND": "storages.backends.s3boto3.S3Boto3Storage",
+            "OPTIONS": {
+                "endpoint_url": 'http://138.232.3.68:9000',
+                'access_key': 'minioadmin',
+                'secret_key': 'minioadmin',
+                'bucket_name': 'attachments',
+                'querystring_auth': True,
+                'use_ssl': False,
+                'file_overwrite': False,
+            }
+        }
+    }
+    MEDIA_URL = f"http://138.232.3.68:9000/media/"
+else:
+    MEDIA_URL = '/media/'
+    MEDIA_ROOT = BASE_DIR / 'workdir' / 'media'
+    STATIC_ROOT = BASE_DIR / 'staticfiles'
+
 # Media files settings
-# DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
-# AWS_S3_ENDPOINT_URL = 'http://138.232.3.68:9000'  # MinIO endpoint
-# AWS_ACCESS_KEY_ID = 'minioadmin'  # Default MinIO access key
-# AWS_SECRET_ACCESS_KEY = 'minioadmin'  # Default MinIO secret key
-# AWS_STORAGE_BUCKET_NAME = 'media'  # Your media bucket name
-# AWS_S3_USE_SSL = False  # Set this to True if using HTTPS
-# AWS_DEFAULT_ACL = 'public-read'
 
 # Set MEDIA_URL for media files
-# MEDIA_URL = f"{AWS_S3_ENDPOINT_URL}/{AWS_STORAGE_BUCKET_NAME}/"
 
-MEDIA_URL = '/media/'
-MEDIA_ROOT = BASE_DIR / 'workdir' / 'media'
+
+# MEDIA_URL = f'{AWS_S3_ENDPOINT_URL}/{AWS_STORAGE_BUCKET_NAME}/'
+# MEDIA_ROOT = BASE_DIR / 'workdir' / 'media'
 
 CKEDITOR_UPLOAD_PATH = 'ckeditor_uploads'
 
@@ -94,7 +133,6 @@ SILENCED_SYSTEM_CHECKS = ['admin.E408']
 # URL that handles the static files served from STATIC_ROOT.
 # Example: "http://media.lawrence.com/static/"
 STATIC_URL = '/static/'
-STATIC_ROOT = BASE_DIR / 'staticfiles'
 #CELERY_ENABLED = True
 EMAIL_BACKEND = 'post_office.EmailBackend'
 # EMAIL_HOST = 'smtp.mailgun.org'

@@ -252,9 +252,15 @@
         <article role="main" id="furo-main-content">
           <section id="storages">
 <h1><span class="section-number">6. </span>Storages<a class="headerlink" href="#storages" title="Link to this heading">¶</a></h1>
-<p><code class="docutils literal notranslate"><span class="pre">post_office</span></code> supports integration with <code class="docutils literal notranslate"><span class="pre">django-storages</span></code>. By default FileSystemStorage is used for storing post_office data.
+<p><code class="docutils literal notranslate"><span class="pre">post_office</span></code> supports integration with <a class="reference external" href="https://django-storages.readthedocs.io/en/latest/">django-storages</a>. By default FileSystemStorage is used for storing post_office data.
 You can override this behaviour by specifying <code class="docutils literal notranslate"><span class="pre">STORAGES</span></code> config in <code class="docutils literal notranslate"><span class="pre">settings.py</span></code>.</p>
-<p>For example for configuring <a class="reference external" href="https://github.com/minio/minio?tab=readme-ov-file">MiniIO</a> (compatible with S3 API). You can do:</p>
+<p>For example for configuring <a class="reference external" href="https://github.com/minio/minio?tab=readme-ov-file">MiniIO</a> (compatible with S3 API):</p>
+<p>Install django-storages and boto3:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">pip</span> <span class="n">install</span> <span class="n">django</span><span class="o">-</span><span class="n">storages</span> <span class="n">boto3</span>
+</pre></div>
+</div>
+<p>To your installed apps add <code class="docutils literal notranslate"><span class="pre">storages</span></code></p>
+<p>Define your storages:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">STORAGES</span> <span class="o">=</span> <span class="p">{</span>
     <span class="s2">&quot;default&quot;</span><span class="p">:</span> <span class="p">{</span>
         <span class="s2">&quot;BACKEND&quot;</span><span class="p">:</span> <span class="s2">&quot;storages.backends.s3boto3.S3Boto3Storage&quot;</span><span class="p">,</span>

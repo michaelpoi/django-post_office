@@ -2,10 +2,20 @@ Storages
 ===========
 
 
-``post_office`` supports integration with ``django-storages``. By default FileSystemStorage is used for storing post_office data.
+``post_office`` supports integration with `django-storages <https://django-storages.readthedocs.io/en/latest/>`_. By default FileSystemStorage is used for storing post_office data.
 You can override this behaviour by specifying ``STORAGES`` config in ``settings.py``.
 
-For example for configuring `MiniIO <https://github.com/minio/minio?tab=readme-ov-file>`_ (compatible with S3 API). You can do:
+For example for configuring `MiniIO <https://github.com/minio/minio?tab=readme-ov-file>`_ (compatible with S3 API):
+
+Install django-storages and boto3:
+
+.. code-block::
+
+    pip install django-storages boto3
+
+To your installed apps add ``storages``
+
+Define your storages:
 
 .. code-block:: python
 

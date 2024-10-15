@@ -381,7 +381,7 @@ CKEDITOR Placeholders editor
 
 When needed base file was created, users can create 2-phase templates using it. For it you should simply:
 
-1. Open admin interface and click create new Email Template.
+1. Open admin interface and click create new EmailMergeModel.
 2. Enter a name which will be used as an template alias for sending.
 3. Click "Save and continue editing" (This event is also triggered when a base file is changing)
 4. Forms for placeholders editing will appear with defaults, such as:

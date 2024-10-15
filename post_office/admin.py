@@ -17,7 +17,7 @@ from django.utils.safestring import mark_safe
 from django.db.models import Case, When, Value, IntegerField
 
 from .models import STATUS, Attachment, EmailModel, EmailMergeModel, Log, EmailAddress, PlaceholderContent, \
-    EmailMergeContentModel
+    EmailMergeContentModel, Recipient
 from .sanitizer import clean_html
 from .settings import get_default_language, get_template_engine, get_base_files
 
@@ -137,13 +137,7 @@ class EmailContentInlineForm(forms.ModelForm):
 
 class EmailContentInlineFormset(forms.BaseInlineFormSet):
     def __init__(self, *args, **kwargs):
-        #request = self.request
         super().__init__(*args, **kwargs)
-
-    # def get_form_kwargs(self, index):
-    #     kwargs = super().get_form_kwargs(index)
-    #     kwargs['request'] = self.request
-    #     return kwargs
 
 
 class EmailContentInline(admin.TabularInline):
@@ -185,6 +179,20 @@ class EmailContentInline(admin.TabularInline):
         return False
 
 
+class RecipientInline(admin.TabularInline):
+    model = Recipient
+    extra = 0
+
+    def has_add_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+
 class EmailAdmin(admin.ModelAdmin):
     list_display = [
         'truncated_message_id',
@@ -195,12 +203,10 @@ class EmailAdmin(admin.ModelAdmin):
         'scheduled_time',
         'use_template',
     ]
-    #filter_horizontal = ('to', 'cc', 'bcc')
     search_fields = ['to', 'subject']
     readonly_fields = ['message_id', 'language', 'render_subject', 'render_plaintext_body', 'render_html_body']
-    inlines = [AttachmentInline, LogInline]
+    inlines = [RecipientInline, AttachmentInline, LogInline, ]
     list_filter = ['status', 'template__name']
-    #formfield_overrides = {CommaSeparatedEmailField: {'widget': CommaSeparatedEmailWidget}}
     actions = [requeue]
 
     def get_urls(self):

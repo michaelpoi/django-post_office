@@ -140,7 +140,7 @@ class EmailModel(models.Model):
     number_of_retries = models.PositiveIntegerField(null=True, blank=True)
     headers = models.JSONField(_('Headers'), blank=True, null=True)
     template = models.ForeignKey(
-        'post_office.EmailMergeModel', blank=True, null=True, verbose_name=_('Email template'), on_delete=models.CASCADE
+        'post_office.EmailMergeModel', blank=True, null=True, verbose_name=_('EmailMergeModel'), on_delete=models.CASCADE
     )
     language = models.CharField(max_length=12)
     context = models.JSONField(_('Context'), blank=True, null=True)
@@ -363,8 +363,8 @@ class EmailMergeModel(models.Model):
 
     class Meta:
         app_label = 'post_office'
-        verbose_name = _('Email Template')
-        verbose_name_plural = _('Email Templates')
+        verbose_name = _('EmailMergeModel')
+        verbose_name_plural = _('EmailMergeModels')
         ordering = ['name']
 
     def __str__(self):

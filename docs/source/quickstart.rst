@@ -48,7 +48,7 @@ Register your template in ``settings.py``:
 
 You can use relative path from your ``templates`` folder or absolute file path.
 
-- Open your admin interface and create a new Email Template instance:
+- Open your admin interface and create a new EmailMergeModel instance:
     - Enter name. This will be used as identifier for your template and click "Save and continue editing".
     - Select Base File which you have created.
     - You will be requested to enter values to the placeholders you entered in the template. (``main`` in the example).

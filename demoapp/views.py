@@ -121,8 +121,8 @@ def render_on_delivery(request):
         f.write(b'Testing attachments')
         f.seek(0)
         mail.send(
-            recipients=['Mykhailo.Poienko@uibk.ac.at'],
-            template='test_custom',
+            recipients=['grisha@gmail.com', 'bob@gmail.com'],
+            template='conf',
             context={'new1': 'Bread is cheaper', 'new2': 'New Iphone is out', 'bad1': 'You can not afford that'},
             language='en',
             priority='low',

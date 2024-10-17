@@ -44,7 +44,7 @@ if USE_S3:
         "default": {
             "BACKEND": "storages.backends.s3boto3.S3Boto3Storage",
             "OPTIONS": {
-                "endpoint_url": 'http://138.232.3.68:9000',  # Note the lowercase 'endpoint_url'
+                "endpoint_url": 'http://127.0.0.1:9000',  # Note the lowercase 'endpoint_url'
                 'access_key': 'minioadmin',
                 'secret_key': 'minioadmin',
                 'bucket_name': 'media',
@@ -56,7 +56,7 @@ if USE_S3:
         'staticfiles': {
             "BACKEND": "storages.backends.s3boto3.S3Boto3Storage",
             "OPTIONS": {
-                "endpoint_url": 'http://138.232.3.68:9000',  # Note the lowercase 'endpoint_url'
+                "endpoint_url": 'http://127.0.0.1:9000',  # Note the lowercase 'endpoint_url'
                 'access_key': 'minioadmin',
                 'secret_key': 'minioadmin',
                 'bucket_name': 'static',
@@ -68,7 +68,7 @@ if USE_S3:
         'post_office_attachments': {
             "BACKEND": "storages.backends.s3boto3.S3Boto3Storage",
             "OPTIONS": {
-                "endpoint_url": 'http://138.232.3.68:9000',
+                "endpoint_url": 'http://127.0.0.1:9000',
                 'access_key': 'minioadmin',
                 'secret_key': 'minioadmin',
                 'bucket_name': 'attachments',
@@ -78,7 +78,7 @@ if USE_S3:
             }
         }
     }
-    MEDIA_URL = f"http://138.232.3.68:9000/media/"
+    MEDIA_URL = f"http://127.0.0.1:9000/media/"
 else:
     MEDIA_URL = '/media/'
     MEDIA_ROOT = BASE_DIR / 'workdir' / 'media'

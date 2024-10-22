@@ -3,12 +3,12 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-post_office documentation
+sendmail documentation
 =========================
 
 **Asynchronous email sending library for Django with enhanced templating options.**
 
-post_office provides a set of powerful features, such as:
+sendmail provides a set of powerful features, such as:
 
 - Handling millions of emails efficiently.
 - Allows you to send emails asynchronously.

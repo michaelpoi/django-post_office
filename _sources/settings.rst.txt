@@ -1,7 +1,7 @@
 Settings
 ============
 
-This section outlines all the settings and configurations that you can put in Django's ``settings.py`` to fine tune ``post-office``'s behavior.
+This section outlines all the settings and configurations that you can put in Django's ``settings.py`` to fine tune ``sendmail``'s behavior.
 
 Batch Size
 -------------
@@ -14,7 +14,7 @@ Defaults to ``100``.
 
 .. code-block:: python
 
-    POST_OFFICE = {
+    SENDMAIL = {
     ...
     'BATCH_SIZE': 100,
     }
@@ -28,7 +28,7 @@ If you send a large number of emails in a single batch on a slow connection, con
 
 .. code-block:: python
 
-    POST_OFFICE = {
+    SENDMAIL = {
         ...
         'BATCH_DELIVERY_TIMEOUT': 180,
     }
@@ -41,7 +41,7 @@ Integration with asynchronous email backends (e.g. based on Celery) becomes triv
 
 .. code-block:: python
 
-    POST_OFFICE = {
+    SENDMAIL = {
     ...
     'DEFAULT_PRIORITY': 'now',
     }
@@ -53,13 +53,13 @@ The SMTP standard requires that each email contains a unique `Message-ID <https:
 Typically the Message-ID consists of two parts separated by the ``@`` symbol: The left part is a generated pseudo random number.
 The right part is a constant string, typically denoting the full qualified domain name of the sending server.
 
-By default, **Django** generates such a Message-ID during email delivery. Since django-post_office keeps track of all delivered emails, it can be very useful to create and store this Message-ID while creating each email in the database. This identifier then can be looked up in the Django admin backend.
+By default, **Django** generates such a Message-ID during email delivery. Since ``django-sendmail`` keeps track of all delivered emails, it can be very useful to create and store this Message-ID while creating each email in the database. This identifier then can be looked up in the Django admin backend.
 
-To enable this feature, add this to your Post-Office settings:
+To enable this feature, add this to your sendmail settings:
 
 .. code-block:: python
 
-    POST_OFFICE = {
+    SENDMAIL = {
     ...
     'MESSAGE_ID_ENABLED': True,
     }
@@ -68,13 +68,13 @@ It can further be fine tuned, using for instance another full qualified domain n
 
 .. code-block:: python
 
-    POST_OFFICE = {
+    SENDMAIL = {
         ...
         'MESSAGE_ID_ENABLED': True,
         'MESSAGE_ID_FQDN': 'example.com',
     }
 
-Otherwise, if ``MESSAGE_ID_FQDN`` is unset (the default), **django-post_office** falls back to the DNS name of the server,
+Otherwise, if ``MESSAGE_ID_FQDN`` is unset (the default), ``django-sendmail`` falls back to the DNS name of the server,
 which is determined by the network settings of the host.
 
 Retry
@@ -85,7 +85,7 @@ You can also configure failed deliveries to be retried after a specific time int
 
 .. code-block:: python
 
-    POST_OFFICE = {
+    SENDMAIL = {
         ...
         'MAX_RETRIES': 4,
         'RETRY_INTERVAL': datetime.timedelta(minutes=15),  # Schedule to be retried 15 minutes later
@@ -99,7 +99,7 @@ This behavior can be changed by setting ``LOG_LEVEL``.
 
 .. code-block:: python
 
-    POST_OFFICE = {
+    SENDMAIL = {
         ...
         'LOG_LEVEL': 1, # Log only failed deliveries
     }
@@ -118,7 +118,7 @@ For example, if you want to send queued emails in FIFO order :
 
 .. code-block:: python
 
-    POST_OFFICE = {
+    SENDMAIL = {
         ...
         'SENDING_ORDER': ['created'],
     }
@@ -126,7 +126,7 @@ For example, if you want to send queued emails in FIFO order :
 Logging
 ------------
 
-You can configure ``post-office``'s logging from Django's ``settings.py``. For example:
+You can configure ``sendmail``'s logging from Django's ``settings.py``. For example:
 
 .. code-block:: python
 
@@ -134,16 +134,16 @@ You can configure ``post-office``'s logging from Django's ``settings.py``. For e
         "version": 1,
         "disable_existing_loggers": False,
         "formatters": {
-            "post_office": {
+            "sendmail": {
                 "format": "[%(levelname)s]%(asctime)s PID %(process)d: %(message)s",
                 "datefmt": "%d-%m-%Y %H:%M:%S",
             },
         },
         "handlers": {
-            "post_office": {
+            "sendmail": {
                 "level": "DEBUG",
                 "class": "logging.StreamHandler",
-                "formatter": "post_office"
+                "formatter": "sendmail"
             },
             # If you use sentry for logging
             'sentry': {
@@ -152,8 +152,8 @@ You can configure ``post-office``'s logging from Django's ``settings.py``. For e
             },
         },
         'loggers': {
-            "post_office": {
-                "handlers": ["post_office", "sentry"],
+            "sendmail": {
+                "handlers": ["sendmail", "sentry"],
                 "level": "INFO"
             },
         },

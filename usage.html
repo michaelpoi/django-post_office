@@ -6,7 +6,7 @@
 <link rel="index" title="Index" href="genindex.html" /><link rel="search" title="Search" href="search.html" /><link rel="next" title="5. Settings" href="settings.html" /><link rel="prev" title="3. Quickstart" href="quickstart.html" />
 
     <!-- Generated with Sphinx 8.1.3 and Furo 2024.08.06 -->
-        <title>4. Usage - post_office documentation</title>
+        <title>4. Usage - sendmail documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=a746c00c" />
     <link rel="stylesheet" type="text/css" href="_static/styles/furo.css?v=354aac6f" />
     <link rel="stylesheet" type="text/css" href="_static/styles/furo-extensions.css?v=302659d7" />
@@ -166,7 +166,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="index.html"><div class="brand">post_office  documentation</div></a>
+      <a href="index.html"><div class="brand">sendmail  documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -190,7 +190,7 @@
       <div class="sidebar-sticky"><a class="sidebar-brand" href="index.html">
   
   
-  <span class="sidebar-brand-text">post_office  documentation</span>
+  <span class="sidebar-brand-text">sendmail  documentation</span>
   
 </a><form class="sidebar-search-container" method="get" action="search.html" role="search">
   <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
@@ -356,14 +356,14 @@ It is used to send <strong>one</strong> email to a list of recipients. It takes 
 <tr class="row-even"><td><p>backend</p></td>
 <td><p>str</p></td>
 <td><p>No</p></td>
-<td><p>Alias of the backend you want to use from <code class="docutils literal notranslate"><span class="pre">settings.POST_OFFICE['BACKENDS']</span></code>. Defaults to <code class="docutils literal notranslate"><span class="pre">default</span></code></p></td>
+<td><p>Alias of the backend you want to use from <code class="docutils literal notranslate"><span class="pre">settings.SENDMAIL['BACKENDS']</span></code>. Defaults to <code class="docutils literal notranslate"><span class="pre">default</span></code></p></td>
 </tr>
 </tbody>
 </table>
 </div>
 <p><strong>Note:</strong> Some arguments can take strings with special variables allowed.
 Examples of special variables include: <code class="docutils literal notranslate"><span class="pre">#var1#</span></code>, <code class="docutils literal notranslate"><span class="pre">#recipient.first_name#</span></code>, etc.</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">post_office</span> <span class="kn">import</span> <span class="n">mail</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">sendmail</span> <span class="kn">import</span> <span class="n">mail</span>
 
 <span class="n">mail</span><span class="o">.</span><span class="n">send</span><span class="p">(</span>
     <span class="p">[</span><span class="n">EmailAddress</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="n">email</span><span class="o">=</span><span class="s1">&#39;peter@gmail.com&#39;</span><span class="p">,</span> <span class="n">first_name</span><span class="o">=</span><span class="s1">&#39;Peter&#39;</span><span class="p">),</span> <span class="s1">&#39;lena@email.com&#39;</span><span class="p">,</span> <span class="s1">&#39;ben@yahoo.com&#39;</span><span class="p">],</span>
@@ -379,13 +379,13 @@ Examples of special variables include: <code class="docutils literal notranslate
 </div>
 <p>The command above will queue 1 email specified lists of recipients. HTML message will be equal to Hi <strong>there</strong>!</p>
 <p>Passing <code class="docutils literal notranslate"><span class="pre">now</span></code> as the priority allows to bypass the queue and deliver the email right away.</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">post_office</span> <span class="kn">import</span> <span class="n">mail</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">sendmail</span> <span class="kn">import</span> <span class="n">mail</span>
 
  <span class="n">mail</span><span class="o">.</span><span class="n">send</span><span class="p">(</span>
      <span class="s1">&#39;recipient@example.com&#39;</span><span class="p">,</span> <span class="c1"># List of email addresses or list of EmailAddress also accepted</span>
      <span class="s1">&#39;from@example.com&#39;</span><span class="p">,</span>
      <span class="n">template</span><span class="o">=</span><span class="s1">&#39;your-template-here&#39;</span><span class="p">,</span> <span class="c1"># Could be an EmailTemplate instance or name</span>
-     <span class="n">context</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;generator&#39;</span><span class="p">:</span> <span class="s1">&#39;post_office&#39;</span><span class="p">,</span>
+     <span class="n">context</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;generator&#39;</span><span class="p">:</span> <span class="s1">&#39;sendmail&#39;</span><span class="p">,</span>
      <span class="s1">&#39;username&#39;</span><span class="p">:</span> <span class="s1">&#39;michaelpoi&#39;</span><span class="p">,},</span> <span class="c1"># Context is used to fill both {{ var }} in html and #var# in ckeditor.</span>
      <span class="n">language</span><span class="o">=</span><span class="s1">&#39;en&#39;</span><span class="p">,</span> <span class="c1"># If not specified settings.LANGUAGE_CODE is used,</span>
      <span class="n">priority</span><span class="o">=</span><span class="s1">&#39;now&#39;</span>
@@ -395,7 +395,7 @@ Examples of special variables include: <code class="docutils literal notranslate
 </section>
 <section id="emailaddress-and-recipient-context">
 <h2><span class="section-number">4.2. </span>EmailAddress and recipient context<a class="headerlink" href="#emailaddress-and-recipient-context" title="Link to this heading">¶</a></h2>
-<p>In the post office recipients are stored as EmailAddress model instances. This was done to allow personalization of emails.
+<p>In the sendmail recipients are stored as EmailAddress model instances. This was done to allow personalization of emails.
 EmailAddress model has the following attributes:</p>
 <div class="table-wrapper colwidths-given docutils container" id="id2">
 <table class="docutils align-default" id="id2">
@@ -488,8 +488,8 @@ For example you can add to html template something like this:</p>
 </div>
 <p>This way you can achieve personalized greeting for each recipient when using <a class="reference internal" href="#mail-send-many"><span class="std std-ref">mail.send_many()</span></a>.</p>
 <p>You can use this context when filling subject, content or placeholders values in CKEditor fields as well. For example:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">post_office</span> <span class="kn">import</span> <span class="n">mail</span>
-<span class="kn">from</span> <span class="nn">post_office.models</span> <span class="kn">import</span> <span class="n">EmailAddress</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">sendmail</span> <span class="kn">import</span> <span class="n">mail</span>
+<span class="kn">from</span> <span class="nn">sendmail.models</span> <span class="kn">import</span> <span class="n">EmailAddress</span>
 
 <span class="n">john</span> <span class="o">=</span> <span class="n">EmailAddress</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="n">email</span><span class="o">=</span><span class="s1">&#39;john.doe@email.com&#39;</span><span class="p">,</span>
                                    <span class="n">first_name</span><span class="o">=</span><span class="s1">&#39;John&#39;</span><span class="p">,</span>
@@ -517,8 +517,8 @@ Using <code class="docutils literal notranslate"><span class="pre">mail.send_man
 </ul>
 <p>Other parameters are shared among generated emails.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">tempfile</span>
-<span class="kn">from</span> <span class="nn">post_office</span> <span class="kn">import</span> <span class="n">mail</span>
-<span class="kn">from</span> <span class="nn">post_office.models</span> <span class="kn">import</span> <span class="n">EmailAddress</span>
+<span class="kn">from</span> <span class="nn">sendmail</span> <span class="kn">import</span> <span class="n">mail</span>
+<span class="kn">from</span> <span class="nn">sendmail.models</span> <span class="kn">import</span> <span class="n">EmailAddress</span>
 
 <span class="n">lena</span> <span class="o">=</span> <span class="n">EmailAddress</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="n">email</span><span class="o">=</span><span class="s1">&#39;lena@email.com&#39;</span><span class="p">,</span> <span class="n">first_name</span><span class="o">=</span><span class="s1">&#39;Lena&#39;</span><span class="p">)</span>
 <span class="n">ben</span> <span class="o">=</span> <span class="n">EmailAddress</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="n">email</span><span class="o">=</span><span class="s1">&#39;ben@yahoo.com&#39;</span><span class="p">,</span> <span class="n">first_name</span><span class="o">=</span><span class="s1">&#39;Ben&#39;</span><span class="p">,</span> <span class="n">is_blocked</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
@@ -544,7 +544,7 @@ Both emails have the same attachment.</p>
 </section>
 <section id="templating">
 <h2><span class="section-number">4.4. </span>Templating<a class="headerlink" href="#templating" title="Link to this heading">¶</a></h2>
-<p>post_office introduces a two-phase approach for creating email templates. This process ensures a flexible and powerful way to handle email templates, leveraging both HTML expertise and user-friendly editing tools.</p>
+<p>sendmail introduces a two-phase approach for creating email templates. This process ensures a flexible and powerful way to handle email templates, leveraging both HTML expertise and user-friendly editing tools.</p>
 <ol class="arabic simple">
 <li><dl class="simple">
 <dt><a class="reference internal" href="#html-base-file-creation"><span class="std std-ref">HTML Base File Creation</span></a></dt><dd><p>In the first phase, experienced email HTML developers create base files while adhering to the specific limitations of rendering emails in various clients. During this phase, developers can:</p>
@@ -572,11 +572,11 @@ Both emails have the same attachment.</p>
 <section id="html-base-file-creation">
 <h3><span class="section-number">4.4.1. </span>HTML Base File Creation<a class="headerlink" href="#html-base-file-creation" title="Link to this heading">¶</a></h3>
 <p>Base Files should be stored in <code class="docutils literal notranslate"><span class="pre">settings.TEMPLATES['DIRS']</span> <span class="pre">/</span> <span class="pre">'email'</span></code>.
-post_office looks for email folders in all specified DIRS.</p>
-<p>In each of your base files you should load post_office to use custom tags, which can be done as following:</p>
-<p><code class="docutils literal notranslate"><span class="pre">{%</span> <span class="pre">load</span> <span class="pre">post_office</span> <span class="pre">%}</span></code></p>
+sendmail looks for email folders in all specified DIRS.</p>
+<p>In each of your base files you should load sendmail to use custom tags, which can be done as following:</p>
+<p><code class="docutils literal notranslate"><span class="pre">{%</span> <span class="pre">load</span> <span class="pre">sendmail</span> <span class="pre">%}</span></code></p>
 <p>In your templates you can specify variables to be filled with the context:</p>
-<div class="highlight-django notranslate"><div class="highlight"><pre><span></span><span class="cp">{%</span> <span class="k">load</span> <span class="nv">post_office</span> <span class="cp">%}</span>
+<div class="highlight-django notranslate"><div class="highlight"><pre><span></span><span class="cp">{%</span> <span class="k">load</span> <span class="nv">sendmail</span> <span class="cp">%}</span>
 
 <span class="x">&lt;!DOCTYPE html&gt;</span>
 <span class="x">&lt;html lang=&quot;en&quot;&gt;</span>
@@ -594,7 +594,7 @@ post_office looks for email folders in all specified DIRS.</p>
 <p>username variable is expected then to be filled with <a class="reference internal" href="#mail-send"><span class="std std-ref">mail.send()</span></a> or <a class="reference internal" href="#mail-send-many"><span class="std std-ref">mail.send_many()</span></a> context. If it wont be passed user
 wont see any errors. You can still handle this using django build-in filters, for example:</p>
 <p><code class="docutils literal notranslate"><span class="pre">Hello,</span> <span class="pre">{{</span> <span class="pre">username|default:'user'}}</span></code></p>
-<p>In your templates you may want to use placeholders inside conditions, loops or includes. With post_office it is possible.</p>
+<p>In your templates you may want to use placeholders inside conditions, loops or includes. With sendmail it is possible.</p>
 <p>main.html</p>
 <div class="highlight-django notranslate"><div class="highlight"><pre><span></span><span class="x">&lt;html lang=&quot;en&quot;&gt;</span>
 <span class="x">&lt;head&gt;</span>
@@ -615,7 +615,7 @@ wont see any errors. You can still handle this using django build-in filters, fo
 </pre></div>
 </div>
 <p>in.html</p>
-<div class="highlight-django notranslate"><div class="highlight"><pre><span></span><span class="cp">{%</span> <span class="k">load</span> <span class="nv">post_office</span> <span class="cp">%}</span>
+<div class="highlight-django notranslate"><div class="highlight"><pre><span></span><span class="cp">{%</span> <span class="k">load</span> <span class="nv">sendmail</span> <span class="cp">%}</span>
 
 <span class="x">&lt;!DOCTYPE html&gt;</span>
 <span class="x">&lt;html lang=&quot;en&quot;&gt;</span>
@@ -639,7 +639,7 @@ wont see any errors. You can still handle this using django build-in filters, fo
 </section>
 <section id="inlines">
 <h3><span class="section-number">4.4.2. </span>Inlines<a class="headerlink" href="#inlines" title="Link to this heading">¶</a></h3>
-<p>You may want to use embed images to your templates. This can be done using post_office <code class="docutils literal notranslate"><span class="pre">{%</span> <span class="pre">inline_image</span> <span class="pre">%}</span></code> template tag.</p>
+<p>You may want to use embed images to your templates. This can be done using sendmail <code class="docutils literal notranslate"><span class="pre">{%</span> <span class="pre">inline_image</span> <span class="pre">%}</span></code> template tag.</p>
 <p><code class="docutils literal notranslate"><span class="pre">&lt;img</span> <span class="pre">src=&quot;{%</span> <span class="pre">inline_image</span> <span class="pre">'images/logo.png'</span> <span class="pre">%}&quot;</span> <span class="pre">alt=&quot;&quot;</span> <span class="pre">width=&quot;100&quot;&gt;</span></code></p>
 <p>You can specify either alias or absolute path to your image. Alias are resolved in the following order:</p>
 <ol class="arabic simple">
@@ -667,7 +667,7 @@ wont see any errors. You can still handle this using django build-in filters, fo
 </section>
 <section id="multilingual-templates">
 <h2><span class="section-number">4.5. </span>Multilingual Templates<a class="headerlink" href="#multilingual-templates" title="Link to this heading">¶</a></h2>
-<p>In post_office you can create and send templates in multiple languages. For this simply edit your <code class="docutils literal notranslate"><span class="pre">settings.py</span></code>:</p>
+<p>In sendmail you can create and send templates in multiple languages. For this simply edit your <code class="docutils literal notranslate"><span class="pre">settings.py</span></code>:</p>
 <p>Default templates language can be changed in <code class="docutils literal notranslate"><span class="pre">settings.LANGUAGE_CODE</span></code></p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">LANGUAGE_CODE</span> <span class="o">=</span> <span class="s1">&#39;en&#39;</span>
 </pre></div>
@@ -688,8 +688,8 @@ wont see any errors. You can still handle this using django build-in filters, fo
 <p>If <a class="reference internal" href="#mail-send-many"><span class="std std-ref">mail.send_many()</span></a> is called with defined language then all the emails will be forced to that language.
 Otherwise each email is translated to recipient <code class="docutils literal notranslate"><span class="pre">preferred</span> <span class="pre">language</span></code> if it is available.
 Extra attachments are also translated to this language.</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">post_office.mail</span> <span class="kn">import</span> <span class="n">send_many</span>
-<span class="kn">from</span> <span class="nn">post_office.models</span> <span class="kn">import</span> <span class="n">EmailAddress</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">sendmail.mail</span> <span class="kn">import</span> <span class="n">send_many</span>
+<span class="kn">from</span> <span class="nn">sendmail.models</span> <span class="kn">import</span> <span class="n">EmailAddress</span>
 
 <span class="n">en_recipient</span> <span class="o">=</span> <span class="n">EmailAddress</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="n">email</span><span class="o">=</span><span class="s1">&#39;en@gmail.com&#39;</span><span class="p">,</span> <span class="n">first_name</span><span class="o">=</span><span class="s1">&#39;John&#39;</span><span class="p">,</span> <span class="n">preferred_language</span><span class="o">=</span><span class="s1">&#39;en&#39;</span><span class="p">)</span>
 <span class="n">de_recipient</span> <span class="o">=</span> <span class="n">EmailAddress</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="n">email</span><span class="o">=</span><span class="s1">&#39;de@gmail.com&#39;</span><span class="p">,</span> <span class="n">first_name</span><span class="o">=</span><span class="s1">&#39;Ali&#39;</span><span class="p">,</span> <span class="n">preferred_language</span><span class="o">=</span><span class="s1">&#39;de&#39;</span><span class="p">)</span>
@@ -698,8 +698,8 @@ Extra attachments are also translated to this language.</p>
 </pre></div>
 </div>
 <p>In this case de_recipient also gets English copy of an email. To use preferred language you can do something like this:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">post_office.mail</span> <span class="kn">import</span> <span class="n">send_many</span>
-<span class="kn">from</span> <span class="nn">post_office.models</span> <span class="kn">import</span> <span class="n">EmailAddress</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">sendmail.mail</span> <span class="kn">import</span> <span class="n">send_many</span>
+<span class="kn">from</span> <span class="nn">sendmail.models</span> <span class="kn">import</span> <span class="n">EmailAddress</span>
 
 <span class="n">en_recipient</span> <span class="o">=</span> <span class="n">EmailAddress</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="n">email</span><span class="o">=</span><span class="s1">&#39;en@gmail.com&#39;</span><span class="p">,</span> <span class="n">first_name</span><span class="o">=</span><span class="s1">&#39;John&#39;</span><span class="p">,</span> <span class="n">preferred_language</span><span class="o">=</span><span class="s1">&#39;en&#39;</span><span class="p">)</span>
 <span class="n">de_recipient</span> <span class="o">=</span> <span class="n">EmailAddress</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="n">email</span><span class="o">=</span><span class="s1">&#39;de@gmail.com&#39;</span><span class="p">,</span> <span class="n">first_name</span><span class="o">=</span><span class="s1">&#39;Ali&#39;</span><span class="p">,</span> <span class="n">preferred_language</span><span class="o">=</span><span class="s1">&#39;de&#39;</span><span class="p">)</span>
@@ -711,10 +711,10 @@ Extra attachments are also translated to this language.</p>
 </section>
 <section id="custom-email-backends">
 <h2><span class="section-number">4.6. </span>Custom Email Backends<a class="headerlink" href="#custom-email-backends" title="Link to this heading">¶</a></h2>
-<p>By default post_office uses <code class="docutils literal notranslate"><span class="pre">django.core.mail.backends.smtp.EmailBackend</span></code>.
-If you want to use other email backends, you can change it by configuring <code class="docutils literal notranslate"><span class="pre">settings.POST_OFFICE['BACKENDS']</span></code></p>
+<p>By default sendmail uses <code class="docutils literal notranslate"><span class="pre">django.core.mail.backends.smtp.EmailBackend</span></code>.
+If you want to use other email backends, you can change it by configuring <code class="docutils literal notranslate"><span class="pre">settings.SENDMAIL['BACKENDS']</span></code></p>
 <p>For example to use <a class="reference external" href="https://github.com/django-ses/django-ses">django-ses</a> you can do:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">POST_OFFICE</span> <span class="o">=</span> <span class="p">{</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">SENDMAIL</span> <span class="o">=</span> <span class="p">{</span>
 <span class="c1"># other settings</span>
 <span class="s1">&#39;BACKENDS&#39;</span><span class="p">:</span> <span class="p">{</span>
     <span class="s1">&#39;default&#39;</span><span class="p">:</span> <span class="s1">&#39;django.core.mail.backends.smtp.EmailBackend&#39;</span><span class="p">,</span>
@@ -726,7 +726,7 @@ If you want to use other email backends, you can change it by configuring <code 
 <p>Now when you use <a class="reference internal" href="#mail-send"><span class="std std-ref">mail.send()</span></a> or <a class="reference internal" href="#mail-send-many"><span class="std std-ref">mail.send_many()</span></a> you can which backend will be used for sending by specifying
 <code class="docutils literal notranslate"><span class="pre">backend</span></code> argument. If <code class="docutils literal notranslate"><span class="pre">backend</span></code> is not specified <code class="docutils literal notranslate"><span class="pre">default</span></code> will be used.</p>
 <p><strong>Note</strong> For <a class="reference internal" href="#mail-send-many"><span class="std std-ref">mail.send_many()</span></a> all generated emails will inherit <code class="docutils literal notranslate"><span class="pre">backend</span></code> argument.</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">post_office</span> <span class="kn">import</span> <span class="n">mail</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">sendmail</span> <span class="kn">import</span> <span class="n">mail</span>
 
 <span class="n">mail</span><span class="o">.</span><span class="n">send</span><span class="p">(</span>
 <span class="p">[</span><span class="s1">&#39;recipient@example.com&#39;</span><span class="p">],</span>
@@ -736,7 +736,7 @@ If you want to use other email backends, you can change it by configuring <code 
 </pre></div>
 </div>
 <p>Resulting email will be sent using <code class="docutils literal notranslate"><span class="pre">default</span></code> backend.</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">post_office</span> <span class="kn">import</span> <span class="n">mail</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">sendmail</span> <span class="kn">import</span> <span class="n">mail</span>
 
 <span class="n">mail</span><span class="o">.</span><span class="n">send_many</span><span class="p">(</span>
 <span class="n">recipients</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;recipient@example.com&#39;</span><span class="p">,</span> <span class="s1">&#39;next@gmail.com&#39;</span><span class="p">],</span>
@@ -751,7 +751,7 @@ If you want to use other email backends, you can change it by configuring <code 
 <section id="management-commands">
 <h2><span class="section-number">4.7. </span>Management commands<a class="headerlink" href="#management-commands" title="Link to this heading">¶</a></h2>
 <ul class="simple">
-<li><p>send_queued_mail - send queued emails, those are not successfully sent are marked as failed or requeued depending on settings. &lt;link&gt;</p></li>
+<li><p>send_queued_mail - send queued emails, those are not successfully sent are marked as failed or requeued depending on <a class="reference internal" href="settings.html#settings"><span class="std std-ref">Settings</span></a>.</p></li>
 </ul>
 <div class="table-wrapper colwidths-given docutils container" id="id3">
 <table class="docutils align-default" id="id3">
@@ -804,7 +804,7 @@ If you want to use other email backends, you can change it by configuring <code 
 </table>
 </div>
 <ul class="simple">
-<li><p>dblocks - when <code class="docutils literal notranslate"><span class="pre">post_office</span></code> is sending emails using <code class="docutils literal notranslate"><span class="pre">send_queued_mail</span></code> management command it blocks the entire database.
+<li><p>dblocks - when <code class="docutils literal notranslate"><span class="pre">sendmail</span></code> is sending emails using <code class="docutils literal notranslate"><span class="pre">send_queued_mail</span></code> management command it blocks the entire database.
 You can use this command to manage these DB locks.</p></li>
 </ul>
 <div class="table-wrapper colwidths-given docutils container" id="id5">

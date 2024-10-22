@@ -5,7 +5,7 @@ Send a simple email is really easy:
 
 .. code-block:: python
 
-    from post_office import mail
+    from sendmail import mail
 
     mail.send(
         'recipient@example.com', # List of email addresses or list of EmailAddress also accepted
@@ -21,7 +21,7 @@ If you want to use templates:
 
 .. code-block:: django
 
-    {% load post_office %}
+    {% load sendmail %}
 
     <!DOCTYPE html>
     <html lang="en">
@@ -39,7 +39,7 @@ Register your template in ``settings.py``:
 
 .. code-block:: python
 
-    POST_OFFICE = {
+    SENDMAIL = {
         ...
         'BASE_FILES': [
             ('your-file/path', _('Your-Name')),
@@ -66,13 +66,13 @@ You can use relative path from your ``templates`` folder or absolute file path.
 
 .. code-block:: python
 
-    from post_office import mail
+    from sendmail import mail
 
     mail.send(
         'recipient@example.com', # List of email addresses or list of EmailAddress also accepted
         'from@example.com',
         template='your-template-here', # Could be an EmailTemplate instance or name
-        context={'generator': 'post_office',
+        context={'generator': 'sendmail',
         'username': 'michaelpoi',}, # Context is used to fill both {{ var }} in html and #var# in ckeditor.
         language='en' # If not specified settings.LANGUAGE_CODE is used
     )

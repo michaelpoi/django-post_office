@@ -6,7 +6,7 @@
 <link rel="index" title="Index" href="genindex.html" /><link rel="search" title="Search" href="search.html" /><link rel="next" title="7. Integration with Celery" href="celery.html" /><link rel="prev" title="5. Settings" href="settings.html" />
 
     <!-- Generated with Sphinx 8.1.3 and Furo 2024.08.06 -->
-        <title>6. Storages - post_office documentation</title>
+        <title>6. Storages - sendmail documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=a746c00c" />
     <link rel="stylesheet" type="text/css" href="_static/styles/furo.css?v=354aac6f" />
     <link rel="stylesheet" type="text/css" href="_static/styles/furo-extensions.css?v=302659d7" />
@@ -166,7 +166,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="index.html"><div class="brand">post_office  documentation</div></a>
+      <a href="index.html"><div class="brand">sendmail  documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -190,7 +190,7 @@
       <div class="sidebar-sticky"><a class="sidebar-brand" href="index.html">
   
   
-  <span class="sidebar-brand-text">post_office  documentation</span>
+  <span class="sidebar-brand-text">sendmail  documentation</span>
   
 </a><form class="sidebar-search-container" method="get" action="search.html" role="search">
   <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
@@ -252,7 +252,7 @@
         <article role="main" id="furo-main-content">
           <section id="storages">
 <h1><span class="section-number">6. </span>Storages<a class="headerlink" href="#storages" title="Link to this heading">¶</a></h1>
-<p><code class="docutils literal notranslate"><span class="pre">post_office</span></code> supports integration with <a class="reference external" href="https://django-storages.readthedocs.io/en/latest/">django-storages</a>. By default FileSystemStorage is used for storing post_office data.
+<p><code class="docutils literal notranslate"><span class="pre">sendmail</span></code> supports integration with <a class="reference external" href="https://django-storages.readthedocs.io/en/latest/">django-storages</a>. By default FileSystemStorage is used for storing sendmail data.
 You can override this behaviour by specifying <code class="docutils literal notranslate"><span class="pre">STORAGES</span></code> config in <code class="docutils literal notranslate"><span class="pre">settings.py</span></code>.</p>
 <p>For example for configuring <a class="reference external" href="https://github.com/minio/minio?tab=readme-ov-file">MiniIO</a> (compatible with S3 API):</p>
 <p>Install django-storages and boto3:</p>
@@ -286,7 +286,7 @@ You can override this behaviour by specifying <code class="docutils literal notr
             <span class="s1">&#39;file_overwrite&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span>  <span class="c1"># Optional: set to False to avoid overwriting files with the same name</span>
         <span class="p">},</span>
     <span class="p">},</span>
-    <span class="s1">&#39;post_office_attachments&#39;</span><span class="p">:</span> <span class="p">{</span>
+    <span class="s1">&#39;sendmail_attachments&#39;</span><span class="p">:</span> <span class="p">{</span>
         <span class="s2">&quot;BACKEND&quot;</span><span class="p">:</span> <span class="s2">&quot;storages.backends.s3boto3.S3Boto3Storage&quot;</span><span class="p">,</span>
         <span class="s2">&quot;OPTIONS&quot;</span><span class="p">:</span> <span class="p">{</span>
             <span class="s2">&quot;endpoint_url&quot;</span><span class="p">:</span> <span class="s1">&#39;http://138.232.3.68:9000&#39;</span><span class="p">,</span>
@@ -306,7 +306,7 @@ You can override this behaviour by specifying <code class="docutils literal notr
 In context of <code class="docutils literal notranslate"><span class="pre">boto3</span></code> it should always have <code class="docutils literal notranslate"><span class="pre">querystring_auth</span> <span class="pre">=</span> <span class="pre">False</span></code>. To ensure proper work of <code class="docutils literal notranslate"><span class="pre">ckeditor_uploader</span></code>.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">staticfiles</span></code> storage is used to store project <code class="docutils literal notranslate"><span class="pre">staticfiles</span></code>.
 As project depends on <code class="docutils literal notranslate"><span class="pre">ckeditor</span></code> it should always have <code class="docutils literal notranslate"><span class="pre">querystring_auth</span> <span class="pre">=</span> <span class="pre">False</span></code>.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">post_office_attachments</span></code> storage used to store ckeditor attachments. Defaults to <code class="docutils literal notranslate"><span class="pre">default_storage</span></code>.
+<li><p><code class="docutils literal notranslate"><span class="pre">sendmail_attachments</span></code> storage used to store ckeditor attachments. Defaults to <code class="docutils literal notranslate"><span class="pre">default_storage</span></code>.
 <strong>Strongly recommended to override it with any private storage.</strong></p></li>
 </ul>
 </section>

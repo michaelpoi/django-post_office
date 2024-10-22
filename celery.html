@@ -6,7 +6,7 @@
 <link rel="index" title="Index" href="genindex.html" /><link rel="search" title="Search" href="search.html" /><link rel="next" title="8. Integration with uWSGI" href="uwsgi.html" /><link rel="prev" title="6. Storages" href="storages.html" />
 
     <!-- Generated with Sphinx 8.1.3 and Furo 2024.08.06 -->
-        <title>7. Integration with Celery - post_office documentation</title>
+        <title>7. Integration with Celery - sendmail documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=a746c00c" />
     <link rel="stylesheet" type="text/css" href="_static/styles/furo.css?v=354aac6f" />
     <link rel="stylesheet" type="text/css" href="_static/styles/furo-extensions.css?v=302659d7" />
@@ -166,7 +166,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="index.html"><div class="brand">post_office  documentation</div></a>
+      <a href="index.html"><div class="brand">sendmail  documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -190,7 +190,7 @@
       <div class="sidebar-sticky"><a class="sidebar-brand" href="index.html">
   
   
-  <span class="sidebar-brand-text">post_office  documentation</span>
+  <span class="sidebar-brand-text">sendmail  documentation</span>
   
 </a><form class="sidebar-search-container" method="get" action="search.html" role="search">
   <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
@@ -257,7 +257,7 @@ This setup has a big advantage that emails are sent immediately after they are a
 The delivery is performed asynchronously in a separate task to prevent blocking request/response-cycle.</p>
 <div class="admonition warning">
 <p class="admonition-title">Warning</p>
-<p>Current version of post_office uses Django ORM <code class="docutils literal notranslate"><span class="pre">select_for_update(skip_locked=True)</span></code> method in celery task
+<p>Current version of sendmail uses Django ORM <code class="docutils literal notranslate"><span class="pre">select_for_update(skip_locked=True)</span></code> method in celery task
 for locking sent emails. Not all database backends support it.</p>
 <p>“Using select_for_update() on backends which do not support SELECT … FOR UPDATE (such as SQLite) will have no effect.
 SELECT … FOR UPDATE will not be added to the query, and an error isn’t raised if select_for_update() is used in autocommit mode.”
@@ -265,8 +265,8 @@ SELECT … FOR UPDATE will not be added to the query, and an error isn’t raise
 </div>
 <p>You should <a class="reference external" href="https://docs.celeryq.dev/en/latest/userguide/application.html">configure celery</a> so that you <code class="docutils literal notranslate"><span class="pre">celery.py</span></code>
 setup invokes <a class="reference external" href="https://docs.celeryq.dev/en/latest/reference/celery.html#celery.Celery.autodiscover_tasks">autodiscover_tasks</a></p>
-<p>Celery must also be enabled in post_office configurations in <code class="docutils literal notranslate"><span class="pre">settings.py</span></code>:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">POST_OFFICE</span> <span class="o">=</span> <span class="p">{</span>
+<p>Celery must also be enabled in sendmail configurations in <code class="docutils literal notranslate"><span class="pre">settings.py</span></code>:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">SENDMAIL</span> <span class="o">=</span> <span class="p">{</span>
 <span class="c1"># other settings</span>
 <span class="s1">&#39;CELERY_ENABLED&#39;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
 <span class="p">}</span>
@@ -294,8 +294,8 @@ setup invokes <a class="reference external" href="https://docs.celeryq.dev/en/la
 
 
 <span class="p">[</span><span class="n">tasks</span><span class="p">]</span>
-  <span class="o">.</span> <span class="n">post_office</span><span class="o">.</span><span class="n">tasks</span><span class="o">.</span><span class="n">cleanup_mail</span>
-  <span class="o">.</span> <span class="n">post_office</span><span class="o">.</span><span class="n">tasks</span><span class="o">.</span><span class="n">send_queued_mail</span>
+  <span class="o">.</span> <span class="n">sendmail</span><span class="o">.</span><span class="n">tasks</span><span class="o">.</span><span class="n">cleanup_mail</span>
+  <span class="o">.</span> <span class="n">sendmail</span><span class="o">.</span><span class="n">tasks</span><span class="o">.</span><span class="n">send_queued_mail</span>
 </pre></div>
 </div>
 <p>In case of a temporary delivery failure, we might want retrying to send those emails by a periodic task.
@@ -303,16 +303,16 @@ This can be scheduled with a simple <a class="reference external" href="https://
 for instance through</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">app</span><span class="o">.</span><span class="n">conf</span><span class="o">.</span><span class="n">beat_schedule</span> <span class="o">=</span> <span class="p">{</span>
 <span class="s1">&#39;send-queued-mail&#39;</span><span class="p">:</span> <span class="p">{</span>
-    <span class="s1">&#39;task&#39;</span><span class="p">:</span> <span class="s1">&#39;post_office.tasks.send_queued_mail&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;task&#39;</span><span class="p">:</span> <span class="s1">&#39;sendmail.tasks.send_queued_mail&#39;</span><span class="p">,</span>
     <span class="s1">&#39;schedule&#39;</span><span class="p">:</span> <span class="mf">600.0</span><span class="p">,</span>
     <span class="p">},</span>
 <span class="p">}</span>
 </pre></div>
 </div>
 <p>The email queue now will be processed every 10 minutes.
-If you are using <a class="reference external" href="https://django-celery-beat.readthedocs.io/en/latest/">Django Celery Beat</a>, then use the Django-Admin backend and add a periodic tasks for <code class="docutils literal notranslate"><span class="pre">post_office.tasks.send_queued_mail</span></code>.</p>
+If you are using <a class="reference external" href="https://django-celery-beat.readthedocs.io/en/latest/">Django Celery Beat</a>, then use the Django-Admin backend and add a periodic tasks for <code class="docutils literal notranslate"><span class="pre">sendmail.tasks.send_queued_mail</span></code>.</p>
 <p>Depending on your policy, you may also want to remove expired emails from the queue.
-This can be done by adding another periodic tasks for <code class="docutils literal notranslate"><span class="pre">post_office.tasks.cleanup_mail</span></code>, which may run once a week or month.</p>
+This can be done by adding another periodic tasks for <code class="docutils literal notranslate"><span class="pre">sendmail.tasks.cleanup_mail</span></code>, which may run once a week or month.</p>
 </section>
 
         </article>

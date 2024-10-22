@@ -8,7 +8,7 @@ it shall connect a callback function to the Post Office's signal handler ``email
 .. code-block:: python
 
     from django.dispatch import receiver
-    from post_office.signals import email_queued
+    from sendmail.signals import email_queued
 
     @receiver(email_queued)
     def my_callback(sender, emails, **kwargs):

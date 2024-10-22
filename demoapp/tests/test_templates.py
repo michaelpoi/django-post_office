@@ -1,5 +1,5 @@
 import pytest
-from post_office.models import EmailMergeModel, PlaceholderContent, EmailAddress, EmailMergeContentModel
+from sendmail.models import EmailMergeModel, PlaceholderContent, EmailAddress, EmailMergeContentModel
 
 
 @pytest.fixture
@@ -57,7 +57,7 @@ def test_creation(test_template):
 def test_render_template(test_template):
     rendered = test_template.render_email_template(language='en')
     clean = rendered.replace('\n', '').replace('\t', '').replace('\r', '').strip()
-    html_string = (' {% load post_office %}'
+    html_string = (' {% load sendmail %}'
                    ' <!DOCTYPE html><html lang="en">'
                    '<head>'
                    '    <meta charset="UTF-8">'
@@ -90,7 +90,7 @@ def test_render_template(test_template):
                                                       language='en')
     clean = rendered.replace('\n', '').replace('\t', '').replace('\r', '').strip()
 
-    html_string = (' {% load post_office %}'
+    html_string = (' {% load sendmail %}'
                    ' <!DOCTYPE html><html lang="en">'
                    '<head>'
                    '    <meta charset="UTF-8">'

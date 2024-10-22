@@ -1,9 +1,9 @@
 Installation
 =========================
 
-``pip install post_office``
+``pip install django-sendmail``
 
-Add ``post_office`` and ``ckeditor`` to your installed app in ``settings.py``:
+Add ``sendmail`` and ``ckeditor`` to your installed apps in ``settings.py``:
 
 .. code-block::
 
@@ -11,7 +11,7 @@ Add ``post_office`` and ``ckeditor`` to your installed app in ``settings.py``:
     # other apps,
     'ckeditor',
     'ckeditor_uploader',
-    'post_office',
+    'sendmail',
     ]
 
 To your ``settings.py`` also add email server configurations:
@@ -29,7 +29,7 @@ To your list of template engines (``TEMPLATES``) settings add a special template
 
     TEMPLATES = [
     {
-        'BACKEND': 'post_office.template.backends.post_office.PostOfficeTemplates',
+        'BACKEND': 'sendmail.template.backends.sendmail.SendMailTemplates',
         'APP_DIRS': True,
         'DIRS': [BASE_DIR / 'templates', ...],
         'OPTIONS': {
@@ -78,10 +78,10 @@ Run ``collectstatic``:
 
     python manage.py collectstatic
 
-Set ``post_office.EmailBackend`` as your ``EMAIL_BACKEND`` in django's ``settings.py``:
+Set ``sendmail.EmailBackend`` as your ``EMAIL_BACKEND`` in django's ``settings.py``:
 
 .. code-block::
 
-    EMAIL_BACKEND = 'post_office.EmailBackend'
+    EMAIL_BACKEND = 'sendmail.EmailBackend'
 
 

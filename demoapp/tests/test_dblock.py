@@ -3,8 +3,8 @@ import time
 from datetime import timedelta
 from multiprocessing import Process
 
-from post_office.dblock import db_lock, TimeoutException, LockedException
-from post_office.models import DBMutex
+from sendmail.dblock import db_lock, TimeoutException, LockedException
+from sendmail.models import DBMutex
 
 
 @pytest.mark.django_db

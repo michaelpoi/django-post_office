@@ -35,7 +35,7 @@ INSTALLED_APPS = [
     'storages',
     'ckeditor',
     'ckeditor_uploader',
-    'post_office',
+    'sendmail',
 ]
 
 USE_S3 = False
@@ -65,7 +65,7 @@ if USE_S3:
                 'file_overwrite': False,  # Optional: set to False to avoid overwriting files with the same name
             },
         },
-        'post_office_attachments': {
+        'sendmail_attachments': {
             "BACKEND": "storages.backends.s3boto3.S3Boto3Storage",
             "OPTIONS": {
                 "endpoint_url": 'http://127.0.0.1:9000',
@@ -134,7 +134,7 @@ SILENCED_SYSTEM_CHECKS = ['admin.E408']
 # Example: "http://media.lawrence.com/static/"
 STATIC_URL = '/static/'
 #CELERY_ENABLED = True
-EMAIL_BACKEND = 'post_office.EmailBackend'
+EMAIL_BACKEND = 'sendmail.EmailBackend'
 # EMAIL_HOST = 'smtp.mailgun.org'
 # EMAIL_PORT = 587
 # EMAIL_USE_TLS = True
@@ -151,7 +151,7 @@ DEFAULT_FROM_EMAIL = 'default@email.com'
 
 TEMPLATES = [
     {
-        'BACKEND': 'post_office.template.backends.post_office.PostOfficeTemplates',
+        'BACKEND': 'sendmail.template.backends.sendmail.SendMailTemplates',
         'APP_DIRS': True,
         'DIRS': [os.path.join(BASE_DIR / 'demoapp' / 'templates')],
         'OPTIONS': {
@@ -182,8 +182,8 @@ TEMPLATES = [
 
 ]
 
-POST_OFFICE = {
-    'TEMPLATE_ENGINE': 'post_office',
+SENDMAIL = {
+    'TEMPLATE_ENGINE': 'sendmail',
     'CELERY_ENABLED': True,
     'MAX_RETRIES': 3,
     'BATCH_SIZE': 20,
@@ -197,7 +197,6 @@ POST_OFFICE = {
     'BASE_FILES': [
         ('/home/mykhailo/Desktop/emails/django-post_office/demoapp/templates/email/default.html', _('Default')),
         ('email/placeholders.html', _('Placeholders')),
-        ('/home/mykhailo/Desktop/out.html', _('Out')),
     ]
 }
 WSGI_APPLICATION = "demoapp.wsgi.application"

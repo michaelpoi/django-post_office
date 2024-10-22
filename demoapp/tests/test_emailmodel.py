@@ -1,11 +1,11 @@
 from email.mime.image import MIMEImage
 
 import pytest
-from post_office.models import EmailModel
-from post_office.models import STATUS, PRIORITY, EmailAddress, render_message
-from post_office.utils import set_recipients
+from sendmail.models import EmailModel
+from sendmail.models import STATUS, PRIORITY, EmailAddress, render_message
+from sendmail.utils import set_recipients
 from django.core.mail import EmailMessage, EmailMultiAlternatives
-from post_office.settings import get_template_engine
+from sendmail.settings import get_template_engine
 #from django.conf import settings
 
 
@@ -82,7 +82,7 @@ def test_get_message(settings, simple_email):
 
     assert isinstance(email, EmailMessage)
 
-    html_with_inlines = (f"{{% load post_office %}}\n "
+    html_with_inlines = (f"{{% load sendmail %}}\n "
                          f"<img src='{{% inline_image '{settings.BASE_DIR / 'demoapp' / 'tests' / 'assets' / 'logo.png'}'%}}'"
                          f"{simple_email.html_message}")
     simple_email.html_message = html_with_inlines

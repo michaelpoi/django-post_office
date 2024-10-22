@@ -6,7 +6,7 @@ This setup has a big advantage that emails are sent immediately after they are a
 The delivery is performed asynchronously in a separate task to prevent blocking request/response-cycle.
 
 .. warning::
-    Current version of post_office uses Django ORM ``select_for_update(skip_locked=True)`` method in celery task
+    Current version of sendmail uses Django ORM ``select_for_update(skip_locked=True)`` method in celery task
     for locking sent emails. Not all database backends support it.
 
     "Using select_for_update() on backends which do not support SELECT ... FOR UPDATE (such as SQLite) will have no effect.
@@ -16,11 +16,11 @@ The delivery is performed asynchronously in a separate task to prevent blocking 
 You should `configure celery <https://docs.celeryq.dev/en/latest/userguide/application.html>`_ so that you ``celery.py``
 setup invokes `autodiscover_tasks <https://docs.celeryq.dev/en/latest/reference/celery.html#celery.Celery.autodiscover_tasks>`_
 
-Celery must also be enabled in post_office configurations in ``settings.py``:
+Celery must also be enabled in sendmail configurations in ``settings.py``:
 
 .. code-block:: python
 
-    POST_OFFICE = {
+    SENDMAIL = {
     # other settings
     'CELERY_ENABLED': True,
     }
@@ -53,8 +53,8 @@ You should see something like this:
 
 
     [tasks]
-      . post_office.tasks.cleanup_mail
-      . post_office.tasks.send_queued_mail
+      . sendmail.tasks.cleanup_mail
+      . sendmail.tasks.send_queued_mail
 
 In case of a temporary delivery failure, we might want retrying to send those emails by a periodic task.
 This can be scheduled with a simple `Celery beat configuration <https://docs.celeryq.dev/en/latest/userguide/periodic-tasks.html#entries>`_,
@@ -64,13 +64,13 @@ for instance through
 
     app.conf.beat_schedule = {
     'send-queued-mail': {
-        'task': 'post_office.tasks.send_queued_mail',
+        'task': 'sendmail.tasks.send_queued_mail',
         'schedule': 600.0,
         },
     }
 
 The email queue now will be processed every 10 minutes.
-If you are using `Django Celery Beat <https://django-celery-beat.readthedocs.io/en/latest/>`_, then use the Django-Admin backend and add a periodic tasks for ``post_office.tasks.send_queued_mail``.
+If you are using `Django Celery Beat <https://django-celery-beat.readthedocs.io/en/latest/>`_, then use the Django-Admin backend and add a periodic tasks for ``sendmail.tasks.send_queued_mail``.
 
 Depending on your policy, you may also want to remove expired emails from the queue.
-This can be done by adding another periodic tasks for ``post_office.tasks.cleanup_mail``, which may run once a week or month.
+This can be done by adding another periodic tasks for ``sendmail.tasks.cleanup_mail``, which may run once a week or month.

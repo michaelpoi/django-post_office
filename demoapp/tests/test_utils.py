@@ -4,15 +4,15 @@ from datetime import datetime
 from django.core.files import File
 from django.core.files.base import ContentFile
 import pytest
-from post_office.utils import set_recipients, get_recipients_objects, parse_emails, parse_priority, split_emails, \
+from sendmail.utils import set_recipients, get_recipients_objects, parse_emails, parse_priority, split_emails, \
     create_attachments, send_mail, get_email_template, cleanup_expired_mails, get_language_from_code
-from post_office.models import EmailAddress, EmailModel, PRIORITY, Attachment, STATUS, EmailMergeModel
+from sendmail.models import EmailAddress, EmailModel, PRIORITY, Attachment, STATUS, EmailMergeModel
 from django.core.exceptions import ValidationError
 from django.core.files.storage import default_storage, FileSystemStorage
 
-from post_office.settings import get_attachments_storage
+from sendmail.settings import get_attachments_storage
 
-from post_office.validators import validate_email_with_name, validate_template_syntax
+from sendmail.validators import validate_email_with_name, validate_template_syntax
 
 
 @pytest.mark.django_db
@@ -111,7 +111,7 @@ def test_parse_emails():
 
 
 def test_parse_priority(settings):
-    settings.POST_OFFICE['DEFAULT_PRIORITY'] = 'low'
+    settings.SENDMAIL['DEFAULT_PRIORITY'] = 'low'
     assert parse_priority('now') == PRIORITY.now
     assert parse_priority('high') == PRIORITY.high
     assert parse_priority('medium') == PRIORITY.medium
@@ -291,7 +291,7 @@ def test_get_language_from_code():
 def test_default_storage(settings):
     assert get_attachments_storage() == default_storage
 
-    settings.STORAGES.update({'post_office_attachments': {'post_office_attachments': {
+    settings.STORAGES.update({'sendmail_attachments': {'sendmail_attachments': {
         "BACKEND": "django.core.files.storage.FileSystemStorage",
         "OPTIONS": {
             "location": settings.MEDIA_ROOT,  # Specify the directory for storage

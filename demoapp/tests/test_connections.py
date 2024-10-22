@@ -1,5 +1,5 @@
 import pytest
-from post_office.connections import connections
+from sendmail.connections import connections
 from .conftest import ErrorRaisingBackend, SlowTestBackend
 
 

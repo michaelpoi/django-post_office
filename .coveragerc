@@ -1,7 +1,7 @@
 # .coveragerc
 [run]
 omit =
-    */post_office/migrations/*
-    */post_office/tests/*
-    */post_office/admin.py
+    */sendmail/migrations/*
+    */sendmail/tests/*
+    */sendmail/admin.py
     */demoapp/*

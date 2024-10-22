@@ -1,4 +1,4 @@
-from post_office.parser import process_template
+from sendmail.parser import process_template
 
 
 def test_parse():

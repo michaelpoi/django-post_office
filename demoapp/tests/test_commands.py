@@ -9,9 +9,9 @@ from django.core.files.base import ContentFile
 from django.core.management import call_command
 from django.utils.timezone import now
 
-from post_office.mail import send
-from post_office.models import EmailModel, Attachment, STATUS, EmailAddress
-from post_office.utils import set_recipients
+from sendmail.mail import send
+from sendmail.models import EmailModel, Attachment, STATUS, EmailAddress
+from sendmail.utils import set_recipients
 
 
 @pytest.mark.django_db

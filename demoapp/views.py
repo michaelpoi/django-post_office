@@ -5,8 +5,8 @@ from dataclasses import dataclass
 from django.template import loader
 
 from django.http import HttpResponse
-from post_office import mail
-from post_office.models import EmailMergeModel, EmailAddress
+from sendmail import mail
+from sendmail.models import EmailMergeModel, EmailAddress
 from django.template.loader import get_template
 from django.core.mail import EmailMultiAlternatives
 from django.shortcuts import render, redirect
@@ -122,7 +122,7 @@ def render_on_delivery(request):
         f.seek(0)
         mail.send(
             recipients=['grisha@gmail.com', 'bob@gmail.com'],
-            template='conf',
+            template='renamed',
             context={'new1': 'Bread is cheaper', 'new2': 'New Iphone is out', 'bad1': 'You can not afford that'},
             language='en',
             priority='low',

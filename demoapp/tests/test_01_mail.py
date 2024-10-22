@@ -4,8 +4,8 @@ from unittest.mock import patch
 from zoneinfo import ZoneInfo
 
 import pytest
-from post_office.mail import create, send, send_many, split_into_batches, get_queued, _send_bulk
-from post_office.models import PRIORITY, EmailModel, EmailAddress, EmailMergeModel, PlaceholderContent, STATUS, \
+from sendmail.mail import create, send, send_many, split_into_batches, get_queued, _send_bulk
+from sendmail.models import PRIORITY, EmailModel, EmailAddress, EmailMergeModel, PlaceholderContent, STATUS, \
     Attachment, Recipient
 from django.core.exceptions import ValidationError
 import tempfile
@@ -14,7 +14,7 @@ from django.db import connection
 from django.utils import timezone
 from django.db.utils import InterfaceError
 
-from post_office.settings import get_available_backends
+from sendmail.settings import get_available_backends
 
 
 #from django.conf import settings
@@ -467,7 +467,7 @@ def test_internalization(caplog, template):
 
 
 def test_split_batches(settings):
-    settings.POST_OFFICE['BATCH_SIZE'] = 2
+    settings.SENDMAIL['BATCH_SIZE'] = 2
     assert split_into_batches([1, 2, 3, 4, 5, 6, 7]) == [[1, 2], [3, 4], [5, 6], [7]]
 
 
@@ -544,7 +544,7 @@ def test_errors(settings, template):
         language='de',
         backend='error',
     )
-    settings.POST_OFFICE['MAX_RETRIES'] = 1
+    settings.SENDMAIL['MAX_RETRIES'] = 1
     assert not email.number_of_retries
 
     _send_bulk([email], uses_multiprocessing=False)

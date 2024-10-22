@@ -1,8 +1,8 @@
-# Django Post Office
+# Django SendMail
 
 **Asynchronous email sending library for Django with enhanced templating options.**
 
-post_office provides a set of powerful features, such as:
+sendmail provides a set of powerful features, such as:
 
 - Handling millions of emails efficiently. 
 - Allows you to send emails asynchronously.
@@ -32,17 +32,17 @@ Installing nh3 is strongly encouraged for security reasons. Only with installed 
 
 
 ```sh
-pip install django-post_office
+pip install django-sendmail
 ```
 
-Add post_office and ckeditor to your installed app in settings.py:
+Add sendmail and ckeditor to your installed app in settings.py:
 
 ```python
 INSTALLED_APPS = [
-# other apps,
-'ckeditor',
-'ckeditor_uploader',
-'post_office',
+    # other apps,
+    'ckeditor',
+    'ckeditor_uploader',
+    'sendmail',
 ]
 ```
 
@@ -56,25 +56,26 @@ DEFAULT_FROM_EMAIL = 'default@email.com'
 ```
 
 To your list of template engines (`TEMPLATES`) settings add a special template backend:
+
 ```python
 TEMPLATES = [
-{
-    'BACKEND': 'post_office.template.backends.post_office.PostOfficeTemplates',
-    'APP_DIRS': True,
-    'DIRS': [BASE_DIR / 'templates', ...],
-    'OPTIONS': {
-        'context_processors': [
-            'django.contrib.auth.context_processors.auth',
-            'django.template.context_processors.debug',
-            'django.template.context_processors.i18n',
-            'django.template.context_processors.media',
-            'django.template.context_processors.static',
-            'django.template.context_processors.tz',
-            'django.template.context_processors.request',
-        ]
-    }
-},
-...
+    {
+        'BACKEND': 'sendmail.template.backends.sendmail.SendMailTemplates',
+        'APP_DIRS': True,
+        'DIRS': [BASE_DIR / 'templates', ...],
+        'OPTIONS': {
+            'context_processors': [
+                'django.contrib.auth.context_processors.auth',
+                'django.template.context_processors.debug',
+                'django.template.context_processors.i18n',
+                'django.template.context_processors.media',
+                'django.template.context_processors.static',
+                'django.template.context_processors.tz',
+                'django.template.context_processors.request',
+            ]
+        }
+    },
+    ...
 ]
 ```
 Add `CKEDITOR_UPLOAD_PATH`. This path will be used to store ckeditor uploaded images inside `MEDIA_ROOT`:
@@ -109,10 +110,10 @@ Run `collectstatic`:
 python manage.py collectstatic
 ```
 
-Set `post_office.EmailBackend` as your `EMAIL_BACKEND` in Django's `settings.py`:
+Set `sendmail.EmailBackend` as your `EMAIL_BACKEND` in Django's `settings.py`:
 
 ```python
-EMAIL_BACKEND = 'post_office.EmailBackend'
+EMAIL_BACKEND = 'sendmail.EmailBackend'
 ```
 
 ## Quickstart
@@ -120,10 +121,10 @@ EMAIL_BACKEND = 'post_office.EmailBackend'
 Send a simple email is really easy:
 
 ```python
-from post_office import mail
+from sendmail import mail
 
 mail.send(
-    'recipient@example.com', # List of email addresses also accepted
+    'recipient@example.com',  # List of email addresses also accepted
     'from@example.com',
     subject='My email',
     message='Hi there!',
@@ -136,7 +137,7 @@ If you want to use templates:
 - In your templates folder create an .html file with your email markup. Inside it you can leave placeholders or use context vars. For example something like this:
 
 ```html
-{% load post_office %}
+{% load sendmail %}
 
 <!DOCTYPE html>
 <html lang="en">
@@ -154,7 +155,7 @@ If you want to use templates:
 - Register your template in `settings.py`:
 
 ```python
-POST_OFFICE = {
+SENDMAIL = {
     'BASE_FILES': [
         ('your-file/path', _('Your-Name')),
     ]
@@ -175,15 +176,15 @@ You can use relative path from your `templates` folder or absolute file path.
 - To send an email with the created template:
 
 ```python
-from post_office import mail
+from sendmail import mail
 
 mail.send(
-    'recipient@example.com', # List of email addresses or list of EmailAddress also accepted
+    'recipient@example.com',  # List of email addresses or list of EmailAddress also accepted
     'from@example.com',
-    template='your-template-here', # Could be an EmailTemplate instance or name
-    context={'generator': 'post_office',
-    'username': 'michaelpoi',}, # Context is used to fill both {{ var }} in html and #var# in ckeditor.
-    language='en' # If not specified settings.LANGUAGE_CODE is used
+    template='your-template-here',  # Could be an EmailTemplate instance or name
+    context={'generator': 'sendmail',
+             'username': 'michaelpoi', },  # Context is used to fill both {{ var }} in html and #var# in ckeditor.
+    language='en'  # If not specified settings.LANGUAGE_CODE is used
 )
 ```
 

@@ -82,14 +82,14 @@ It is used to send **one** email to a list of recipients. It takes these argumen
     * - backend
       - str
       - No
-      - Alias of the backend you want to use from ``settings.POST_OFFICE['BACKENDS']``. Defaults to ``default``
+      - Alias of the backend you want to use from ``settings.SENDMAIL['BACKENDS']``. Defaults to ``default``
 
 **Note:** Some arguments can take strings with special variables allowed.
 Examples of special variables include: ``#var1#``, ``#recipient.first_name#``, etc.
 
 .. code-block:: python
 
-    from post_office import mail
+    from sendmail import mail
 
     mail.send(
         [EmailAddress.objects.create(email='peter@gmail.com', first_name='Peter'), 'lena@email.com', 'ben@yahoo.com'],
@@ -108,13 +108,13 @@ Passing ``now`` as the priority allows to bypass the queue and deliver the email
 
 .. code-block:: python
 
-   from post_office import mail
+   from sendmail import mail
 
     mail.send(
         'recipient@example.com', # List of email addresses or list of EmailAddress also accepted
         'from@example.com',
         template='your-template-here', # Could be an EmailTemplate instance or name
-        context={'generator': 'post_office',
+        context={'generator': 'sendmail',
         'username': 'michaelpoi',}, # Context is used to fill both {{ var }} in html and #var# in ckeditor.
         language='en', # If not specified settings.LANGUAGE_CODE is used,
         priority='now'
@@ -124,7 +124,7 @@ Passing ``now`` as the priority allows to bypass the queue and deliver the email
 EmailAddress and recipient context
 ---------------------------------------
 
-In the post office recipients are stored as EmailAddress model instances. This was done to allow personalization of emails.
+In the sendmail recipients are stored as EmailAddress model instances. This was done to allow personalization of emails.
 EmailAddress model has the following attributes:
 
 .. list-table:: EmailAddress attributes
@@ -206,8 +206,8 @@ You can use this context when filling subject, content or placeholders values in
 
 .. code-block:: python
 
-    from post_office import mail
-    from post_office.models import EmailAddress
+    from sendmail import mail
+    from sendmail.models import EmailAddress
 
     john = EmailAddress.objects.create(email='john.doe@email.com',
                                        first_name='John',
@@ -237,8 +237,8 @@ Other parameters are shared among generated emails.
 .. code-block:: python
 
     import tempfile
-    from post_office import mail
-    from post_office.models import EmailAddress
+    from sendmail import mail
+    from sendmail.models import EmailAddress
 
     lena = EmailAddress.objects.create(email='lena@email.com', first_name='Lena')
     ben = EmailAddress.objects.create(email='ben@yahoo.com', first_name='Ben', is_blocked=True)
@@ -264,7 +264,7 @@ Both emails have the same attachment.
 Templating
 ------------
 
-post_office introduces a two-phase approach for creating email templates. This process ensures a flexible and powerful way to handle email templates, leveraging both HTML expertise and user-friendly editing tools.
+sendmail introduces a two-phase approach for creating email templates. This process ensures a flexible and powerful way to handle email templates, leveraging both HTML expertise and user-friendly editing tools.
 
 1. :ref:`HTML Base File Creation`
     In the first phase, experienced email HTML developers create base files while adhering to the specific limitations of rendering emails in various clients. During this phase, developers can:
@@ -286,17 +286,17 @@ HTML Base File Creation
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Base Files should be stored in ``settings.TEMPLATES['DIRS'] / 'email'``.
-post_office looks for email folders in all specified DIRS.
+sendmail looks for email folders in all specified DIRS.
 
-In each of your base files you should load post_office to use custom tags, which can be done as following:
+In each of your base files you should load sendmail to use custom tags, which can be done as following:
 
-``{% load post_office %}``
+``{% load sendmail %}``
 
 In your templates you can specify variables to be filled with the context:
 
 .. code-block:: django
 
-    {% load post_office %}
+    {% load sendmail %}
 
     <!DOCTYPE html>
     <html lang="en">
@@ -315,7 +315,7 @@ wont see any errors. You can still handle this using django build-in filters, fo
 
 ``Hello, {{ username|default:'user'}}``
 
-In your templates you may want to use placeholders inside conditions, loops or includes. With post_office it is possible.
+In your templates you may want to use placeholders inside conditions, loops or includes. With sendmail it is possible.
 
 main.html
 
@@ -342,7 +342,7 @@ in.html
 
 .. code-block:: django
 
-    {% load post_office %}
+    {% load sendmail %}
 
     <!DOCTYPE html>
     <html lang="en">
@@ -365,7 +365,7 @@ All placeholders in the previous example will be parsed successfully and provide
 Inlines
 ^^^^^^^^^^^^^^^
 
-You may want to use embed images to your templates. This can be done using post_office ``{% inline_image %}`` template tag.
+You may want to use embed images to your templates. This can be done using sendmail ``{% inline_image %}`` template tag.
 
 ``<img src="{% inline_image 'images/logo.png' %}" alt="" width="100">``
 
@@ -394,7 +394,7 @@ When needed base file was created, users can create 2-phase templates using it. 
 Multilingual Templates
 ------------------------------
 
-In post_office you can create and send templates in multiple languages. For this simply edit your ``settings.py``:
+In sendmail you can create and send templates in multiple languages. For this simply edit your ``settings.py``:
 
 Default templates language can be changed in ``settings.LANGUAGE_CODE``
 
@@ -424,8 +424,8 @@ Extra attachments are also translated to this language.
 
 .. code-block:: python
 
-    from post_office.mail import send_many
-    from post_office.models import EmailAddress
+    from sendmail.mail import send_many
+    from sendmail.models import EmailAddress
 
     en_recipient = EmailAddress.objects.create(email='en@gmail.com', first_name='John', preferred_language='en')
     de_recipient = EmailAddress.objects.create(email='de@gmail.com', first_name='Ali', preferred_language='de')
@@ -436,8 +436,8 @@ In this case de_recipient also gets English copy of an email. To use preferred l
 
 .. code-block:: python
 
-    from post_office.mail import send_many
-    from post_office.models import EmailAddress
+    from sendmail.mail import send_many
+    from sendmail.models import EmailAddress
 
     en_recipient = EmailAddress.objects.create(email='en@gmail.com', first_name='John', preferred_language='en')
     de_recipient = EmailAddress.objects.create(email='de@gmail.com', first_name='Ali', preferred_language='de')
@@ -449,14 +449,14 @@ Now de_recipient gets German letter and en_recipient English copy.
 Custom Email Backends
 ---------------------------
 
-By default post_office uses ``django.core.mail.backends.smtp.EmailBackend``.
-If you want to use other email backends, you can change it by configuring ``settings.POST_OFFICE['BACKENDS']``
+By default sendmail uses ``django.core.mail.backends.smtp.EmailBackend``.
+If you want to use other email backends, you can change it by configuring ``settings.SENDMAIL['BACKENDS']``
 
 For example to use `django-ses <https://github.com/django-ses/django-ses>`_ you can do:
 
 .. code-block:: python
 
-    POST_OFFICE = {
+    SENDMAIL = {
     # other settings
     'BACKENDS': {
         'default': 'django.core.mail.backends.smtp.EmailBackend',
@@ -471,7 +471,7 @@ Now when you use :ref:`mail.send()` or :ref:`mail.send_many()` you can which bac
 
 .. code-block:: python
 
-    from post_office import mail
+    from sendmail import mail
 
     mail.send(
     ['recipient@example.com'],
@@ -483,7 +483,7 @@ Resulting email will be sent using ``default`` backend.
 
 .. code-block:: python
 
-    from post_office import mail
+    from sendmail import mail
 
     mail.send_many(
     recipients=['recipient@example.com', 'next@gmail.com'],
@@ -497,7 +497,7 @@ Resulting 2 emails will be sent using ``django-ses`` backend.
 Management commands
 ------------------------
 
-- send_queued_mail - send queued emails, those are not successfully sent are marked as failed or requeued depending on settings. <link>
+- send_queued_mail - send queued emails, those are not successfully sent are marked as failed or requeued depending on :ref:`settings`.
 
 .. list-table:: send_queued_mail arguments
    :widths: 50 100
@@ -526,7 +526,7 @@ Management commands
    * - --batch-size or -b
      - Limits number of emails being deleted in a batch. Defaults to ``1000``.
 
-- dblocks - when ``post_office`` is sending emails using ``send_queued_mail`` management command it blocks the entire database.
+- dblocks - when ``sendmail`` is sending emails using ``send_queued_mail`` management command it blocks the entire database.
   You can use this command to manage these DB locks.
 
 .. list-table:: dblocks

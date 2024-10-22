@@ -4,7 +4,7 @@ import pytest
 from django.core.files.images import ImageFile
 import re
 from django.template import Context, Template
-from post_office.templatetags.post_office import inline_image, placeholder
+from sendmail.templatetags.sendmail import inline_image, placeholder
 from unittest import mock
 
 

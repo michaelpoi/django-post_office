@@ -33,7 +33,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'ckeditor',
     'ckeditor_uploader',
-    'post_office',
+    'sendmail',
 ]
 
 CKEDITOR_UPLOAD_PATH = 'ckeditor_uploads'
@@ -91,7 +91,7 @@ DEFAULT_FROM_EMAIL = 'default@email.com'
 
 TEMPLATES = [
     {
-        'BACKEND': 'post_office.template.backends.post_office.PostOfficeTemplates',
+        'BACKEND': 'sendmail.template.backends.sendmail.SendMailTemplates',
         'APP_DIRS': True,
         'DIRS': [os.path.join(BASE_DIR, 'demoapp/templates')],
         'OPTIONS': {
@@ -104,7 +104,8 @@ TEMPLATES = [
                 'django.template.context_processors.tz',
                 'django.template.context_processors.request',
             ]
-        }
+        },
+        # 'NAME': 'sendmail'
     },
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
@@ -122,16 +123,15 @@ TEMPLATES = [
 
 ]
 POST_OFFICE_PLACEHOLDERS_CACHE = False
-POST_OFFICE = {
+SENDMAIL = {
     'BACKENDS': {
         'default': 'django.core.mail.backends.dummy.EmailBackend',
         'locmem': 'django.core.mail.backends.locmem.EmailBackend',
         'error': 'demoapp.tests.conftest.ErrorRaisingBackend',
         'smtp': 'django.core.mail.backends.smtp.EmailBackend',
-        'connection_tester': 'post_office.tests.test_mail.ConnectionTestingBackend',
         'slow_backend': 'demoapp.tests.conftest.SlowTestBackend',
     },
-    'TEMPLATE_ENGINE': 'post_office',
+    'TEMPLATE_ENGINE': 'sendmail',
     'CELERY_ENABLED': False,
     'MAX_RETRIES': 2,
     'MESSAGE_ID_ENABLED': True,

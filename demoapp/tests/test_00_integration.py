@@ -1,14 +1,14 @@
 from typing import List
 import requests
-from post_office.mail import send, send_many, _send_bulk
+from sendmail.mail import send, send_many, _send_bulk
 import pytest
-from post_office.models import EmailAddress, EmailMergeModel, PlaceholderContent, EmailModel
+from sendmail.models import EmailAddress, EmailMergeModel, PlaceholderContent, EmailModel
 import tempfile
 from multiprocessing import Pool
-from post_office.utils import get_recipients_objects
-from post_office.models import STATUS
+from sendmail.utils import get_recipients_objects
+from sendmail.models import STATUS
 
-from post_office.utils import split_emails
+from sendmail.utils import split_emails
 
 
 @pytest.fixture

@@ -7,7 +7,7 @@ import pytest
 from django.core.files.images import File
 from django.core.mail import EmailMultiAlternatives, send_mail, EmailMessage
 
-from post_office.models import EmailModel, STATUS, PRIORITY
+from sendmail.models import EmailModel, STATUS, PRIORITY
 
 
 @pytest.mark.django_db
@@ -24,7 +24,7 @@ def test_postoffice_email_backend(settings):
     """
     Ensure that email backend properly queue email messages.
     """
-    settings.EMAIL_BACKEND = 'post_office.EmailBackend'
+    settings.EMAIL_BACKEND = 'sendmail.EmailBackend'
     send_mail('Test', 'Message', 'from@example.com', ['to@example.com'])
     email = EmailModel.objects.latest('id')
     assert email.subject == 'Test'
@@ -50,7 +50,7 @@ def test_send_html_email(settings):
     """
     "text/html" attachments to Email should be persisted into the database
     """
-    settings.EMAIL_BACKEND = 'post_office.EmailBackend'
+    settings.EMAIL_BACKEND = 'sendmail.EmailBackend'
     message = EmailMultiAlternatives('subject', 'body', 'from@example.com',
                                      ['recipient@example.com'])
     message.attach_alternative('html', "text/html")
@@ -64,7 +64,7 @@ def test_headers_sent(settings):
     """
     Test that headers are correctly set on the outgoing emails.
     """
-    settings.EMAIL_BACKEND = 'post_office.EmailBackend'
+    settings.EMAIL_BACKEND = 'sendmail.EmailBackend'
     message = EmailMessage('subject', 'body', 'from@example.com',
                            ['recipient@example.com'],
                            headers={'Mailing-list': 'django-developers@googlegroups.com'})
@@ -79,7 +79,7 @@ def test_reply_to_added_as_header(settings):
     Test that 'Reply-To' headers are correctly set on the outgoing emails,
     when EmailMessage property reply_to is set.
     """
-    settings.EMAIL_BACKEND = 'post_office.EmailBackend'
+    settings.EMAIL_BACKEND = 'sendmail.EmailBackend'
     message = EmailMessage('subject', 'body', 'from@example.com',
                            ['recipient@example.com'],
                            reply_to=['replyto@example.com', ], )
@@ -96,7 +96,7 @@ def test_reply_to_favors_explict_header(settings):
     Then the explicit header value is favored over the message property reply_to,
     adopting the behaviour of message() in django.core.mail.message.EmailMessage.
     """
-    settings.EMAIL_BACKEND = 'post_office.EmailBackend'
+    settings.EMAIL_BACKEND = 'sendmail.EmailBackend'
     message = EmailMessage('subject', 'body', 'from@example.com',
                            ['recipient@example.com'],
                            reply_to=['replyto-from-property@example.com'],
@@ -108,7 +108,7 @@ def test_reply_to_favors_explict_header(settings):
 
 @pytest.mark.django_db
 def test_backend_attachments(settings):
-    settings.EMAIL_BACKEND = 'post_office.EmailBackend'
+    settings.EMAIL_BACKEND = 'sendmail.EmailBackend'
     message = EmailMessage('subject', 'body', 'from@example.com',
                            ['recipient@example.com'])
     message.attach('attachment.txt', b'attachment content')
@@ -122,7 +122,7 @@ def test_backend_attachments(settings):
 
 @pytest.mark.django_db
 def test_backend_image_attachments(settings):
-    settings.EMAIL_BACKEND = 'post_office.EmailBackend'
+    settings.EMAIL_BACKEND = 'sendmail.EmailBackend'
     message = EmailMessage('subject', 'body', 'from@example.com',
                            ['recipient@example.com'])
 
@@ -145,8 +145,8 @@ def test_backend_image_attachments(settings):
 
 @pytest.mark.django_db
 def test_default_priority_now(settings):
-    settings.EMAIL_BACKEND = 'post_office.EmailBackend'
-    settings.POST_OFFICE = {
+    settings.EMAIL_BACKEND = 'sendmail.EmailBackend'
+    settings.SENDMAIL = {
         'DEFAULT_PRIORITY': 'now',
         'BACKENDS': {'default': 'django.core.mail.backends.dummy.EmailBackend'},
     }
@@ -160,12 +160,12 @@ def test_default_priority_now(settings):
 
 @pytest.mark.django_db
 def test_email_queued_signal(settings, mocker):
-    settings.EMAIL_BACKEND = 'post_office.EmailBackend'
-    settings.POST_OFFICE = {
+    settings.EMAIL_BACKEND = 'sendmail.EmailBackend'
+    settings.SENDMAIL = {
         'DEFAULT_PRIORITY': 'medium',
         'BACKENDS': {'default': 'django.core.mail.backends.dummy.EmailBackend'},
     }
-    magic_mock = mocker.patch('post_office.signals.email_queued.send')
+    magic_mock = mocker.patch('sendmail.signals.email_queued.send')
     # If DEFAULT_PRIORITY is not "now", the email_queued signal should be sent
     send_mail('Test', 'Message', 'from1@example.com', ['to@example.com'])
     email = EmailModel.objects.latest('id')

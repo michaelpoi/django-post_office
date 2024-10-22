@@ -1,5 +1,5 @@
 import pytest
-from post_office.admin import get_message_preview, render_placeholder_content, convert_media_urls_to_tags
+from sendmail.admin import get_message_preview, render_placeholder_content, convert_media_urls_to_tags
 from dataclasses import dataclass
 
 
